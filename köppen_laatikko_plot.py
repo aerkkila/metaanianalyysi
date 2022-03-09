@@ -4,6 +4,7 @@ from matplotlib.pyplot import *
 from argparse import ArgumentParser
 from talven_ajankohta import lue_doyt
 import pandas as pd
+import warnings
 
 def argumentit():
     pars = ArgumentParser()
@@ -43,15 +44,14 @@ def lue_luokitus( ncnimi='köppen1x1.nc', args=argumentit() ) -> np.ndarray:
         valitse_luokat( luokitus, args.luokat )
     return luokitus
 
-def _dataframe_luokka_doy(paivat, args) -> pd.DataFrame:
+def _dataframe_luokka_doy(paivat, args, taytto) -> pd.DataFrame:
     luokitus = lue_luokitus('köppen1x1.nc',args)
     luokat = np.unique(luokitus)
     luokat = luokat[luokat!='']
     uusi = pd.DataFrame( columns=luokat, index=range(np.product(paivat.shape)) )
-    epaluvut = [np.nan]*paivat.shape[-1]
     for luokka in luokat:
         a = paivat.copy()
-        a[ luokitus != luokka ] = epaluvut
+        a[ luokitus != luokka ] = taytto
         with np.errstate(invalid='ignore'):
             uusi[luokka] = np.where( a.flatten()>-300, a.flatten(), np.nan )
     return uusi
@@ -60,18 +60,14 @@ def dataframe_luokka_doy( startend='start', args=argumentit() ) -> pd.DataFrame:
     paivat = lue_doyt(startend).transpose( ... , 'time' ).data
     pit = (np.product(paivat.shape[:2]))
     paivat = np.reshape( paivat, [pit,paivat.shape[2]] ) #taulukon jäsen on yhden pisteen aikasarja
-    return _dataframe_luokka_doy(paivat,args)
-    luokitus = lue_luokitus('köppen1x1.nc',args)
-    luokat = np.unique(luokitus)
-    luokat = luokat[luokat!='']
-    uusi = pd.DataFrame( columns=luokat, index=range(np.product(paivat.shape)) )
-    epaluvut = [np.nan]*paivat.shape[-1]
-    for luokka in luokat:
-        a = paivat.copy()
-        a[ luokitus != luokka ] = epaluvut
-        with np.errstate(invalid='ignore'):
-            uusi[luokka] = np.where( a.flatten()>-300, a.flatten(), np.nan )
-    return uusi
+    taytto = [np.nan]*paivat.shape[-1]
+    return _dataframe_luokka_doy(paivat,args,taytto)
+
+def dataframe_luokka_avgdoy( startend='start', args=argumentit() ) -> pd.DataFrame:
+    with warnings.catch_warnings():
+        warnings.filterwarnings( action='ignore', message='Mean of empty slice' )
+        paivat = lue_doyt(startend).mean(dim='time').data.flatten()
+    return _dataframe_luokka_doy(paivat,args,np.nan)
 
 rcParams.update({ 'font.size': 18,
                   'figure.figsize': (12,10) })
