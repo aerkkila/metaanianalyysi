@@ -44,7 +44,7 @@ def lue_luokitus( ncnimi='köppen1x1.nc', args=argumentit() ) -> np.ndarray:
         valitse_luokat( luokitus, args.luokat )
     return luokitus
 
-def _dataframe_luokka_doy(paivat, args, taytto) -> pd.DataFrame:
+def _dataframe_luokka_doy(paivat, args, taytto, _doy=None) -> pd.DataFrame:
     luokitus = lue_luokitus('köppen1x1.nc',args)
     luokat = np.unique(luokitus)
     luokat = luokat[luokat!='']
@@ -54,20 +54,21 @@ def _dataframe_luokka_doy(paivat, args, taytto) -> pd.DataFrame:
         a[ luokitus != luokka ] = taytto
         with np.errstate(invalid='ignore'):
             uusi[luokka] = np.where( a.flatten()>-300, a.flatten(), np.nan )
-    return uusi
+    return uusi if _doy is None else (uusi,_doy)
 
-def dataframe_luokka_doy( startend='start', args=argumentit() ) -> pd.DataFrame:
-    paivat = lue_doyt(startend).transpose( ... , 'time' ).data
+def dataframe_luokka_doy( startend='start', args=argumentit(), palauta_doy=False ) -> pd.DataFrame:
+    doy = lue_doyt(startend).transpose( ... , 'time' )
+    paivat = doy.data
     pit = (np.product(paivat.shape[:2]))
     paivat = np.reshape( paivat, [pit,paivat.shape[2]] ) #taulukon jäsen on yhden pisteen aikasarja
     taytto = [np.nan]*paivat.shape[-1]
-    return _dataframe_luokka_doy(paivat,args,taytto)
+    return _dataframe_luokka_doy( paivat,args,taytto, doy if palauta_doy else None )
 
-def dataframe_luokka_avgdoy( startend='start', args=argumentit() ) -> pd.DataFrame:
+def dataframe_luokka_avgdoy( startend='start', args=argumentit(), palauta_doy=False ) -> pd.DataFrame:
     with warnings.catch_warnings():
         warnings.filterwarnings( action='ignore', message='Mean of empty slice' )
-        paivat = lue_doyt(startend).mean(dim='time').data.flatten()
-    return _dataframe_luokka_doy(paivat,args,np.nan)
+        doy = lue_doyt(startend).mean(dim='time')
+    return _dataframe_luokka_doy( doy.data.flatten(),args,np.nan, doy if palauta_doy else None )
 
 rcParams.update({ 'font.size': 18,
                   'figure.figsize': (12,10) })
