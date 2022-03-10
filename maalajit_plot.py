@@ -27,15 +27,6 @@ def argumentit():
     else:
         args.maalajit = list(ml.tunnisteet_kaikki.keys()) #kaikki
     return args
-
-def nimen_jako(df:pd.DataFrame) -> pd.DataFrame: #jaetaan pitkät yhdistelmänimet kahdelle riville
-    nimenvaihto = {}
-    for sarake in df.columns:
-        if( '+' in sarake and len(sarake) > 10 ):
-            ind = sarake.index('+')+1
-            nimenvaihto.update({ sarake: sarake[:ind] + '\n' + sarake[ind:] })
-    df.rename( nimenvaihto, inplace=True, axis='columns' )
-    return df
     
 def pisteet(args):
     doy = lue_doyt(args.startend)
@@ -75,7 +66,7 @@ def laatikko(args):
                 data1[data1<-300] = np.nan
             data[ v*len(flat_maa) : (v+1)*len(flat_maa) ] = data1
         df[laji] = data
-    nimen_jako(df)
+    ml.nimen_jako(df)
     jarj = df.median().to_numpy().argsort() #järjestetään maalajit mediaanin mukaan
     if args.startend == 'end':
         jarj = jarj[::-1]

@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/python3.9
 import pandas as pd
 import xarray as xr
 import numpy as np
@@ -41,7 +41,7 @@ if __name__ == '__main__':
     data = np.empty(len(ikirluokat),object)
     for i,ikirluok in enumerate(ikirluokat):
         a = ikirstr.flatten()==ikirluok
-        data[i] = koppdoy.copy().loc[a,:]
+        data[i] = koppdoy.loc[a,:]
     fig = figure()
     ax = data[ikir_ind].boxplot( whis=(5,95) )
     title(ikirluokat[ikir_ind])

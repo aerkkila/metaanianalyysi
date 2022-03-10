@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 import xarray as xr
+import pandas as pd
 from scipy.interpolate import interp2d
 import os
 from configure import tyotiedostot
@@ -52,6 +53,15 @@ def maalajien_yhdistamiset(setti, pudota=False):
             lista.append(laji)
         setti.update( taul.to_dataset(name=nimi) )
     return setti.drop_vars(lista) if pudota else setti
+
+def nimen_jako(df:pd.DataFrame) -> pd.DataFrame: #jaetaan pitkät yhdistelmänimet kahdelle riville
+    nimenvaihto = {}
+    for sarake in df.columns:
+        if( '+' in sarake and len(sarake) > 10 ):
+            ind = sarake.index('+')+1
+            nimenvaihto.update({ sarake: sarake[:ind] + '\n' + sarake[ind:] })
+    df.rename( nimenvaihto, inplace=True, axis='columns' )
+    return df
 
 def hae_tiednimi(maalaji):
     for tied in os.listdir(tyotiedostot+'MethEOWP730/BAWLD'):
