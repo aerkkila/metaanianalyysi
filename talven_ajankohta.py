@@ -1,8 +1,7 @@
 import xarray as xr
 import os, re
 import numpy as np
-
-Tyotiedostot = '/media/levy/Tyotiedostot/'
+from configure import tyotiedostot
 
 def lue_doyt(kumpi='start') -> xr.DataArray:
     if(kumpi == 'start'):
@@ -10,7 +9,7 @@ def lue_doyt(kumpi='start') -> xr.DataArray:
     else:
         muuttuja = 'spring_start'
     kansio = os.getcwd()
-    os.chdir(Tyotiedostot+'FT_implementointi/FT_percents_pixel_ease_flag/DOY')
+    os.chdir(tyotiedostot+'FT_implementointi/FT_percents_pixel_ease_flag/DOY')
     muoto = f'(?<=winter_{kumpi}_doy_)[0-9]+(?=\.nc)'
     vuodet = []
     for tied in os.listdir('.'):

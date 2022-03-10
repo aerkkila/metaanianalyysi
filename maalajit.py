@@ -2,8 +2,8 @@
 import xarray as xr
 from scipy.interpolate import interp2d
 import os
+from configure import tyotiedostot
 
-Tyotiedostot = '../../'
 tunnisteet_kaikki = {
     'glacier'        : 'GLA',
     'rockland'       : 'ROC',
@@ -54,13 +54,13 @@ def maalajien_yhdistamiset(setti, pudota=False):
     return setti.drop_vars(lista) if pudota else setti
 
 def hae_tiednimi(maalaji):
-    for tied in os.listdir(Tyotiedostot+'MethEOWP730/BAWLD'):
+    for tied in os.listdir(tyotiedostot+'MethEOWP730/BAWLD'):
         if f'_{tunnisteet_kaikki[maalaji]}.nc' in tied:
             return tied
 
 class Muuntaja1x1:
     def __init__(self):
-        data = xr.open_dataset(Tyotiedostot+'FT_implementointi/FT_percents_pixel_ease_flag/DOY/winter_start_doy_2010.nc')
+        data = xr.open_dataset(tyotiedostot+'FT_implementointi/FT_percents_pixel_ease_flag/DOY/winter_start_doy_2010.nc')
         self.uusi = xr.DataArray( dims=('lat', 'lon'), coords=({'lat':data.lat, 'lon':data.lon}) )
         data.close()
     def __enter__(self):
@@ -78,7 +78,7 @@ def lue_maalajit(maalajit, alkup=True, muunnos=True): #xr.dataset
     muunn_data = None
     with Muuntaja1x1() as muuntaja:
         for maalaji in maalajit:
-            maadata = xr.open_dataset( Tyotiedostot + 'MethEOWP730/BAWLD/' + hae_tiednimi(maalaji) ).Band1.fillna(0)
+            maadata = xr.open_dataset( tyotiedostot + 'MethEOWP730/BAWLD/' + hae_tiednimi(maalaji) ).Band1.fillna(0)
             if(alkup):
                 if alkup_data is None:
                     alkup_data = maadata.to_dataset(name=maalaji)

@@ -1,0 +1,1 @@
+tyotiedostot = '/media/levy/Tyotiedostot/'

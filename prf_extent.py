@@ -2,10 +2,10 @@
 from PIL import Image
 import numpy as np
 import re, os
+from configure import tyotiedostot
 
 def lue(hila='1x1') -> dict:
-    tyotstot = '/media/levy/Tyotiedostot/'
-    kansio = tyotstot + 'PermafrostExtent/'
+    kansio = tyotiedostot + 'PermafrostExtent/'
     vuodet = []
     nimi0 = 'PRF_Extent'
     nimi1 = '_%s.tif' %hila
