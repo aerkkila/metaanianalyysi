@@ -15,16 +15,6 @@ vari1 = '\033[1;32m'
 vari2 = '\033[1;93m'
 vari0 = '\033[0m'
 
-def testikartta(dt):
-    import cartopy.crs as ccrs
-    ax = axes(projection=ccrs.PlateCarree())
-    ax.coastlines()
-    maadf0 = maadf.where(maadf == 0, 0)
-    maadf0 = maadf0.iloc[:,0]
-    dt0 = dt.where(dt == 0, 0)
-    dt0 = dt0.iloc[:,0]
-    show()
-
 def vaihda_ikirluokka(hyppy:int,dflista):
     global ikir_ind # myös dflista, ax ja ikirluokat ovat pääfunktiosta
     ikir_ind = ( ikir_ind + len(dflista) + hyppy ) % len(dflista)
@@ -58,9 +48,7 @@ if __name__ == '__main__':
     turha,maa = ml.lue_maalajit(ml.tunnisteet.keys()) #xr.DataSet (lat,lon)
     maa = ml.maalajien_yhdistamiset(maa,pudota=True)
     maadf = maa.to_dataframe() #index = lat,lon
-    with open('tmp.txt','w') as f:
-        f.write(maadf.to_string())
-
+    
     with warnings.catch_warnings():
         warnings.filterwarnings( action='ignore', message='Mean of empty slice' )
         doy = taj.lue_doyt(startend).mean(dim='time')
@@ -84,7 +72,6 @@ if __name__ == '__main__':
     for i,ikirluok in enumerate(ikirluokat):
         a = ikirstr.flatten()==ikirluok
         dflista[i] = maadf.loc[a,:].reset_index()
-    #testikartta(dflista[-1])
     mmin = np.inf
     mmax = -np.inf
     for df in dflista:
