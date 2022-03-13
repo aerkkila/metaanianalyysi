@@ -63,9 +63,7 @@ if __name__ == '__main__':
         jarj = jarj[::-1]
     maadf = maadf.iloc[:,jarj]
 
-    ikirouta = prf.Prf('1x1','xarray')#.rajaa( (doy.lat.min(), doy.lat.max()+1) ).data#.mean(dim='time') #pitäisi olla 25km, koska tämä vääristää tuloksia
-    print('\033[1;41mprf.rajaa pitää korjata\033[0m')
-    exit()
+    ikirouta = prf.Prf('1x1','xarray').rajaa( (doy.lat.min(), doy.lat.max()+1) ).data.mean(dim='time') #pitäisi olla 25km, koska tämä vääristää tuloksia
     ikirstr = prf.luokittelu_str_xr(ikirouta)
 
     ml.nimen_jako(maadf)
@@ -73,7 +71,7 @@ if __name__ == '__main__':
     dflista = np.empty(len(ikirluokat),object)
     for i,ikirluok in enumerate(ikirluokat):
         maski = ikirstr.data.flatten()==ikirluok
-        dflista[i] = maadf.loc[maski,:].reset_index()
+        dflista[i] = maadf.loc[maski,:].reset_index().drop('lon',axis=1)
     mmin = np.inf
     mmax = -np.inf
     for df in dflista:
