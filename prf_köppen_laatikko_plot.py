@@ -28,11 +28,14 @@ def nappainfunk(tapaht):
 if __name__ == '__main__':
     rcParams.update({'font.size':13,'figure.figsize':(12,10)})
     tallenna = False
+    startend = 'start'
     for a in sys.argv:
         if a == '-s':
             tallenna = True
+        if a == 'start' or a == 'end':
+            startend = a
     
-    koppdoy,doy = klp.dataframe_luokka_avgdoy('start',palauta_doy=True) #pd.DataFrame,xr.DataArray
+    koppdoy,doy = klp.dataframe_luokka_avgdoy(startend,palauta_doy=True) #pd.DataFrame,xr.DataArray
 
     ikirouta = prf.Prf('1x1','xarray').rajaa( (doy.lat.min(), doy.lat.max()+1) ) #pitäisi olla 25km, koska tämä vääristää tuloksia
     ikirstr = prf.luokittelu_str_xr(ikirouta.data.mean(dim='time'))
@@ -59,7 +62,7 @@ if __name__ == '__main__':
         show()
         exit()
     while 1:
-        savefig('kuvia/prf_köppen_laatikko%i.png' %ikir_ind)
+        savefig('kuvia/prf_köppen_laatikko_%s%i.png' %(startend,ikir_ind))
         if(ikir_ind == len(ikirdatalis)-1):
             exit()
         vaihda_ikirluokka(1)
