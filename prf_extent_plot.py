@@ -1,14 +1,14 @@
 #!/usr/bin/python3
 import numpy as np
 from matplotlib.pyplot import *
-from prf_extent import lue_prf
+import prf_extent as prf
+import cartopy.crs as ccrs
 
 def vaihda_vuosi(maara:int):
     global vuosi_ind
-    if vuosi_ind + maara < tif['data'].shape[0] and vuosi_ind + maara >= 0:
-        vuosi_ind += maara
-    olio.set_data(tif['data'][vuosi_ind].reshape(tif['muoto']))
-    title(str(tif['vuodet'][vuosi_ind]))
+    vuosi_ind = (vuosi_ind + tif.data.shape[0] + maara) % tif.data.shape[0]
+    olio.set_array(tif.data[vuosi_ind,:,:].data.flatten())
+    title(str(tif.vuodet[vuosi_ind]))
     draw()
 
 def nappainfunk(tapaht):
@@ -18,12 +18,16 @@ def nappainfunk(tapaht):
         vaihda_vuosi(-1)
 
 if __name__ == '__main__':
-    tif = lue_prf()
+    rcParams.update({'font.size':13,'figure.figsize':(12,10)})
+    tif = prf.Prf('1x1','xarray')
     vuosi_ind = 0
-    fig = figure(figsize=(12,10))
-    olio = imshow( np.reshape( tif['data'][vuosi_ind], tif['muoto'] ), cmap=get_cmap('rainbow') )
-    title(str(tif['vuodet'][vuosi_ind]))
-    colorbar()
+    platecarree = ccrs.PlateCarree()
+    projektio = platecarree
+    fig = figure()
+    ax = axes(projection=projektio)
+    ax.coastlines()
+    olio = tif.data[vuosi_ind,:,:].plot.pcolormesh( cmap=get_cmap('rainbow'), ax=ax )
+    title(str(tif.vuodet[vuosi_ind]))
     tight_layout()
     fig.canvas.mpl_connect('key_press_event',nappainfunk)
     show()
