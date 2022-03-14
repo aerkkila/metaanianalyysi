@@ -32,6 +32,6 @@ if __name__ == '__main__':
         with np.errstate(invalid='ignore'):
             data[ (data<-300) | (ikirstr!=laji) ] = np.nan
         df[laji] = data.flatten()
-    df.boxplot(whis=(5,95))
+    df.drop('distinguishing isolated', axis=1).boxplot(whis=(5,95))
     ylabel('winter %s doy' %startend)
     show()

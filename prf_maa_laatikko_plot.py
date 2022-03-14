@@ -63,7 +63,7 @@ if __name__ == '__main__':
         jarj = jarj[::-1]
     maadf = maadf.iloc[:,jarj]
 
-    ikirouta = prf.Prf('1x1','xarray').rajaa( (doy.lat.min(), doy.lat.max()+1) ).data.mean(dim='time') #pitäisi olla 25km, koska tämä vääristää tuloksia
+    ikirouta = prf.Prf('1x1','xarray').rajaa( (doy.lat.min(), doy.lat.max()+1) ).data.mean(dim='time')
     ikirstr = prf.luokittelu_str_xr(ikirouta)
 
     ml.nimen_jako(maadf)

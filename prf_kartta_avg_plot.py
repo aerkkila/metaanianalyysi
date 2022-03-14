@@ -6,15 +6,14 @@ import prf_extent as prf
 
 def main():
     platecarree = ccrs.PlateCarree()
-#    projektio   = ccrs.LambertAzimuthalEqualArea(central_latitude=90)
-    projektio  = platecarree
+    projektio   = ccrs.LambertAzimuthalEqualArea(central_latitude=90)
+    #projektio  = platecarree
     kattavuus   = [-180,180,25,90]
     ax = axes(projection=projektio)
     ax.coastlines()
     ax.set_extent(kattavuus,platecarree)
     ikirouta = prf.Prf('1x1',muoto='xarray').data.mean(dim='time')
     ikirouta.plot.pcolormesh(transform=platecarree,cmap=get_cmap('rainbow'))
-    tight_layout()
     show()
 
 if __name__ == '__main__':

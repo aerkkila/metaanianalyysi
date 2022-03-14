@@ -3,6 +3,7 @@ import numpy as np
 from matplotlib.pyplot import *
 import prf_extent as prf
 import cartopy.crs as ccrs
+import sys
 
 def vaihda_vuosi(maara:int):
     global vuosi_ind
@@ -18,16 +19,25 @@ def nappainfunk(tapaht):
         vaihda_vuosi(-1)
 
 if __name__ == '__main__':
+    avg=False
+    for a in sys.argv:
+        if a == 'avg':
+            avg=True
     rcParams.update({'font.size':13,'figure.figsize':(12,10)})
     tif = prf.Prf('1x1','xarray')
+    tif.data = tif.data.where(tif.data>0,np.nan)
     vuosi_ind = 0
     platecarree = ccrs.PlateCarree()
-    projektio = platecarree
+    projektio = ccrs.LambertAzimuthalEqualArea(central_latitude=90)
     fig = figure()
-    ax = axes(projection=projektio)
+    ax = axes([0,0.04,1,0.92],projection=projektio)
     ax.coastlines()
-    olio = tif.data[vuosi_ind,:,:].plot.pcolormesh( cmap=get_cmap('rainbow'), ax=ax )
-    title(str(tif.vuodet[vuosi_ind]))
-    tight_layout()
-    fig.canvas.mpl_connect('key_press_event',nappainfunk)
+    ax.set_extent([-180,180,25,90],platecarree)
+    if avg:
+        olio = tif.data.mean(dim='time').plot.pcolormesh( cmap=get_cmap('rainbow'), ax=ax, transform=platecarree )
+        tif.vuodet=[0]
+    else:
+        olio = tif.data[vuosi_ind,:,:].plot.pcolormesh( cmap=get_cmap('rainbow'), ax=ax, transform=platecarree )
+        title(str(tif.vuodet[vuosi_ind]))
+        fig.canvas.mpl_connect('key_press_event',nappainfunk)
     show()
