@@ -49,6 +49,8 @@ def rajaa1x1( dataarr, lat01 ):
 class Prf():
     def __init__(self,hila='1x1',muoto='xarray'):
         a = lue_numpy(hila) if muoto=='numpy' else lue_xarray(hila)
+        if muoto=='numpy':
+            print('\033[1;33mVaroitus:\033[0m Prf-numpy ei välttämättä toimi halutusti. Muoto olkoon xarray.')
         self.vuodet = a['vuodet']
         self.data   = a['data'  ]
         self.hila = hila
