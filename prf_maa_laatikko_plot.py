@@ -71,7 +71,7 @@ if __name__ == '__main__':
     dflista = np.empty(len(ikirluokat),object)
     for i,ikirluok in enumerate(ikirluokat):
         maski = ikirstr.data.flatten()==ikirluok
-        dflista[i] = maadf.loc[maski,:].reset_index().drop('lon',axis=1)
+        dflista[i] = maadf.loc[maski,:].reset_index().drop(['lon','lat','wetland'],axis=1)
     mmin = np.inf
     mmax = -np.inf
     for df in dflista:
