@@ -12,9 +12,9 @@ def vaihda_vuosi(maara:int):
     draw()
 
 def nappainfunk(tapaht):
-    if tapaht.key == 'right':
+    if tapaht.key == 'right' or tapaht.key == 'o' or tapaht.key == 'i':
         vaihda_vuosi(1)
-    elif tapaht.key == 'left':
+    elif tapaht.key == 'left' or tapaht.key == 'a' or tapaht.key == 'g':
         vaihda_vuosi(-1)
 
 if __name__ == '__main__':
