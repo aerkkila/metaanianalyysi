@@ -12,9 +12,9 @@ ikir_ind = 0
 
 def vaihda_ikirluokka(hyppy:int):
     global ikir_ind # myös data, ax ja ikirluokat ovat pääfunktiosta
-    ikir_ind = ( ikir_ind + len(data) + hyppy ) % len(data)
+    ikir_ind = ( ikir_ind + len(ikirdatalis) + hyppy ) % len(ikirdatalis)
     ax.clear()
-    data[ikir_ind].boxplot( whis=(5,95), ax=ax )
+    ikirdatalis[ikir_ind].boxplot( whis=(5,95), ax=ax )
     ax.set_ylim(mmin,mmax)
     title(ikirluokat[ikir_ind])
     draw()
@@ -34,22 +34,22 @@ if __name__ == '__main__':
     
     koppdoy,doy = klp.dataframe_luokka_avgdoy('start',palauta_doy=True) #pd.DataFrame,xr.DataArray
 
-    ikirouta = prf.Prf('1x1').rajaa( (doy.lat.min(), doy.lat.max()+1) ) #pitäisi olla 25km, koska tämä vääristää tuloksia
-    ikirstr = prf.luokittelu_str(np.mean(ikirouta.data,axis=0)) #np.2Darray
+    ikirouta = prf.Prf('1x1','xarray').rajaa( (doy.lat.min(), doy.lat.max()+1) ) #pitäisi olla 25km, koska tämä vääristää tuloksia
+    ikirstr = prf.luokittelu_str_xr(ikirouta.data.mean(dim='time'))
 
     ikirluokat = prf.luokat[1:] #distinguishing_isolated puuttuu datasta
-    data = np.empty(len(ikirluokat),object)
+    ikirdatalis = np.empty(len(ikirluokat),object)
     for i,ikirluok in enumerate(ikirluokat):
-        a = ikirstr.flatten()==ikirluok
-        data[i] = koppdoy.loc[a,:]
+        a = ikirstr==ikirluok
+        ikirdatalis[i] = koppdoy[a.data.flatten()]
     fig = figure()
-    ax = data[ikir_ind].boxplot( whis=(5,95) )
+    ax = ikirdatalis[ikir_ind].boxplot( whis=(5,95) )
     title(ikirluokat[ikir_ind])
     mmin = np.inf
     mmax = -np.inf
-    for d in data:
-        mmin = min((min(d.min()),mmin))
-        mmax = max((max(d.max()),mmax))
+    for d in ikirdatalis:
+        mmin = min( d.min().min(), mmin )
+        mmax = max( d.max().max(), mmax )
     mmin = np.floor(mmin/10)*10
     mmax = np.ceil(mmax/10)*10
     ax.set_ylim(mmin,mmax)
@@ -60,6 +60,6 @@ if __name__ == '__main__':
         exit()
     while 1:
         savefig('kuvia/prf_köppen_laatikko%i.png' %ikir_ind)
-        if(ikir_ind == len(data)-1):
+        if(ikir_ind == len(ikirdatalis)-1):
             exit()
         vaihda_ikirluokka(1)

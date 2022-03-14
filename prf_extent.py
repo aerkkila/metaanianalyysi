@@ -21,7 +21,7 @@ def lue_numpy(hila='1x1') -> dict:
     tifdata = np.empty([len(vuodet),np.product(muoto)])
     for i,vuosi in enumerate(vuodet):
         with Image.open( kansio + nimi0 + str(vuosi) + nimi1 ) as im:
-            tifdata[i] = np.flip( np.array(im.getdata()).reshape(muoto), axis=0 ).flatten() #onpa tämä nyt vaikeaa
+            tifdata[i] = np.flip( np.array(im.getdata()).reshape(muoto), axis=0 ).flatten()
     muoto = [ len(vuodet), muoto[0], muoto[1] ]
     return { 'vuodet':vuodet, 'data':tifdata.reshape(muoto) }
 
@@ -36,8 +36,10 @@ def lue_xarray(hila) -> dict:
 
 def rajaa1x1( dataarr, lat01 ):
     if type(dataarr) == np.ndarray:
-        alku = int(np.ceil(90-lat01[1]))
-        loppu = int(np.ceil(90-lat01[0]))
+        print('Muoto olkoon xarray (prf_extent.py:rajaa1x1).')
+        exit()
+        alku = int(np.ceil(lat01[1]))
+        loppu = int(np.ceil(lat01[0]))
         return dataarr[:,alku:loppu,:]
     elif type(dataarr) == xr.DataArray:
         return dataarr[:, (lat01[0]<=dataarr.lat) & (dataarr.lat<lat01[1]) ]
@@ -45,7 +47,7 @@ def rajaa1x1( dataarr, lat01 ):
     return dataarr
 
 class Prf():
-    def __init__(self,hila='1x1',muoto='numpy'):
+    def __init__(self,hila='1x1',muoto='xarray'):
         a = lue_numpy(hila) if muoto=='numpy' else lue_xarray(hila)
         self.vuodet = a['vuodet']
         self.data   = a['data'  ]
@@ -67,6 +69,7 @@ luokat = ['distinguishing isolated', 'sporadic', 'discontinuous', 'continuous']
 
 def luokittelu_str_np(data:np.ndarray) -> np.ndarray:
     uusi = np.empty_like(data,dtype=object)
+    uusi[        (0 == data )    ] = None
     uusi[ (0 < data) & (data<10) ] = luokat[0]
     uusi[ (10<=data) & (data<50) ] = luokat[1]
     uusi[ (50<=data) & (data<90) ] = luokat[2]
