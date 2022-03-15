@@ -20,9 +20,9 @@ def vaihda_ikirluokka(hyppy:int):
     draw()
 
 def nappainfunk(tapaht):
-    if tapaht.key == 'right':
+    if tapaht.key == 'right' or tapaht.key == 'o' or tapaht.key == 'i':
         vaihda_ikirluokka(1)
-    elif tapaht.key == 'left':
+    elif tapaht.key == 'left' or tapaht.key == 'g' or tapaht.key == 'a':
         vaihda_ikirluokka(-1)
 
 if __name__ == '__main__':
