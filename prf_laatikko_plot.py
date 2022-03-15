@@ -13,17 +13,15 @@ def argumentit():
             tallenna = True
         elif a == 'start' or a == 'end':
             startend = a
+    return
 
 if __name__ == '__main__':
     tallenna = False
     startend = 'start'
     argumentit()
     rcParams.update({'font.size':13,'figure.figsize':(12,10)})
-    doy = taj.lue_doyt(startend)
-    with warnings.catch_warnings():
-        warnings.filterwarnings( action='ignore', message='Mean of empty slice' )
-        doy = doy.mean(dim='time')
-    ikirouta = prf.Prf('1x1').rajaa( (doy.lat.min(), doy.lat.max()+1) ) #pitäisi olla 25km, koska tämä vääristää tuloksia
+    doy = taj.lue_avgdoy(startend)
+    ikirouta = prf.Prf('1x1').rajaa( (doy.lat.min(), doy.lat.max()+1) )
     ikirstr = prf.luokittelu_str_xr(ikirouta.data.mean(dim='time'))
 
     df = pd.DataFrame(columns=prf.luokat)

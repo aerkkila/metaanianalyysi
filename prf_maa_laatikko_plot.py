@@ -31,6 +31,7 @@ def nappainfunk(tapaht):
         vaihda_ikirluokka(-1,dflista)
 
 if __name__ == '__main__':
+    warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
     rcParams.update({'font.size':13,'figure.figsize':(12,10)})
     tallenna = False
     startend = 'start'

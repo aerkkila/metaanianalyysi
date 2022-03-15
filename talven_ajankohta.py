@@ -1,5 +1,5 @@
 import xarray as xr
-import os, re
+import os, re, warnings
 import numpy as np
 from configure import tyotiedostot
 
@@ -32,6 +32,12 @@ def lue_doyt(kumpi='start') -> xr.DataArray:
         dat.close()
     os.chdir(kansio)
     return uusi
+
+def lue_avgdoy(startend):
+    doy = lue_doyt(startend)
+    with warnings.catch_warnings():
+        warnings.filterwarnings( action='ignore', message='Mean of empty slice' )
+        return doy.mean(dim='time')
 
 def doy2numpy(doy):
     data = np.empty( len(doy.data.flatten()) )
