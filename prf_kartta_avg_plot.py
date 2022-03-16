@@ -13,7 +13,7 @@ def main():
     ax.coastlines()
     ax.set_extent(kattavuus,platecarree)
     ikirouta = prf.Prf('1x1',muoto='xarray').data.mean(dim='time')
-    ikirouta.plot.pcolormesh(transform=platecarree,cmap=get_cmap('rainbow'))
+    ikirouta.where(ikirouta>0,np.nan).plot.pcolormesh(transform=platecarree,cmap=get_cmap('rainbow'))
     show()
 
 if __name__ == '__main__':
