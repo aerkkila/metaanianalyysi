@@ -19,7 +19,7 @@ if __name__ == '__main__':
     tallenna = False
     startend = 'start'
     argumentit()
-    rcParams.update({'font.size':13,'figure.figsize':(12,10)})
+    rcParams.update({'font.size':13,'figure.figsize':(10,8)})
     doy = taj.lue_avgdoy(startend)
     ikirouta = prf.Prf('1x1').rajaa( (doy.lat.min(), doy.lat.max()+1) )
     ikirstr = prf.luokittelu_str_xr(ikirouta.data.mean(dim='time'))
@@ -30,6 +30,12 @@ if __name__ == '__main__':
         with np.errstate(invalid='ignore'):
             data[ (data<-300) | (ikirstr!=laji) ] = np.nan
         df[laji] = data.flatten()
-    df.drop('distinguishing isolated', axis=1).boxplot(whis=(5,95))
+    with warnings.catch_warnings():
+         warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
+         df.drop('distinguishing isolated', axis=1).boxplot(whis=(5,95))
     ylabel('winter %s doy' %startend)
-    show()
+    tight_layout()
+    if tallenna:
+        savefig('kuvia/%s_%s.png' %(sys.argv[0][:-3],startend))
+    else:
+        show()

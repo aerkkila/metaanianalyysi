@@ -8,13 +8,28 @@ import prf_extent as prf
 import talven_ajankohta as taj
 import köppen_laatikko_plot as klp
 
+def argumentit():
+    global ikir_ind,tallenna,startend
+    ikir_ind = 0
+    tallenna = False
+    startend = 'start'
+    for a in sys.argv:
+        if a == '-s':
+            tallenna = True
+        if a == 'start' or a == 'end':
+            startend = a
+
+def viimeistele():
+    ax.set_ylim(mmin,mmax)
+    ylabel('winter %s doy' %startend)
+    title(ikirluokat[ikir_ind])
+
 def vaihda_ikirluokka(hyppy:int):
     global ikir_ind # myös data, ax ja ikirluokat ovat pääfunktiosta
     ikir_ind = ( ikir_ind + len(ikirdatalis) + hyppy ) % len(ikirdatalis)
     ax.clear()
-    ikirdatalis[ikir_ind].boxplot( whis=(5,95), ax=ax )
-    ax.set_ylim(mmin,mmax)
-    title(ikirluokat[ikir_ind])
+    ikirdatalis[ikir_ind].boxplot( whis=(5,95), ax=gca() )
+    viimeistele()
     draw()
 
 def nappainfunk(tapaht):
@@ -24,15 +39,8 @@ def nappainfunk(tapaht):
         vaihda_ikirluokka(-1)
 
 if __name__ == '__main__':
-    rcParams.update({'font.size':13,'figure.figsize':(12,10)})
-    ikir_ind = 0
-    tallenna = False
-    startend = 'start'
-    for a in sys.argv:
-        if a == '-s':
-            tallenna = True
-        if a == 'start' or a == 'end':
-            startend = a
+    rcParams.update({'font.size':13,'figure.figsize':(10,8)})
+    argumentit()
     
     koppdoy,doy = klp.dataframe_luokka_avgdoy(startend,palauta_doy=True) #pd.DataFrame,xr.DataArray
 
@@ -44,9 +52,6 @@ if __name__ == '__main__':
     for i,ikirluok in enumerate(ikirluokat):
         a = ikirstr==ikirluok
         ikirdatalis[i] = koppdoy[a.data.flatten()]
-    fig = figure()
-    ax = ikirdatalis[ikir_ind].boxplot( whis=(5,95) )
-    title(ikirluokat[ikir_ind])
     mmin = np.inf
     mmax = -np.inf
     for d in ikirdatalis:
@@ -54,7 +59,9 @@ if __name__ == '__main__':
         mmax = max( d.max().max(), mmax )
     mmin = np.floor(mmin/10)*10
     mmax = np.ceil(mmax/10)*10
-    ax.set_ylim(mmin,mmax)
+    fig = figure()
+    ax = ikirdatalis[ikir_ind].boxplot( whis=(5,95) )
+    viimeistele()
     tight_layout()
     if not tallenna:
         fig.canvas.mpl_connect('key_press_event',nappainfunk)

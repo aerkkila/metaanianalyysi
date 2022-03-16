@@ -15,27 +15,12 @@ vari1 = '\033[1;32m'
 vari2 = '\033[1;93m'
 vari0 = '\033[0m'
 
-def vaihda_ikirluokka(hyppy:int,dflista):
-    global ikir_ind # myös dflista, ax ja ikirluokat ovat pääfunktiosta
-    ikir_ind = ( ikir_ind + len(dflista) + hyppy ) % len(dflista)
-    ax.clear()
-    dflista[ikir_ind].boxplot( whis=(5,95), ax=ax )
-    ax.set_ylim(mmin,mmax)
-    title(ikirluokat[ikir_ind])
-    draw()
-
-def nappainfunk(tapaht):
-    if tapaht.key == 'right':
-        vaihda_ikirluokka(1,dflista)
-    elif tapaht.key == 'left':
-        vaihda_ikirluokka(-1,dflista)
-
-if __name__ == '__main__':
-    warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
-    rcParams.update({'font.size':13,'figure.figsize':(12,10)})
+def argumentit():
+    global tallenna,startend,osuusraja,verbose
     tallenna = False
     startend = 'start'
     osuusraja = 30
+    verbose = False
     for i,a in enumerate(sys.argv):
         if a == '-s':
             tallenna = True
@@ -45,6 +30,32 @@ if __name__ == '__main__':
             osuusraja = float(argv[i+1])
         elif a == '-v':
             verbose = True
+    return
+
+def viimeistele():
+    title(ikirluokat[ikir_ind])
+    ax.set_ylim(mmin,mmax)
+    ylabel('winter %s doy' %startend)
+
+def vaihda_ikirluokka(hyppy:int,dflista):
+    global ikir_ind # myös dflista, ax ja ikirluokat ovat pääfunktiosta
+    ikir_ind = ( ikir_ind + len(dflista) + hyppy ) % len(dflista)
+    ax.clear()
+    with warnings.catch_warnings():
+         warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
+         dflista[ikir_ind].boxplot( whis=(5,95), ax=ax )
+    viimeistele()
+    draw()
+
+def nappainfunk(tapaht):
+    if tapaht.key == 'right':
+        vaihda_ikirluokka(1,dflista)
+    elif tapaht.key == 'left':
+        vaihda_ikirluokka(-1,dflista)
+
+if __name__ == '__main__':
+    rcParams.update({'font.size':13,'figure.figsize':(10,8)})
+    argumentit()
     
     turha,maa = ml.lue_maalajit(ml.tunnisteet.keys()) #xr.DataSet (lat,lon)
     maa = ml.maalajien_yhdistamiset(maa,pudota=True)
@@ -87,16 +98,17 @@ if __name__ == '__main__':
             print('\n'+vari2+luok+vari0)
             print(np.isfinite(df).sum())
     fig = figure()
-    ax = dflista[ikir_ind].boxplot( whis=(5,95) )
-    title(ikirluokat[ikir_ind])
-    ax.set_ylim(mmin,mmax)
+    with warnings.catch_warnings():
+         warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
+         ax = dflista[ikir_ind].boxplot( whis=(5,95) )
+    viimeistele()
     tight_layout()
     if not tallenna:
         fig.canvas.mpl_connect('key_press_event',nappainfunk)
         show()
         exit()
     while 1:
-        savefig('kuvia/prf_köppen_laatikko%i.png' %ikir_ind)
+        savefig('kuvia/%s_%s%i.png' %(sys.argv[0][:-3],startend,ikir_ind))
         if(ikir_ind == len(dflista)-1):
             exit()
-        vaihda_ikirluokka(1)
+        vaihda_ikirluokka(1,dflista)
