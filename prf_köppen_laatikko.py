@@ -8,8 +8,6 @@ import prf_extent as prf
 import talven_ajankohta as taj
 import köppen_laatikko_plot as klp
 
-ikir_ind = 0
-
 def vaihda_ikirluokka(hyppy:int):
     global ikir_ind # myös data, ax ja ikirluokat ovat pääfunktiosta
     ikir_ind = ( ikir_ind + len(ikirdatalis) + hyppy ) % len(ikirdatalis)
@@ -27,6 +25,7 @@ def nappainfunk(tapaht):
 
 if __name__ == '__main__':
     rcParams.update({'font.size':13,'figure.figsize':(12,10)})
+    ikir_ind = 0
     tallenna = False
     startend = 'start'
     for a in sys.argv:
@@ -62,7 +61,7 @@ if __name__ == '__main__':
         show()
         exit()
     while 1:
-        savefig('kuvia/prf_köppen_laatikko_%s%i.png' %(startend,ikir_ind))
+        savefig('kuvia/%s_%s%i.png' %(sys.argv[0][:-3],startend,ikir_ind))
         if(ikir_ind == len(ikirdatalis)-1):
             exit()
         vaihda_ikirluokka(1)

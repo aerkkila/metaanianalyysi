@@ -34,7 +34,7 @@ def valitse_luokat( sluokka:np.ndarray, luokat:str ) -> np.ndarray:
             sluokka[i] = ''
     return sluokka
 
-def lue_luokitus( ncnimi='köppen1x1.nc', args=argumentit() ) -> np.ndarray:
+def lue_luokitus( ncnimi='köppen1x1.nc' ) -> np.ndarray:
     luokitus = xr.open_dataset(ncnimi).sluokka.data.flatten()
     if args.keski_pois:
         pudota_keskiluokka(luokitus)
@@ -45,7 +45,7 @@ def lue_luokitus( ncnimi='köppen1x1.nc', args=argumentit() ) -> np.ndarray:
     return luokitus
 
 def _dataframe_luokka_doy(paivat, args, taytto, _doy=None) -> pd.DataFrame:
-    luokitus = lue_luokitus('köppen1x1.nc',args)
+    luokitus = lue_luokitus('köppen1x1.nc')
     luokat = np.unique(luokitus)
     luokat = luokat[luokat!='']
     uusi = pd.DataFrame( columns=luokat, index=range(np.product(paivat.shape)) )
@@ -56,7 +56,7 @@ def _dataframe_luokka_doy(paivat, args, taytto, _doy=None) -> pd.DataFrame:
             uusi[luokka] = np.where( a.flatten()>-300, a.flatten(), np.nan )
     return uusi if _doy is None else (uusi,_doy)
 
-def dataframe_luokka_doy( startend='start', args=argumentit(), palauta_doy=False ) -> pd.DataFrame:
+def dataframe_luokka_doy( startend='start', palauta_doy=False ) -> pd.DataFrame:
     doy = lue_doyt(startend).transpose( ... , 'time' )
     paivat = doy.data
     pit = (np.product(paivat.shape[:2]))
@@ -64,7 +64,7 @@ def dataframe_luokka_doy( startend='start', args=argumentit(), palauta_doy=False
     taytto = [np.nan]*paivat.shape[-1]
     return _dataframe_luokka_doy( paivat,args,taytto, doy if palauta_doy else None )
 
-def dataframe_luokka_avgdoy( startend='start', args=argumentit(), palauta_doy=False ) -> pd.DataFrame:
+def dataframe_luokka_avgdoy( startend='start', palauta_doy=False ) -> pd.DataFrame:
     with warnings.catch_warnings():
         warnings.filterwarnings( action='ignore', message='Mean of empty slice' )
         doy = lue_doyt(startend).mean(dim='time')
@@ -76,7 +76,7 @@ rcParams.update({ 'font.size': 18,
 if __name__ == '__main__':
     args = argumentit()
     for s_e in args.startend:
-        df = dataframe_luokka_doy(s_e,args)
+        df = dataframe_luokka_doy(s_e,False)
         fig = figure()
         df.boxplot( whis=(5,95) )
         ylabel('winter %s doy' %s_e)
@@ -87,3 +87,8 @@ if __name__ == '__main__':
             clf()
     if not args.tallenna:
         show()
+else:
+    apu = sys.argv
+    sys.argv = [sys.argv[0]]
+    args = argumentit()
+    sys.argv = apu
