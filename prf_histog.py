@@ -73,7 +73,7 @@ if __name__ == '__main__':
 
     fig = figure()
     palkit = bar( xarrlis[ikir_ind], yarrlis[ikir_ind]/1000/tarkk, width=0.8*tarkk )
-    xlabel('winter %s doy' %startend)
+    xlabel('winter %s day' %startend)
     ylabel('extent (1000 km$^2$ / %s day)' %startend)
     title(prf.luokat[ikir_ind])
     tight_layout()
@@ -81,3 +81,8 @@ if __name__ == '__main__':
         fig.canvas.mpl_connect('key_press_event',nappainfunk)
         show()
         exit()
+    while True:
+        savefig("kuvia/%s_%s%i.png" %(sys.argv[0][:-3],startend,ikir_ind))
+        if ikir_ind+1 == len(prf.luokat):
+            exit()
+        vaihda_ikirluokka(1)
