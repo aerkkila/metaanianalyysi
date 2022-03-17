@@ -8,24 +8,29 @@ import prf_extent as prf
 import sys
 
 def argumentit(argv):
-    global tarkk,verbose,tallenna
-    tarkk = 5
-    verbose = False
-    tallenna = False
+    global tarkk,verbose,tallenna,latraja
+    tarkk = 5; verbose = False; tallenna = False; latraja = 50
     i=1
     while i<len(argv):
         a = argv[i]
-        if a == '-t':
-            i += 1
-            tarkk = int(argv[i])
-        elif a == '-v':
+        if a == '-v':
             verbose = True
         elif a == '-s':
             tallenna = True
+        elif a == '-t':
+            i += 1
+            tarkk = int(argv[i])
+        elif a == '-l0':
+            i += 1
+            latraja = int(argv[i])
         else:
             print("Varoitus: tuntematon argumentti \"%s\"" %a)
         i += 1
     return
+
+def kuvaajan_viimeistely():
+    xlabel("% permafrost")
+    ylabel("flux (?/m$^2$)")
 
 _viimelat1x1 = np.nan
 def pintaala1x1(lat):
@@ -35,7 +40,7 @@ def pintaala1x1(lat):
     _viimelat1x1 = lat
     aste = 0.0174532925199
     R2 = 40592558970441
-    _viimeala1x1 = aste*R2*( sin((lat+1)*aste) - sin(lat*aste) )*1.0e-6
+    _viimeala1x1 = aste*R2*( sin((lat+1)*aste) - sin(lat*aste) )
     return _viimeala1x1
 
 class Vuo():
@@ -45,13 +50,10 @@ class Vuo():
         self.alat = alat
         return
     def __str__(self):
-        vari0 = '\033[0m'
-        vari1 = '\033[1;33m'
-        vari2 = '\033[1;32m'
-        return ('%sVuo ja ikirouta:%s\n' %(vari2,vari0) +
-                f'%sosuudet:%s\n{self.osdet}\n' %(vari1,vari0) +
-                f'%svuot:%s\n{self.vuot}\n' %(vari1,vari0) +
-                f'%salat:%s\n{self.alat}\n' %(vari1,vari0))
+        return ('%sVuo ja ikirouta:%s\n' %(vari1,vari0) +
+                f'%sosuudet:%s\n{self.osdet}\n' %(vari2,vari0) +
+                f'%svuot:%s\n{self.vuot}\n' %(vari2,vari0) +
+                f'%salat:%s\n{self.alat}\n' %(vari2,vari0))
 
 def laske_vuot():
     alku = int(ikirouta.min())
@@ -75,16 +77,24 @@ def laske_vuot():
 if __name__ == '__main__':
     rcParams.update({'font.size':13,'figure.figsize':(10,8)})
     argumentit(sys.argv)
+    vari0 = '\033[0m'
+    vari1 = '\033[1;32m'
+    vari2 = '\033[1;33m'
     ncmuuttuja = 'posterior_bio'
     tiedosto = 'FT_implementointi/Results_LPX2019/flux1x1_LPX2019_FTimpl_S3_bio_antro_tot.nc'
-    vuodata = xr.open_dataset(tyotiedostot+tiedosto)[ncmuuttuja].mean(dim='time')
-    ikiroutaolio = prf.Prf('1x1')#.rajaa([vuodata.lat.min(),vuodata.lat.max()+1]) #rajaus on jo oikein
+    vuodata = xr.open_dataset(tyotiedostot+tiedosto)[ncmuuttuja].mean(dim='time').loc[latraja:,:]
+    ikiroutaolio = prf.Prf('1x1').rajaa([latraja,90])
     ikirouta = ikiroutaolio.data.mean(dim='time')
 
     vuoolio = laske_vuot()
     if verbose:
+        import locale
+        locale.setlocale(locale.LC_ALL, '')
+        print(f'%sIkiroutadata:%s\n{ikirouta}\n' %(vari1,vari0))
         print(vuoolio)
+        print(locale.format_string( 'Yhteensä ikirouta-aluetta %.2f Mkm²', (np.sum(vuoolio.alat[1:])*1e-12) ))
     fig = figure()
-    palkit = bar( vuoolio.osdet, vuoolio.vuot/vuoolio.alat )
+    palkit = bar( vuoolio.osdet, vuoolio.vuot/vuoolio.alat, width=tarkk*0.8 )
+    kuvaajan_viimeistely()
     tight_layout()
     show()
