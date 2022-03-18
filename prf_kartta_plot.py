@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 import numpy as np
 from matplotlib.pyplot import *
-import prf_extent as prf
+import prf as prf
 import cartopy.crs as ccrs
 import sys
 

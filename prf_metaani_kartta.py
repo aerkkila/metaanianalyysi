@@ -7,9 +7,9 @@ from matplotlib.pyplot import *
 import matplotlib
 import matplotlib.colors as mcolors
 from matplotlib.colors import ListedColormap as lcmap
+from config import LPX2019vuo
 import sys
-import prf_extent as prf
-import maalajit as ml
+import prf as prf
 
 def argumentit(argv):
     global latraja,tallenna,verbose,ikir_ind
@@ -87,7 +87,6 @@ if __name__ == '__main__':
     ikirluokat = prf.luokittelu_str_xr(ikirouta)
     prf.luokat = prf.luokat[1:] # distinguishing isolated pois
 
-    from config import LPX2019vuo
     ncmuuttuja = 'posterior_bio'
     ch4data = xr.open_dataset(LPX2019vuo)[ncmuuttuja].mean(dim='time').loc[latraja:,:]
 
@@ -96,7 +95,6 @@ if __name__ == '__main__':
     kattavuus   = [-180,180,latraja,90]
     fig = figure()
     #Tällä asetetaan muut ikiroutaluokka-alueet harmaaksi.
-    from matplotlib.colors import ListedColormap as lcmap
     harmaa = lcmap('#c0c0c0')
 
     vkartta = luo_varikartta()

@@ -4,7 +4,7 @@ import xarray as xr
 import numpy as np
 from matplotlib.pyplot import *
 import sys
-import prf_extent as prf
+import prf as prf
 import talven_ajankohta as taj
 import köppen_laatikko_plot as klp
 

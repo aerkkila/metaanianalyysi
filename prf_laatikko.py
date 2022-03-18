@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from matplotlib.pyplot import *
 import warnings,sys
-import prf_extent as prf
+import prf as prf
 import talven_ajankohta as taj
 
 def argumentit():

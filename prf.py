@@ -36,7 +36,7 @@ def lue_xarray(hila) -> dict:
 
 def rajaa1x1( dataarr, lat01 ):
     if type(dataarr) == np.ndarray:
-        print('Muoto olkoon xarray (prf_extent.py:rajaa1x1).')
+        print('Muoto olkoon xarray (prf.py:rajaa1x1).')
         exit()
         alku = int(np.ceil(lat01[1]))
         loppu = int(np.ceil(lat01[0]))

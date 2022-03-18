@@ -2,7 +2,7 @@
 from matplotlib.pyplot import *
 import cartopy.crs as ccrs
 import matplotlib
-import prf_extent as prf
+import prf as prf
 import sys
 
 if __name__ == '__main__':

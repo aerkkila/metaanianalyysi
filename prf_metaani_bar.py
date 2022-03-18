@@ -4,7 +4,7 @@ import numpy as np
 from numpy import sin
 from config import LPX2019vuo
 from matplotlib.pyplot import *
-import prf_extent as prf
+import prf as prf
 import sys
 
 def argumentit(argv):

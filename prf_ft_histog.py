@@ -3,11 +3,11 @@ import numpy as np
 from numpy import sin
 from matplotlib.pyplot import *
 import talven_ajankohta as taj
-import prf_extent as prf
+import prf as prf
 
 def argumentit():
     global startend, tallenna, tarkk, verbose
-    tallenna=False; startend='start'; tarkk=1; verbose=False
+    tallenna=False; startend='start'; tarkk=2; verbose=False
     i = 1
     while i < len(sys.argv):
         a = sys.argv[i]
