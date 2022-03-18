@@ -9,12 +9,14 @@ import prf_extent as prf
 import maalajit as ml
 
 def argumentit(argv):
-    global latraja,ikir_ind
-    latraja=45; ikir_ind=0
+    global latraja,tallenna,ikir_ind
+    latraja=45; tallenna=False; ikir_ind=0
     i=1
     while i < len(argv):
         a = argv[i]
-        if a == '-l0':
+        if a == '-s':
+            tallenna = True
+        elif a == '-l0':
             i+=1
             try:
                 latraja = int(argv[i])
@@ -77,6 +79,13 @@ if __name__ == '__main__':
     datamax = float(ch4data.max())
 
     piirra()
-    fig.canvas.mpl_connect('key_press_event',nappainfunk)
-    show()
-    ch4data.close()
+    if not tallenna:
+        fig.canvas.mpl_connect('key_press_event',nappainfunk)
+        show()
+        ch4data.close()
+        exit()
+    while True:
+        savefig("kuvia/%s%i.png" %(sys.argv[0][:-3],ikir_ind))
+        if ikir_ind==len(prf.luokat)-1:
+            exit()
+        vaihda_luokka(1)
