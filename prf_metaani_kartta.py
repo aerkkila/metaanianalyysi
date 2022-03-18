@@ -12,13 +12,15 @@ import prf_extent as prf
 import maalajit as ml
 
 def argumentit(argv):
-    global latraja,tallenna,ikir_ind
-    latraja=45; tallenna=False; ikir_ind=0
+    global latraja,tallenna,verbose,ikir_ind
+    latraja=45; tallenna=False; verbose=False; ikir_ind=0
     i=1
     while i < len(argv):
         a = argv[i]
         if a == '-s':
             tallenna = True
+        elif a == '-v':
+            verbose = True
         elif a == '-l0':
             i+=1
             try:
@@ -30,9 +32,12 @@ def argumentit(argv):
         i+=1
 
 def luo_varikartta():
-    pienin = float(ch4data.min())
-    suurin = float(ch4data.max())
-    pienin = min(pienin*6, -suurin)
+    global pienin,suurin
+    pienin = np.percentile(ch4data.data, 1)
+    suurin = np.percentile(ch4data.data,99)
+    if verbose:
+        print('pienin, prosenttipiste: ', ch4data.min().data, pienin)
+        print('suurin, prosenttipiste: ', ch4data.max().data, suurin)
     N = 1024
     cmap = matplotlib.cm.get_cmap('coolwarm',N)
     varit = np.empty(N,object)
@@ -52,13 +57,7 @@ def piirra():
     ax.set_extent(kattavuus,platecarree)
     ax.coastlines()
     ch4data.where(ikirluokat==prf.luokat[ikir_ind],np.nan).plot.\
-        pcolormesh( transform=platecarree, cmap=vkartta, norm=mcolors.DivergingNorm(0,max(datamin*6,-datamax),datamax) )
-#    ch4data.where(ikirluokat==prf.luokat[ikir_ind],np.nan).plot.\
-#        pcolormesh( transform=platecarree, cmap=vkartta,
-#                    norm=mcolors.SymLogNorm(vmin=min(datamin,-datamax),
-#                                            vmax=max(datamax,-datamin),
-#                                            linthresh=1e-8,
-#                                            linscale=0.5) )
+        pcolormesh( transform=platecarree, cmap=vkartta, norm=mcolors.DivergingNorm(0,max(pienin*6,-suurin),suurin) )
 #    #Tämä asettaa muut ikiroutaluokka-alueet harmaaksi.
     harmaa = lcmap('#c0c0c0')
     ch4data.where(~(ikirluokat==prf.luokat[ikir_ind]),np.nan).plot.\
@@ -100,8 +99,6 @@ if __name__ == '__main__':
     from matplotlib.colors import ListedColormap as lcmap
     harmaa = lcmap('#c0c0c0')
 
-    datamin = float(ch4data.min())
-    datamax = float(ch4data.max())
     vkartta = luo_varikartta()
 
     piirra()
