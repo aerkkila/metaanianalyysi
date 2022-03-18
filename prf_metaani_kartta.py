@@ -1,9 +1,12 @@
 #!/usr/bin/python3
 import xarray as xr
 import numpy as np
+from numpy import log
 import cartopy.crs as ccrs
 from matplotlib.pyplot import *
+import matplotlib
 import matplotlib.colors as mcolors
+from matplotlib.colors import ListedColormap as lcmap
 import sys
 import prf_extent as prf
 import maalajit as ml
@@ -26,15 +29,37 @@ def argumentit(argv):
             print("%sVaroitus:%s tuntematon argumentti \"%s\"" %(varoitusvari,vari0,a))
         i+=1
 
+def luo_varikartta():
+    pienin = float(ch4data.min())
+    suurin = float(ch4data.max())
+    pienin = min(pienin*6, -suurin)
+    N = 1024
+    cmap = matplotlib.cm.get_cmap('coolwarm',N)
+    varit = np.empty(N,object)
+    kanta = 10
+    
+    for i in range(0,N//2): #negatiiviset vuot
+        varit[i] = cmap(i)
+    #cmaplis = np.logspace(log(N//2+1)/log(kanta), log(N)/log(kanta), N//2, base=kanta)
+    cmaplis=np.logspace(log(0.5)/log(kanta),0,N//2)
+    for i in range(N//2,N): #positiiviset vuot
+        varit[i] = cmap(cmaplis[i-N//2])
+    return lcmap(varit)
+
 def piirra():
     clf()
     ax = axes([0.01,0.01,1,0.95],projection=projektio)
     ax.set_extent(kattavuus,platecarree)
     ax.coastlines()
     ch4data.where(ikirluokat==prf.luokat[ikir_ind],np.nan).plot.\
-        pcolormesh( transform=platecarree, norm=mcolors.DivergingNorm(0,max(datamin*6,-datamax),datamax) )
-    #Tämä asettaa muut ikiroutaluokka-alueet harmaaksi. ax.set_facecolor() ei toiminut
-    from matplotlib.colors import ListedColormap as lcmap
+        pcolormesh( transform=platecarree, cmap=vkartta, norm=mcolors.DivergingNorm(0,max(datamin*6,-datamax),datamax) )
+#    ch4data.where(ikirluokat==prf.luokat[ikir_ind],np.nan).plot.\
+#        pcolormesh( transform=platecarree, cmap=vkartta,
+#                    norm=mcolors.SymLogNorm(vmin=min(datamin,-datamax),
+#                                            vmax=max(datamax,-datamin),
+#                                            linthresh=1e-8,
+#                                            linscale=0.5) )
+#    #Tämä asettaa muut ikiroutaluokka-alueet harmaaksi.
     harmaa = lcmap('#c0c0c0')
     ch4data.where(~(ikirluokat==prf.luokat[ikir_ind]),np.nan).plot.\
         pcolormesh( transform=platecarree, ax=gca(), add_colorbar=False, cmap=harmaa )
@@ -77,6 +102,7 @@ if __name__ == '__main__':
 
     datamin = float(ch4data.min())
     datamax = float(ch4data.max())
+    vkartta = luo_varikartta()
 
     piirra()
     if not tallenna:
