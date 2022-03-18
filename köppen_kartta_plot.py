@@ -3,7 +3,6 @@ import cartopy.crs as ccrs
 import xarray as xr
 from matplotlib.pyplot import *
 import matplotlib.patches as patches
-from matplotlib.collections import PatchCollection
 import matplotlib
 from argparse import ArgumentParser
 from köppen_laatikko_plot import luokan_tarkkuudeksi, valitse_luokat, pudota_keskiluokka
