@@ -7,7 +7,7 @@ import pandas as pd
 import cartopy.crs as ccrs
 import cartopy.feature as feature
 from argparse import ArgumentParser
-from configure import tyotiedostot
+from config import LPX2019vuo
 
 pars = ArgumentParser()
 pars.add_argument('-k', '--kausi', default='whole_year',
@@ -18,7 +18,7 @@ pars.add_argument('-s', '--tallenna', nargs='?', type=int, const=1, default=0)
 args = pars.parse_args()
 
 kaudet = { 'summer':(6,9), 'winter':(3,12), 'whole_year':(1,13) }
-data0 = xr.open_dataset(tyotiedostot + 'FT_implementointi/Results_LPX2019/flux1x1_LPX2019_FTimpl_S3_bio_antro_tot.nc')[args.muuttuja]
+data0 = xr.open_dataset(LPX2019vuo)[args.muuttuja]
 ajat = pd.to_datetime(data0.time.data)
 kohdat = (kaudet[args.kausi][0] <= ajat.month) & (ajat.month < kaudet[args.kausi][1])
 if(args.kausi == 'winter'):
