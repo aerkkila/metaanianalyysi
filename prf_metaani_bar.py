@@ -2,7 +2,7 @@
 import xarray as xr
 import numpy as np
 from numpy import sin
-from config import tyotiedostot
+from config import LPX2019vuo
 from matplotlib.pyplot import *
 import prf_extent as prf
 import sys
@@ -31,6 +31,7 @@ def argumentit(argv):
 def kuvaajan_viimeistely():
     xlabel("% permafrost")
     ylabel("flux (?/m$^2$)")
+    title('CH4 flux, lat ≥ %d°N' %latraja)
 
 _viimelat1x1 = np.nan
 def pintaala1x1(lat):
@@ -81,8 +82,7 @@ if __name__ == '__main__':
     vari1 = '\033[1;32m'
     vari2 = '\033[1;33m'
     ncmuuttuja = 'posterior_bio'
-    tiedosto = 'FT_implementointi/Results_LPX2019/flux1x1_LPX2019_FTimpl_S3_bio_antro_tot.nc'
-    vuodata = xr.open_dataset(tyotiedostot+tiedosto)[ncmuuttuja].mean(dim='time').loc[latraja:,:]
+    vuodata = xr.open_dataset(LPX2019vuo)[ncmuuttuja].mean(dim='time').loc[latraja:,:]
     ikiroutaolio = prf.Prf('1x1').rajaa([latraja,90])
     ikirouta = ikiroutaolio.data.mean(dim='time')
 
@@ -98,4 +98,7 @@ if __name__ == '__main__':
     palkit = bar( vuoolio.osdet, vuoolio.vuot/vuoolio.alat, width=tarkk*0.8 )
     kuvaajan_viimeistely()
     tight_layout()
-    show()
+    if tallenna:
+        savefig('kuvia/%s.png' %(sys.argv[0][:-3]))
+    else:
+        show()

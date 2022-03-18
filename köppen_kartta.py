@@ -9,13 +9,13 @@ from köppen_laatikko_plot import luokan_tarkkuudeksi, valitse_luokat, pudota_ke
 
 def argumentit():
     pars = ArgumentParser()
-    pars.add_argument( 'tiedostot', nargs='*', default=['köppen1x1.nc'] )
+    pars.add_argument( 'tiedostot', nargs='?', default='köppen1x1.nc' )
     pars.add_argument( '-s', '--tallenna', nargs='?', type=int, const=1, default=0 )
-    pars.add_argument( '-t', '--tarkkuus', type=int, default=1 )
-    pars.add_argument( '-l', '--luokat', default='' )
+    pars.add_argument( '-t', '--tarkkuus', type=int, default=2 )
+    pars.add_argument( '-l', '--luokat', default='DE' )
     pars.add_argument( '-c', '--cmap', default='gist_rainbow_r' )
     pars.add_argument( '-f', '--fast', nargs='?', type=int, const=1, default=0 )
-    pars.add_argument( '-k', '--keski_pois', nargs='?', type=int, const=1, default=0 )
+    pars.add_argument( '-k', '--keski_pois', nargs='?', type=int, const=0, default=1 ) # toimii käänteisesti
     return pars.parse_args()
 
 def piirra_nopeasti(luokitus,luokat,cmap):
@@ -51,8 +51,14 @@ def piirra_tarkasti(luokitus,luokat,cmap,ax):
                     j+=1
                 ax.add_patch(patches.Rectangle( (lon[alku],lat), dx*(j-alku),dy, color=cmap(i), transform=platecarree ))
 
-def aja(args):
-    luokitus = xr.open_dataset(args.tiedostot[0])
+if __name__ == '__main__':
+    args = argumentit()
+    platecarree = ccrs.PlateCarree()
+    projektio   = ccrs.LambertAzimuthalEqualArea(central_latitude=90)
+    kattavuus   = [-180,180,40,90]
+    rcParams.update({'font.size':18,'figure.figsize':(12,10)})
+    
+    luokitus = xr.open_dataset(args.tiedostot)
     npdata = luokitus.sluokka.data.flatten()
     if args.keski_pois:
         pudota_keskiluokka(npdata)
@@ -62,8 +68,8 @@ def aja(args):
         valitse_luokat( npdata, args.luokat )
     luokitus.sluokka.data = npdata.reshape(luokitus.sluokka.shape)
 
-    fig = figure(figsize=(10,8))
-    ax = axes( projection=projektio )
+    fig = figure()
+    ax = axes( [0,0.05,0.95,0.9], projection=projektio )
     ax.coastlines()
     ax.set_extent(kattavuus, platecarree)
     luokat = np.unique(luokitus.sluokka.data)
@@ -77,19 +83,9 @@ def aja(args):
     for l in leg.get_lines():
         l.set_markersize(15)
         l.set_marker('.')
-
-    if(args.tallenna):
-        savefig( '%s_kartta%s%i.png' %(args.tiedostot[0],args.luokat,(-13 if args.keski_pois else args.tarkkuus)) )
+        
+    if args.tallenna:
+        savefig( 'kuvia/%s.png' %(sys.argv[0][:-3]) )
         clf()
-    if len(args.tiedostot) > 1:
-        args.tiedostot = args.tiedostot[1:]
-        aja()
-    if not args.tallenna:
+    else:
         show()
-
-if __name__ == '__main__':
-    args = argumentit()
-    platecarree = ccrs.PlateCarree()
-    projektio   = ccrs.LambertAzimuthalEqualArea(central_latitude=90)
-    kattavuus   = [-180,180,40,90]
-    aja(args)

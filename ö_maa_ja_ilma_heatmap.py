@@ -12,7 +12,7 @@ if __name__ == '__main__':
     args = pkl.argumentit()
     args.luokat = 'CDE'
     args.keski_pois = 1
-    kopp = pkl.lue_luokitus('köppen1x1.nc',args)
+    kopp = pkl.lue_luokitus('köppen1x1.nc')
     ilmluokat = np.unique(kopp)
     ilmluokat = ilmluokat[ilmluokat!='']
 
