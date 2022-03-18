@@ -1,7 +1,7 @@
 import xarray as xr
 import os, re, warnings
 import numpy as np
-from configure import tyotiedostot
+from config import tyotiedostot
 
 def lue_doyt(kumpi='start') -> xr.DataArray:
     if(kumpi == 'start'):

@@ -3,7 +3,7 @@ from PIL import Image
 import numpy as np
 import re, os
 import xarray as xr
-from configure import tyotiedostot
+from config import tyotiedostot
 
 def lue_numpy(hila='1x1') -> dict:
     kansio = tyotiedostot + 'PermafrostExtent/'

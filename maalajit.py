@@ -3,7 +3,7 @@ import xarray as xr
 import pandas as pd
 from scipy.interpolate import interp2d
 import os
-from configure import tyotiedostot
+from config import tyotiedostot
 
 tunnisteet_kaikki = {
     'glacier'        : 'GLA',

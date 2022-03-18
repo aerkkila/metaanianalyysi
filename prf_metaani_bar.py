@@ -2,7 +2,7 @@
 import xarray as xr
 import numpy as np
 from numpy import sin
-from configure import tyotiedostot
+from config import tyotiedostot
 from matplotlib.pyplot import *
 import prf_extent as prf
 import sys
@@ -87,6 +87,7 @@ if __name__ == '__main__':
     ikirouta = ikiroutaolio.data.mean(dim='time')
 
     vuoolio = laske_vuot()
+    vuodata.close()
     if verbose:
         import locale
         locale.setlocale(locale.LC_ALL, '')
