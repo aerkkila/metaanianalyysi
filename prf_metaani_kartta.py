@@ -51,6 +51,14 @@ def piirra():
     ax = axes([0.01,0.01,1,0.95],projection=projektio)
     ax.set_extent(kattavuus,platecarree)
     ax.coastlines()
+    #Tämä asettaa maskin ulkopuolisen alueen eri väriseksi
+    harmaa = lcmap('#d0e0c0')
+    muu = xr.DataArray(data=np.zeros([kattavuus[3]-kattavuus[2],kattavuus[1]-kattavuus[0]]),
+                       coords={ 'lat':np.arange(kattavuus[2]+0.5,kattavuus[3],1),
+                                'lon':np.arange(kattavuus[0]+0.5,kattavuus[1],1), },
+                       dims=['lat','lon'])
+    muu.plot.pcolormesh( transform=platecarree, ax=gca(), add_colorbar=False, cmap=harmaa )
+    #Varsinainen data
     ch4data.where(ikirluokat==prf.luokat[ikir_ind],np.nan).plot.\
         pcolormesh( transform=platecarree, cmap=vkartta, norm=mcolors.DivergingNorm(0,max(pienin*6,-suurin),suurin) )
     #Tämä asettaa muut ikiroutaluokka-alueet harmaaksi.
