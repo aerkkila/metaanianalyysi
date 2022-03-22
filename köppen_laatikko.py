@@ -2,7 +2,7 @@
 import xarray as xr
 from matplotlib.pyplot import *
 from argparse import ArgumentParser
-from talven_ajankohta import lue_doyt
+import talven_ajankohta as taj
 import pandas as pd
 import warnings
 
@@ -57,7 +57,7 @@ def _dataframe_luokka_doy(paivat, args, taytto, _doy=None) -> pd.DataFrame:
     return uusi if _doy is None else (uusi,_doy)
 
 def dataframe_luokka_doy( startend='start', palauta_doy=False ) -> pd.DataFrame:
-    doy = lue_doyt(startend).transpose( ... , 'time' )
+    doy = taj.lue_doyt(startend).transpose( ... , 'time' )
     paivat = doy.data
     pit = (np.product(paivat.shape[:2]))
     paivat = np.reshape( paivat, [pit,paivat.shape[2]] ) #taulukon jäsen on yhden pisteen aikasarja
@@ -65,9 +65,7 @@ def dataframe_luokka_doy( startend='start', palauta_doy=False ) -> pd.DataFrame:
     return _dataframe_luokka_doy( paivat,args,taytto, doy if palauta_doy else None )
 
 def dataframe_luokka_avgdoy( startend='start', palauta_doy=False ) -> pd.DataFrame:
-    with warnings.catch_warnings():
-        warnings.filterwarnings( action='ignore', message='Mean of empty slice' )
-        doy = lue_doyt(startend).mean(dim='time')
+    doy = taj.lue_avgdoy(startend)
     return _dataframe_luokka_doy( doy.data.flatten(),args,np.nan, doy if palauta_doy else None )
 
 if __name__ == '__main__':

@@ -38,13 +38,3 @@ def lue_avgdoy(startend):
     with warnings.catch_warnings():
         warnings.filterwarnings( action='ignore', message='Mean of empty slice' )
         return doy.mean(dim='time')
-
-def doy2numpy(doy):
-    data = np.empty( len(doy.data.flatten()) )
-    pit = len(doy[0,:,:].data.flatten())
-    for v in range(len(doy.time)):
-        data1 = doy[v,:,:].data.flatten()
-        with np.errstate(invalid='ignore'):
-            data1[data1<-300] = np.nan
-        data[ v*pit : (v+1)*pit ] = data1
-    return data

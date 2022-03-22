@@ -24,7 +24,7 @@ kuvia/prf_maa_laatikko_*.png: prf_maa_laatikko.py prf.py
 	./prf_maa_laatikko.py -s start
 	./prf_maa_laatikko.py -s end
 
-kuvia/prf_metaani_bar.png: prf_metaani_bar.py prf.py config.py
+kuvia/prf_metaani_bar.png: prf_metaani_bar.py prf.py config.py talven_ajankohta.py
 	./prf_metaani_bar.py -s
 
 kuvia/prf_metaani_laatikko.png: prf_metaani_laatikko.py config.py prf.py

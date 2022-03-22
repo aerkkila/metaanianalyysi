@@ -3,6 +3,7 @@ import xarray as xr
 import numpy as np
 from numpy import sin
 from config import edgartno_lpx_muutt, edgartno_lpx_tied
+import talven_ajankohta as taj
 from matplotlib.pyplot import *
 import prf as prf
 import sys
@@ -31,7 +32,7 @@ def argumentit(argv):
 def kuvaajan_viimeistely():
     xlabel("% permafrost")
     ylabel("flux (?/m$^2$)")
-    title('CH4 flux, lat ≥ %d°N' %latraja)
+    title('CH_4 flux')
 
 _viimelat1x1 = np.nan
 def pintaala1x1(lat):
