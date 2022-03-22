@@ -1,11 +1,12 @@
 #!/usr/bin/python3
 import xarray as xr
-import numpy as np
+import pandas as pd
 from numpy import sin
+import numpy as np
 from config import edgartno_lpx_muutt, edgartno_lpx_tied
 from matplotlib.pyplot import *
 import prf as prf
-import sys
+import sys, warnings
 
 def argumentit(argv):
     global tarkk,verbose,tallenna,latraja
@@ -27,11 +28,6 @@ def argumentit(argv):
             print("Varoitus: tuntematon argumentti \"%s\"" %a)
         i += 1
     return
-
-def kuvaajan_viimeistely():
-    xlabel("% permafrost")
-    ylabel("flux (?/m$^2$)")
-    title('CH4 flux, lat ≥ %d°N' %latraja)
 
 _viimelat1x1 = np.nan
 def pintaala1x1(lat):
@@ -68,15 +64,21 @@ def laske_vuot(vuodata):
     latflat = np.meshgrid( ikirouta.lon.data, ikirouta.lat.data )[1].flatten()
     vuoflat = vuodata.data.flatten()
     #kirjoitettava data
-    vuot = np.zeros(len(osuudet))
-    alat = np.zeros(len(osuudet))
+    vuot = []
+    [ vuot.append([]) for i in range(len(osuudet)) ]
+    #alat = vuot.copy()
     for i in range(len(ikirflat)):
         ala = pintaala1x1(latflat[i])
         #pyöristettäköön indeksi ylöspäin, jotta 0 % on oma luokkansa ja 100 % sisältyy 100-ε %:in
         ind = int(np.ceil( (ikirflat[i]-alku) / tarkk ))
-        alat[ind] += ala
-        vuot[ind] += vuoflat[i]*ala
-    return Vuo(osuudet,vuot,alat)
+        #alat[ind].append(ala)
+        vuot[ind].append(vuoflat[i])
+    vuonp = np.empty([len(vuot), max(len(v) for v in vuot)]) + np.nan
+    for i in range(len(vuot)):
+        for j in range(len(vuot[i])):
+            vuonp[i,j] = vuot[i][j]
+    vuodf = pd.DataFrame(vuonp.T,columns=osuudet)
+    return Vuo(osuudet,vuodf,None)
 
 if __name__ == '__main__':
     rcParams.update({'font.size':13,'figure.figsize':(10,8)})
@@ -87,17 +89,14 @@ if __name__ == '__main__':
     vuodata = xr.open_dataset(edgartno_lpx_tied)[edgartno_lpx_muutt].mean(dim='record').loc[latraja:,:]
     vuoolio = laske_vuot(vuodata)
     vuodata.close()
+
     if verbose:
-        import locale
-        locale.setlocale(locale.LC_ALL, '')
-        print(f'%sIkiroutadata:%s\n{ikirouta}\n' %(vuoolio.vari1,vuoolio.vari0))
         print(vuoolio)
-        print(locale.format_string( 'Yhteensä ikirouta-aluetta %.2f Mkm²', (np.sum(vuoolio.alat[1:])*1e-12) ))
-    fig = figure()
-    palkit = bar( vuoolio.osdet, vuoolio.vuot/vuoolio.alat, width=tarkk*0.8 )
-    kuvaajan_viimeistely()
-    tight_layout()
+
+    with warnings.catch_warnings():
+         warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
+         vuoolio.vuot.boxplot(whis=(5,95))
     if tallenna:
-        savefig('kuvia/%s.png' %(sys.argv[0][:-3]))
+        savefig('kuvia/%s.png' %sys.argv[0][:-3])
     else:
         show()

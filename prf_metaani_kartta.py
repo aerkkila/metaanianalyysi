@@ -7,7 +7,7 @@ from matplotlib.pyplot import *
 import matplotlib
 import matplotlib.colors as mcolors
 from matplotlib.colors import ListedColormap as lcmap
-from config import LPX2019vuo
+from config import edgartno_lpx_muutt, edgartno_lpx_tied
 import sys
 import prf as prf
 
@@ -42,10 +42,10 @@ def luo_varikartta():
     cmap = matplotlib.cm.get_cmap('coolwarm',N)
     varit = np.empty(N,object)
     kanta = 10
-    
+
+    #negatiiviset vuot lineaarisesti ja positiiviset logaritmisesti
     for i in range(0,N//2): #negatiiviset vuot
         varit[i] = cmap(i)
-    #cmaplis = np.logspace(log(N//2+1)/log(kanta), log(N)/log(kanta), N//2, base=kanta)
     cmaplis=np.logspace(log(0.5)/log(kanta),0,N//2)
     for i in range(N//2,N): #positiiviset vuot
         varit[i] = cmap(cmaplis[i-N//2])
@@ -58,7 +58,7 @@ def piirra():
     ax.coastlines()
     ch4data.where(ikirluokat==prf.luokat[ikir_ind],np.nan).plot.\
         pcolormesh( transform=platecarree, cmap=vkartta, norm=mcolors.DivergingNorm(0,max(pienin*6,-suurin),suurin) )
-#    #Tämä asettaa muut ikiroutaluokka-alueet harmaaksi.
+    #Tämä asettaa muut ikiroutaluokka-alueet harmaaksi.
     harmaa = lcmap('#c0c0c0')
     ch4data.where(~(ikirluokat==prf.luokat[ikir_ind]),np.nan).plot.\
         pcolormesh( transform=platecarree, ax=gca(), add_colorbar=False, cmap=harmaa )
@@ -87,15 +87,12 @@ if __name__ == '__main__':
     ikirluokat = prf.luokittelu_str_xr(ikirouta)
     prf.luokat = prf.luokat[1:] # distinguishing isolated pois
 
-    ncmuuttuja = 'posterior_bio'
-    ch4data = xr.open_dataset(LPX2019vuo)[ncmuuttuja].mean(dim='time').loc[latraja:,:]
+    ch4data = xr.open_dataset(edgartno_lpx_tied)[edgartno_lpx_muutt].mean(dim='record').loc[latraja:,:]
 
     platecarree = ccrs.PlateCarree()
     projektio   = ccrs.LambertAzimuthalEqualArea(central_latitude=90)
     kattavuus   = [-180,180,latraja,90]
     fig = figure()
-    #Tällä asetetaan muut ikiroutaluokka-alueet harmaaksi.
-    harmaa = lcmap('#c0c0c0')
 
     vkartta = luo_varikartta()
 

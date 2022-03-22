@@ -5,7 +5,7 @@ from matplotlib.pyplot import *
 import matplotlib.patches as patches
 import matplotlib
 from argparse import ArgumentParser
-from köppen_laatikko_plot import luokan_tarkkuudeksi, valitse_luokat, pudota_keskiluokka
+from köppen_laatikko import luokan_tarkkuudeksi, valitse_luokat, pudota_keskiluokka
 
 def argumentit():
     pars = ArgumentParser()

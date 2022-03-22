@@ -38,13 +38,10 @@ def rajaa1x1( dataarr, lat01 ):
     if type(dataarr) == np.ndarray:
         print('Muoto olkoon xarray (prf.py:rajaa1x1).')
         exit()
-        alku = int(np.ceil(lat01[1]))
-        loppu = int(np.ceil(lat01[0]))
-        return dataarr[:,alku:loppu,:]
     elif type(dataarr) == xr.DataArray:
         return dataarr[:, (lat01[0]<=dataarr.lat) & (dataarr.lat<lat01[1]) ]
     print('\033[1;31mVirhe (rajaa1x1)\033[0m. Tuntematon muoto.')
-    return dataarr
+    exit()
 
 class Prf():
     def __init__(self,hila='1x1',muoto='xarray'):

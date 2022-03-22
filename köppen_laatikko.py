@@ -70,20 +70,21 @@ def dataframe_luokka_avgdoy( startend='start', palauta_doy=False ) -> pd.DataFra
         doy = lue_doyt(startend).mean(dim='time')
     return _dataframe_luokka_doy( doy.data.flatten(),args,np.nan, doy if palauta_doy else None )
 
-rcParams.update({ 'font.size': 18,
-                  'figure.figsize': (12,10) })
-
 if __name__ == '__main__':
+    rcParams.update({ 'font.size': 18,
+                      'figure.figsize': (12,10) })
     args = argumentit()
     for s_e in args.startend:
         df = dataframe_luokka_doy(s_e,False)
         fig = figure()
-        df.boxplot( whis=(5,95) )
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
+            df.boxplot( whis=(5,95) )
         ylabel('winter %s doy' %s_e)
         gca().tick_params( axis='y', which='both', left=True )
         tight_layout()
         if args.tallenna:
-            savefig( 'köppen_laatikko_%s%s%i.png' %(s_e,args.luokat,(-13 if args.keski_pois else args.tarkkuus)) )
+            savefig( 'kuvia/köppen_laatikko_%s%s%i.png' %(s_e,args.luokat,(-13 if args.keski_pois else args.tarkkuus)) )
             clf()
     if not args.tallenna:
         show()

@@ -5,7 +5,7 @@ import xarray as xr
 import pandas as pd
 import maalajit as ml
 import maalajit_plot as pml
-import köppen_laatikko_plot as pkl
+import köppen_laatikko as pkl
 import seaborn as sns
 
 if __name__ == '__main__':

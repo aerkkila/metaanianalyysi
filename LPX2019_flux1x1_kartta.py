@@ -7,18 +7,18 @@ import pandas as pd
 import cartopy.crs as ccrs
 import cartopy.feature as feature
 from argparse import ArgumentParser
-from config import LPX2019vuo
+from config import LPX2019tied, LPX2019muutt
 
 pars = ArgumentParser()
 pars.add_argument('-k', '--kausi', default='whole_year',
                   help='summer, winter, \033[31mwhole_year\033[0m')
-pars.add_argument('-m', '--muuttuja', default='posterior_bio',
-                  help='Löytyvät nc-tiedostosta. Oletus on \033[31mposterior_bio\033[0m')
+pars.add_argument('-m', '--muuttuja', default=LPX2019muutt,
+                  help='Löytyvät tiedostosta %s. Oletus on %s' %(LPX2019tied,LPX2019muutt))
 pars.add_argument('-s', '--tallenna', nargs='?', type=int, const=1, default=0)
 args = pars.parse_args()
 
 kaudet = { 'summer':(6,9), 'winter':(3,12), 'whole_year':(1,13) }
-data0 = xr.open_dataset(LPX2019vuo)[args.muuttuja]
+data0 = xr.open_dataset(LPX2019tied)[args.muuttuja]
 ajat = pd.to_datetime(data0.time.data)
 kohdat = (kaudet[args.kausi][0] <= ajat.month) & (ajat.month < kaudet[args.kausi][1])
 if(args.kausi == 'winter'):

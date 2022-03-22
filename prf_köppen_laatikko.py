@@ -6,7 +6,7 @@ from matplotlib.pyplot import *
 import sys
 import prf as prf
 import talven_ajankohta as taj
-import köppen_laatikko_plot as klp
+import köppen_laatikko as klaat
 
 def argumentit():
     global ikir_ind,tallenna,startend
@@ -42,7 +42,7 @@ if __name__ == '__main__':
     rcParams.update({'font.size':13,'figure.figsize':(10,8)})
     argumentit()
     
-    koppdoy,doy = klp.dataframe_luokka_avgdoy(startend,palauta_doy=True) #pd.DataFrame,xr.DataArray
+    koppdoy,doy = klaat.dataframe_luokka_avgdoy(startend,palauta_doy=True) #pd.DataFrame,xr.DataArray
 
     ikirouta = prf.Prf('1x1','xarray').rajaa( (doy.lat.min(), doy.lat.max()+1) ) #pitäisi olla 25km, koska tämä vääristää tuloksia
     ikirstr = prf.luokittelu_str_xr(ikirouta.data.mean(dim='time'))
