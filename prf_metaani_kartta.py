@@ -7,13 +7,14 @@ from matplotlib.pyplot import *
 import matplotlib
 import matplotlib.colors as mcolors
 from matplotlib.colors import ListedColormap as lcmap
-from config import edgartno_lpx_muutt, edgartno_lpx_tied
+from config import edgartno_lpx_muutt, edgartno_lpx_tied, tyotiedostot
 import sys
 import prf as prf
+import talven_ajankohta as taj
 
 def argumentit(argv):
-    global latraja,tallenna,verbose,ikir_ind
-    latraja=45; tallenna=False; verbose=False; ikir_ind=0
+    global tallenna,verbose,ikir_ind
+    tallenna=False; verbose=False; ikir_ind=0
     i=1
     while i < len(argv):
         a = argv[i]
@@ -21,20 +22,14 @@ def argumentit(argv):
             tallenna = True
         elif a == '-v':
             verbose = True
-        elif a == '-l0':
-            i+=1
-            try:
-                latraja = int(argv[i])
-            except Exception as e:
-                print("%sVaroitus:%s latrajan lukeminen epäonnistui. %s" %(varoitusvari,vari0,str(e)))
         else:
             print("%sVaroitus:%s tuntematon argumentti \"%s\"" %(varoitusvari,vari0,a))
         i+=1
 
 def luo_varikartta():
     global pienin,suurin
-    pienin = np.percentile(ch4data.data, 1)
-    suurin = np.percentile(ch4data.data,99)
+    pienin = np.nanpercentile(ch4data.data, 1)
+    suurin = np.nanpercentile(ch4data.data,99)
     if verbose:
         print('pienin, prosenttipiste: ', ch4data.min().data, pienin)
         print('suurin, prosenttipiste: ', ch4data.max().data, suurin)
@@ -81,17 +76,21 @@ if __name__ == '__main__':
     vari0 = '\033[0m'
     rcParams.update({'font.size':13,'figure.figsize':(12,10)})
     argumentit(sys.argv)
+    datamaski = xr.open_dataset(tyotiedostot + 'FT_implementointi/FT_percents_pixel_ease_flag/DOY/winter_end_doy_2014.nc')
     
-    ikiroutaolio = prf.Prf('1x1').rajaa([latraja,90])
+    ikiroutaolio = prf.Prf('1x1').rajaa([datamaski.lat.min(),datamaski.lat.max()+0.01])
     ikirouta = ikiroutaolio.data.mean(dim='time')
     ikirluokat = prf.luokittelu_str_xr(ikirouta)
     prf.luokat = prf.luokat[1:] # distinguishing isolated pois
 
-    ch4data = xr.open_dataset(edgartno_lpx_tied)[edgartno_lpx_muutt].mean(dim='record').loc[latraja:,:]
+    ch4data = xr.open_dataset(edgartno_lpx_tied)[edgartno_lpx_muutt].\
+        mean(dim='record').\
+        loc[datamaski.lat.min():datamaski.lat.max(),:].\
+        where(datamaski.spring_start==datamaski.spring_start,np.nan)
 
     platecarree = ccrs.PlateCarree()
     projektio   = ccrs.LambertAzimuthalEqualArea(central_latitude=90)
-    kattavuus   = [-180,180,latraja,90]
+    kattavuus   = [-180,180,30,90]
     fig = figure()
 
     vkartta = luo_varikartta()

@@ -16,11 +16,7 @@ def lue_doyt(kumpi='start') -> xr.DataArray:
         vuosi = re.search(muoto, tied)
         if vuosi:
             vuodet.append(int(vuosi.group(0)))
-    #alku ei ole hyvä ensimmäisenä ja loppu viimeisenä vuonna
-    if(kumpi=='start'):
-        vuodet = vuodet[1:]
-    else:
-        vuodet = vuodet[:-1]
+    vuodet = vuodet[1:-1] #ensimmäinen ja viimeinen vuosi ovat omituisia
     dat = xr.open_dataset(f'winter_{kumpi}_doy_{vuodet[0]}.nc')
     uusi = xr.DataArray( dims=('time', 'lat' ,'lon'),
                          coords=({'time':vuodet, 'lat':dat.lat.data, 'lon':dat.lon.data}) )

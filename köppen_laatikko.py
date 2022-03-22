@@ -52,8 +52,7 @@ def _dataframe_luokka_doy(paivat, args, taytto, _doy=None) -> pd.DataFrame:
     for luokka in luokat:
         a = paivat.copy()
         a[ luokitus != luokka ] = taytto
-        with np.errstate(invalid='ignore'):
-            uusi[luokka] = np.where( a.flatten()>-300, a.flatten(), np.nan )
+        uusi[luokka] = a.flatten()
     return uusi if _doy is None else (uusi,_doy)
 
 def dataframe_luokka_doy( startend='start', palauta_doy=False ) -> pd.DataFrame:

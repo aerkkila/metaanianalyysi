@@ -3,14 +3,15 @@ import xarray as xr
 import pandas as pd
 from numpy import sin
 import numpy as np
-from config import edgartno_lpx_muutt, edgartno_lpx_tied
+from config import edgartno_lpx_muutt, edgartno_lpx_tied, tyotiedostot
 from matplotlib.pyplot import *
 import prf as prf
+import talven_ajankohta as taj
 import sys, warnings
 
 def argumentit(argv):
-    global tarkk,verbose,tallenna,latraja
-    tarkk = 5; verbose = False; tallenna = False; latraja = 50
+    global tarkk,verbose,tallenna
+    tarkk = 5; verbose = False; tallenna = False
     i=1
     while i<len(argv):
         a = argv[i]
@@ -21,9 +22,6 @@ def argumentit(argv):
         elif a == '-t':
             i += 1
             tarkk = int(argv[i])
-        elif a == '-l0':
-            i += 1
-            latraja = int(argv[i])
         else:
             print("Varoitus: tuntematon argumentti \"%s\"" %a)
         i += 1
@@ -83,12 +81,16 @@ def laske_vuot(vuodata):
 if __name__ == '__main__':
     rcParams.update({'font.size':13,'figure.figsize':(10,8)})
     argumentit(sys.argv)
-    ikiroutaolio = prf.Prf('1x1').rajaa([latraja,90])
+    datamaski = xr.open_dataset(tyotiedostot + 'FT_implementointi/FT_percents_pixel_ease_flag/DOY/winter_end_doy_2014.nc')
+    
+    ikiroutaolio = prf.Prf('1x1').rajaa([datamaski.lat.min(),datamaski.lat.max()])
     ikirouta = ikiroutaolio.data.mean(dim='time')
 
-    vuodata = xr.open_dataset(edgartno_lpx_tied)[edgartno_lpx_muutt].mean(dim='record').loc[latraja:,:]
-    vuoolio = laske_vuot(vuodata)
+    vuodata = xr.open_dataset(edgartno_lpx_tied)[edgartno_lpx_muutt].mean(dim='record')
+    vuoolio = laske_vuot( vuodata.loc[datamaski.lat.min():datamaski.lat.max(),:].\
+                          where(datamaski.spring_start==datamaski.spring_start,np.nan) )
     vuodata.close()
+    datamaski.close()
 
     if verbose:
         print(vuoolio)
