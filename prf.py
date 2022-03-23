@@ -64,7 +64,7 @@ class Prf():
         return self
 
 luokat = ['distinguishing isolated', 'sporadic', 'discontinuous', 'continuous']
-luokat1 = ['other', 'sporadic', 'discontinuous', 'continuous']
+luokat1 = ['non permafrost', 'sporadic', 'discontinuous', 'continuous']
 
 def luokittelu_str_xr(data:xr.DataArray) -> xr.DataArray:
     dt = data.data.flatten()

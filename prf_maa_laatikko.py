@@ -9,27 +9,30 @@ import talven_ajankohta as taj
 import maalajit as ml
 
 ikir_ind = 0
-verbose = False
-
 vari1 = '\033[1;32m'
 vari2 = '\033[1;93m'
 vari0 = '\033[0m'
 
+tallenna = False
+startend = 'start'
+osuusraja = 30
+verbose = False
+
 def argumentit():
     global tallenna,startend,osuusraja,verbose
-    tallenna = False
-    startend = 'start'
-    osuusraja = 30
-    verbose = False
-    for i,a in enumerate(sys.argv):
+    i=1
+    while i<len(sys.argv):
+        a = sys.argv[i]
         if a == '-s':
             tallenna = True
         elif a == 'end':
             startend = 'end'
-        elif a == '-o' or a == '--osuusraja':
-            osuusraja = float(argv[i+1])
         elif a == '-v':
             verbose = True
+        elif a == '-o' or a == '--osuusraja':
+            i+=1
+            osuusraja = float(sys.argv[i])
+        i+=1
     return
 
 def viimeistele():
@@ -52,11 +55,10 @@ def nappainfunk(tapaht):
         vaihda_ikirluokka(1,dflista)
     elif tapaht.key == 'left':
         vaihda_ikirluokka(-1,dflista)
+    return
 
-if __name__ == '__main__':
-    rcParams.update({'font.size':13,'figure.figsize':(10,8)})
-    argumentit()
-    
+def valmista_data():
+    global mmin,mmax,dflista,ikirluokat
     turha,maa = ml.lue_maalajit(ml.tunnisteet.keys()) #xr.DataSet (lat,lon)
     maa = ml.maalajien_yhdistamiset(maa,pudota=True)
     maadf = maa.to_dataframe() #index = lat,lon
@@ -76,14 +78,14 @@ if __name__ == '__main__':
     maadf = maadf.iloc[:,jarj]
 
     ikirouta = prf.Prf('1x1','xarray').rajaa( (doy.lat.min(), doy.lat.max()+1) ).data.mean(dim='time')
-    ikirstr = prf.luokittelu_str_xr(ikirouta)
+    ikirstr = prf.luokittelu1_str_xr(ikirouta)
 
     ml.nimen_jako(maadf)
-    ikirluokat = prf.luokat[1:] #distinguishing_isolated puuttuu datasta
+    ikirluokat = prf.luokat1
     dflista = np.empty(len(ikirluokat),object)
     for i,ikirluok in enumerate(ikirluokat):
         maski = ikirstr.data.flatten()==ikirluok
-        dflista[i] = maadf.loc[maski,:].reset_index().drop(['lon','lat','wetland'],axis=1)
+        dflista[i] = maadf.loc[maski,:].reset_index().drop(['wetland'],axis=1)
     mmin = np.inf
     mmax = -np.inf
     for df in dflista:
@@ -97,6 +99,15 @@ if __name__ == '__main__':
         for df,luok in zip(dflista,ikirluokat):
             print('\n'+vari2+luok+vari0)
             print(np.isfinite(df).sum())
+
+if __name__ == '__main__':
+    rcParams.update({'font.size':13,'figure.figsize':(10,8)})
+    argumentit()
+
+    valmista_data()
+    for l in dflista:
+        l.drop(['lat','lon'],axis=1,inplace=True)
+    
     fig = figure()
     with warnings.catch_warnings():
          warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
