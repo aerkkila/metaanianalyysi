@@ -92,9 +92,9 @@ if __name__ == '__main__':
             tulosta()
 
     fig = figure()
-    palkit = bar( xarrlis[ikir_ind], yarrlis[ikir_ind]/1000/tarkk, width=0.8*tarkk )
+    palkit = bar( xarrlis[ikir_ind], yarrlis[ikir_ind]/1000, width=0.8*tarkk )
     xlabel('winter %s day' %startend)
-    ylabel('extent (1000 km$^2$ / %s day)' %startend)
+    ylabel('extent (1000 km$^2$)')
     title(prf.luokat[ikir_ind])
     tight_layout()
     if not tallenna:

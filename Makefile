@@ -25,7 +25,8 @@ kuvia/prf_köppen_laatikko_*.png: prf_köppen_laatikko.py
 	./prf_köppen_laatikko.py -s end
 
 kuvia/prf_maa_histog*.png: prf_maa_histog.py
-	./prf_maa_histog.py
+	./prf_maa_histog.py -s start
+	./prf_maa_histog.py -s end
 
 kuvia/prf_maa_laatikko_*.png: prf_maa_laatikko.py
 	./prf_maa_laatikko.py -s start
