@@ -11,8 +11,9 @@ def argumentit():
     pars.add_argument( 'startend', nargs='*', default=['start','end'] )
     pars.add_argument( '-s', '--tallenna', nargs='?', type=int, const=1, default=0 )
     pars.add_argument( '-t', '--tarkkuus', type=int, default=2 )
-    pars.add_argument( '-l', '--luokat', default='DE' ) 
+    pars.add_argument( '-l', '--luokat', default='DE' )
     pars.add_argument( '-k', '--keski_pois', nargs='?', type=int, const=0, default=1 ) #toimii käänteisesti
+    pars.add_argument( '-a', '--alaluokat', default=['D.c','D.d','ET'] ) #turhentaa argumentin luokat ja keski_pois
     return pars.parse_args()
 
 def luokan_tarkkuudeksi( sluokka:np.ndarray, n:int ) -> np.ndarray:
@@ -28,6 +29,12 @@ def pudota_keskiluokka( sluokka:np.ndarray ) -> np.ndarray:
             sluokka[i] = a[0] + '.' + a[2]
     return sluokka
 
+def valitse_alaluokat(sluokka, luokat):
+    for i in range(len(sluokka)):
+        if len(str(sluokka[i])) and not str(sluokka[i]) in luokat:
+            sluokka[i] = ''
+    return sluokka
+
 def valitse_luokat( sluokka:np.ndarray, luokat:str ) -> np.ndarray:
     for i in range(len(sluokka)):
         if len(str(sluokka[i])) and not str(sluokka[i])[0] in luokat:
@@ -36,12 +43,16 @@ def valitse_luokat( sluokka:np.ndarray, luokat:str ) -> np.ndarray:
 
 def lue_luokitus( ncnimi='köppen1x1.nc' ) -> np.ndarray:
     luokitus = xr.open_dataset(ncnimi).sluokka.data.flatten()
-    if args.keski_pois:
-        pudota_keskiluokka(luokitus)
+    if len(args.alaluokat):
+      pudota_keskiluokka(luokitus)
+      valitse_alaluokat(luokitus,args.alaluokat)
     else:
-        luokan_tarkkuudeksi( luokitus, args.tarkkuus )
-    if len(args.luokat):
-        valitse_luokat( luokitus, args.luokat )
+        if args.keski_pois:
+            pudota_keskiluokka(luokitus)
+        else:
+            luokan_tarkkuudeksi( luokitus, args.tarkkuus )
+        if len(args.luokat):
+            valitse_luokat( luokitus, args.luokat )
     return luokitus
 
 def _dataframe_luokka_doy(paivat, args, taytto, _doy=None) -> pd.DataFrame:

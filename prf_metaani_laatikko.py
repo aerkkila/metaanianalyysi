@@ -3,7 +3,7 @@ import xarray as xr
 import pandas as pd
 from numpy import sin
 import numpy as np
-from config import edgartno_lpx_muutt, edgartno_lpx_tied, tyotiedostot
+from config import edgartno_lpx_m, edgartno_lpx_t, tyotiedostot
 from matplotlib.pyplot import *
 import prf as prf
 import talven_ajankohta as taj
@@ -86,7 +86,7 @@ if __name__ == '__main__':
     ikiroutaolio = prf.Prf('1x1').rajaa([datamaski.lat.min(),datamaski.lat.max()])
     ikirouta = ikiroutaolio.data.mean(dim='time')
 
-    vuodata = xr.open_dataset(edgartno_lpx_tied)[edgartno_lpx_muutt].mean(dim='record')
+    vuodata = xr.open_dataset(edgartno_lpx_t)[edgartno_lpx_m].mean(dim='record')
     vuoolio = laske_vuot( vuodata.loc[datamaski.lat.min():datamaski.lat.max(),:].\
                           where(datamaski.spring_start==datamaski.spring_start,np.nan) )
     vuodata.close()

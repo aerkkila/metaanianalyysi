@@ -64,24 +64,7 @@ class Prf():
         return self
 
 luokat = ['distinguishing isolated', 'sporadic', 'discontinuous', 'continuous']
-
-def luokittelu_str_np(data:np.ndarray) -> np.ndarray:
-    uusi = np.empty_like(data,dtype=object)
-    uusi[        (0 == data )    ] = None
-    uusi[ (0 < data) & (data<10) ] = luokat[0]
-    uusi[ (10<=data) & (data<50) ] = luokat[1]
-    uusi[ (50<=data) & (data<90) ] = luokat[2]
-    uusi[ (90<=data)             ] = luokat[3]
-    return uusi
-
-def luokittelu_num_np(data:np.ndarray) -> np.ndarray:
-    uusi = np.empty_like(data,dtype=float)
-    uusi[       (0 == data)      ] = np.nan
-    uusi[ (0 < data) & (data<10) ] = 0
-    uusi[ (10<=data) & (data<50) ] = 1
-    uusi[ (50<=data) & (data<90) ] = 2
-    uusi[ (90<=data)             ] = 3
-    return uusi
+luokat1 = ['other', 'sporadic', 'discontinuous', 'continuous']
 
 def luokittelu_str_xr(data:xr.DataArray) -> xr.DataArray:
     dt = data.data.flatten()
@@ -91,4 +74,13 @@ def luokittelu_str_xr(data:xr.DataArray) -> xr.DataArray:
     uusi[ (10<=dt) & (dt<50) ] = luokat[1]
     uusi[ (50<=dt) & (dt<90) ] = luokat[2]
     uusi[ (90<=dt)           ] = luokat[3]
+    return xr.DataArray( data=uusi.reshape(data.data.shape), coords=data.coords, dims=data.dims )
+
+def luokittelu1_str_xr(data:xr.DataArray) -> xr.DataArray:
+    dt = data.data.flatten()
+    uusi = np.empty(dt.shape,object)
+    uusi[  (dt<10)           ] = luokat1[0]
+    uusi[ (10<=dt) & (dt<50) ] = luokat1[1]
+    uusi[ (50<=dt) & (dt<90) ] = luokat1[2]
+    uusi[ (90<=dt)           ] = luokat1[3]
     return xr.DataArray( data=uusi.reshape(data.data.shape), coords=data.coords, dims=data.dims )

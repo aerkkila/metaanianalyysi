@@ -44,7 +44,7 @@ if __name__ == '__main__':
     
     koppdoy,doy = klaat.dataframe_luokka_avgdoy(startend,palauta_doy=True) #pd.DataFrame,xr.DataArray
 
-    ikirouta = prf.Prf('1x1','xarray').rajaa( (doy.lat.min(), doy.lat.max()+1) ) #pitäisi olla 25km, koska tämä vääristää tuloksia
+    ikirouta = prf.Prf('1x1','xarray').rajaa( (doy.lat.min(), doy.lat.max()+1) )
     ikirstr = prf.luokittelu_str_xr(ikirouta.data.mean(dim='time'))
 
     ikirluokat = prf.luokat[1:] #distinguishing_isolated puuttuu datasta

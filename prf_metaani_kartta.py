@@ -7,7 +7,7 @@ from matplotlib.pyplot import *
 import matplotlib
 import matplotlib.colors as mcolors
 from matplotlib.colors import ListedColormap as lcmap
-from config import edgartno_lpx_muutt, edgartno_lpx_tied, tyotiedostot
+from config import edgartno_lpx_m, edgartno_lpx_t, tyotiedostot
 import sys
 import prf as prf
 import talven_ajankohta as taj
@@ -59,17 +59,17 @@ def piirra():
                        dims=['lat','lon'])
     muu.plot.pcolormesh( transform=platecarree, ax=gca(), add_colorbar=False, cmap=harmaa )
     #Varsinainen data
-    ch4data.where(ikirluokat==prf.luokat[ikir_ind],np.nan).plot.\
+    ch4data.where(ikirluokat==prf.luokat1[ikir_ind],np.nan).plot.\
         pcolormesh( transform=platecarree, cmap=vkartta, norm=mcolors.DivergingNorm(0,max(pienin*6,-suurin),suurin) )
     #Tämä asettaa muut ikiroutaluokka-alueet harmaaksi.
     harmaa = lcmap('#c0c0c0')
-    ch4data.where(~(ikirluokat==prf.luokat[ikir_ind]),np.nan).plot.\
+    ch4data.where(~(ikirluokat==prf.luokat1[ikir_ind]),np.nan).plot.\
         pcolormesh( transform=platecarree, ax=gca(), add_colorbar=False, cmap=harmaa )
-    title(prf.luokat[ikir_ind])
+    title(prf.luokat1[ikir_ind])
 
 def vaihda_luokka(hyppy):
     global ikir_ind
-    ikir_ind = ( ikir_ind + len(prf.luokat) + hyppy ) % len(prf.luokat)
+    ikir_ind = ( ikir_ind + len(prf.luokat1) + hyppy ) % len(prf.luokat1)
     piirra()
     draw()
 
@@ -88,10 +88,9 @@ if __name__ == '__main__':
     
     ikiroutaolio = prf.Prf('1x1').rajaa([datamaski.lat.min(),datamaski.lat.max()+0.01])
     ikirouta = ikiroutaolio.data.mean(dim='time')
-    ikirluokat = prf.luokittelu_str_xr(ikirouta)
-    prf.luokat = prf.luokat[1:] # distinguishing isolated pois
+    ikirluokat = prf.luokittelu1_str_xr(ikirouta)
 
-    ch4data = xr.open_dataset(edgartno_lpx_tied)[edgartno_lpx_muutt].\
+    ch4data = xr.open_dataset(edgartno_lpx_t)[edgartno_lpx_m].\
         mean(dim='record').\
         loc[datamaski.lat.min():datamaski.lat.max(),:].\
         where(datamaski.spring_start==datamaski.spring_start,np.nan)
@@ -110,7 +109,9 @@ if __name__ == '__main__':
         ch4data.close()
         exit()
     while True:
+        if verbose:
+            print(prf.luokat1[ikir_ind])
         savefig("kuvia/%s%i.png" %(sys.argv[0][:-3],ikir_ind))
-        if ikir_ind==len(prf.luokat)-1:
+        if ikir_ind==len(prf.luokat1)-1:
             exit()
         vaihda_luokka(1)
