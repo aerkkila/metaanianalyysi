@@ -30,7 +30,7 @@ def piirra_tarkasti(luokitus,luokat,cmap,ax):
     lon = luokitus.lon.data
     for i,luokka in enumerate(luokat):
         maski_2D = luokitus.sluokka.data==luokka
-        plot(-1,-1,'.',color=cmap(i),label=luokka,transform=platecarree) #Ei piirrä mitään, vaan on legend-funktiota varten.
+        plot(-1,-1,'.',markersize=24,color=cmap(i),label=luokka,transform=platecarree) #Ei piirrä mitään, vaan on legend-funktiota varten.
         #Piirtämistä nopeutetaan yhdistämällä vierekkäiset saman luokan pisteet yhdeksi suorakulmioksi.
         ensimmainen=0
         for lat,maski in zip( luokitus.lat.data, maski_2D ):
@@ -69,7 +69,7 @@ if __name__ == '__main__':
     luokitus.sluokka.data = npdata.reshape(luokitus.sluokka.shape)
 
     fig = figure()
-    ax = axes( [0,0.05,0.95,0.9], projection=projektio )
+    ax = axes( [0,0.03,0.95,0.94], projection=projektio )
     ax.coastlines()
     ax.set_extent(kattavuus, platecarree)
     luokat = np.unique(luokitus.sluokka.data)
@@ -80,10 +80,6 @@ if __name__ == '__main__':
     else:
         piirra_tarkasti(luokitus,luokat,cmap,ax)
     leg=legend( loc='center left', bbox_to_anchor=(1,0.5) )
-    for l in leg.get_lines():
-        l.set_markersize(15)
-        l.set_marker('.')
-        
     if args.tallenna:
         savefig( 'kuvia/%s.png' %(sys.argv[0][:-3]) )
         clf()
