@@ -10,7 +10,6 @@ from matplotlib.colors import ListedColormap as lcmap
 from config import edgartno_lpx_m, edgartno_lpx_t, tyotiedostot
 import sys
 import prf as prf
-import talven_ajankohta as taj
 
 def argumentit(argv):
     global tallenna,verbose,ikir_ind
@@ -51,23 +50,31 @@ def piirra():
     ax = axes([0.01,0.01,1,0.95],projection=projektio)
     ax.set_extent(kattavuus,platecarree)
     ax.coastlines()
+    ulkovari = '#d0e0c0'
+    harmaavari = '#c0c0c0'
     #Tämä asettaa maskin ulkopuolisen alueen eri väriseksi
-    harmaa = lcmap('#d0e0c0')
+    harmaa = lcmap(ulkovari)
     muu = xr.DataArray(data=np.zeros([kattavuus[3]-kattavuus[2],kattavuus[1]-kattavuus[0]]),
                        coords={ 'lat':np.arange(kattavuus[2]+0.5,kattavuus[3],1),
                                 'lon':np.arange(kattavuus[0]+0.5,kattavuus[1],1), },
                        dims=['lat','lon'])
-    muu.plot.pcolormesh( transform=platecarree, ax=gca(), add_colorbar=False, cmap=harmaa )
+    muu.plot.pcolormesh( transform=platecarree, ax=gca(), cmap=harmaa, add_colorbar=False )
+#                         cbar_kwargs={'label':'no permafrost data','ticks':[]} )
     #Varsinainen data
     cbar_nimio = (r'%s ($\frac{\mathrm{mol}}{\mathrm{m}^2\mathrm{s}}$)' %edgartno_lpx_m).replace('_','\\_')
     ch4data.where(ikirluokat==prf.luokat1[ikir_ind],np.nan).plot.\
         pcolormesh( transform=platecarree, cmap=vkartta, norm=mcolors.DivergingNorm(0,max(pienin*6,-suurin),suurin),
                     cbar_kwargs={'label':cbar_nimio} )
     #Tämä asettaa muut ikiroutaluokka-alueet harmaaksi.
-    harmaa = lcmap('#c0c0c0')
+    harmaa = lcmap(harmaavari)
     ch4data.where(~(ikirluokat==prf.luokat1[ikir_ind]),np.nan).plot.\
         pcolormesh( transform=platecarree, ax=gca(), add_colorbar=False, cmap=harmaa )
     title(prf.luokat1[ikir_ind])
+    #väripalkki ulkoalueista
+    harmaa = lcmap([ulkovari,harmaavari])
+    norm = matplotlib.colors.Normalize(vmin=-2, vmax=2)
+    cbar = fig.colorbar(matplotlib.cm.ScalarMappable(cmap=harmaa,norm=norm),ticks=[-1,1])
+    cbar.set_ticklabels(['undefined', 'other\ncategories'])
 
 def vaihda_luokka(hyppy):
     global ikir_ind

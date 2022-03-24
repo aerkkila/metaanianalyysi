@@ -6,12 +6,11 @@ import numpy as np
 from config import edgartno_lpx_m, edgartno_lpx_t, tyotiedostot
 from matplotlib.pyplot import *
 import prf as prf
-import talven_ajankohta as taj
 import sys, warnings
 
 def argumentit(argv):
     global tarkk,verbose,tallenna
-    tarkk = 5; verbose = False; tallenna = False
+    tarkk = 10; verbose = False; tallenna = False
     i=1
     while i<len(argv):
         a = argv[i]
@@ -98,6 +97,8 @@ if __name__ == '__main__':
     with warnings.catch_warnings():
          warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
          vuoolio.vuot.boxplot(whis=(5,95))
+    xlabel('% permafrost')
+    ylabel('CH$_4$ flux (mol/m$^2$/s)')
     if tallenna:
         savefig('kuvia/%s.png' %sys.argv[0][:-3])
     else:

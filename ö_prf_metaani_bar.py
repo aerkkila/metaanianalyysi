@@ -28,7 +28,7 @@ def argumentit(argv):
 
 def kuvaajan_viimeistely():
     xlabel("% permafrost")
-    ylabel("flux (?/m$^2$)")
+    ylabel("flux (mol/m$^2$/s)")
     title('CH$_4$ flux')
 
 _viimelat1x1 = np.nan
