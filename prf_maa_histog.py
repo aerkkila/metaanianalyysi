@@ -2,10 +2,11 @@
 import numpy as np
 import prf_maa_laatikko as pml
 import prf
+import pandas as pd
 from matplotlib.pyplot import *
 from numpy import sin
 
-maaluokat = ['tundra_dry','tundra_wetland+\npermafrost_bog','boreal_forest']
+maaluokat = ['boreal_forest','tundra_dry','tundra_wetland+\npermafrost_bog']
 ikir_ind=0
 
 # laskee paljonko pinta-alaa on kullakin xjaon osuudella (km²).
@@ -48,12 +49,14 @@ def tee_luokka(xtaul,ytaul):
 def piirra():
     leveys = 0.8*tarkk/len(maaluokat)
     for i,mluok in enumerate(maaluokat):
-        isiirto = i*leveys
+        isiirto = i*leveys+0.5*leveys
         palkit = bar( xtaul[ikir_ind]+isiirto, ytaul[ikir_ind,i]/1000, width=leveys, label=mluok )
 
 def viimeistele():
     ylabel('Extent (1000 km$^2$)')
     xlabel('winter %s day' %pml.startend)
+    ajat = pd.to_datetime(xtaul[ikir_ind],unit='D')
+    xticks(xtaul[ikir_ind],labels=ajat.strftime("%m/%d"),rotation=30)
     title(prf.luokat1[ikir_ind])
     legend()
 
