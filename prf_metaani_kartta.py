@@ -59,8 +59,10 @@ def piirra():
                        dims=['lat','lon'])
     muu.plot.pcolormesh( transform=platecarree, ax=gca(), add_colorbar=False, cmap=harmaa )
     #Varsinainen data
+    cbar_nimio = (r'%s ($\frac{\mathrm{mol}}{\mathrm{m}^2\mathrm{s}}$)' %edgartno_lpx_m).replace('_','\\_')
     ch4data.where(ikirluokat==prf.luokat1[ikir_ind],np.nan).plot.\
-        pcolormesh( transform=platecarree, cmap=vkartta, norm=mcolors.DivergingNorm(0,max(pienin*6,-suurin),suurin) )
+        pcolormesh( transform=platecarree, cmap=vkartta, norm=mcolors.DivergingNorm(0,max(pienin*6,-suurin),suurin),
+                    cbar_kwargs={'label':cbar_nimio} )
     #Tämä asettaa muut ikiroutaluokka-alueet harmaaksi.
     harmaa = lcmap('#c0c0c0')
     ch4data.where(~(ikirluokat==prf.luokat1[ikir_ind]),np.nan).plot.\
@@ -82,7 +84,7 @@ def nappainfunk(tapaht):
 if __name__ == '__main__':
     varoitusvari = '\033[1;33m'
     vari0 = '\033[0m'
-    rcParams.update({'font.size':13,'figure.figsize':(12,10)})
+    rcParams.update({'font.size':18,'figure.figsize':(12,10),'text.usetex':True})
     argumentit(sys.argv)
     datamaski = xr.open_dataset(tyotiedostot + 'FT_implementointi/FT_percents_pixel_ease_flag/DOY/winter_end_doy_2014.nc')
     
