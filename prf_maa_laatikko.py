@@ -63,9 +63,7 @@ def valmista_data():
     maa = ml.maalajien_yhdistamiset(maa,pudota=True)
     maadf = maa.to_dataframe() #index = lat,lon
     
-    with warnings.catch_warnings():
-        warnings.filterwarnings( action='ignore', message='Mean of empty slice' )
-        doy = taj.lue_doyt(startend).mean(dim='time')
+    doy = taj.lue_avgdoy(startend)
     maadf.where( maadf >= osuusraja, np.nan, inplace=True )
     maadf.where( maadf != maadf,     1,      inplace=True )
     if verbose:

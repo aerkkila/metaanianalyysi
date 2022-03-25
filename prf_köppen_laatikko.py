@@ -8,12 +8,13 @@ import prf as prf
 import talven_ajankohta as taj
 import köppen_laatikko as klaat
 
-def argumentit():
+tallenna = False
+startend = 'start'
+
+def argumentit(argv):
     global ikir_ind,tallenna,startend
     ikir_ind = 0
-    tallenna = False
-    startend = 'start'
-    for a in sys.argv:
+    for a in argv:
         if a == '-s':
             tallenna = True
         if a == 'start' or a == 'end':
@@ -40,20 +41,21 @@ def nappainfunk(tapaht):
     elif tapaht.key == 'left' or tapaht.key == 'g' or tapaht.key == 'a':
         vaihda_ikirluokka(-1)
 
-if __name__ == '__main__':
-    rcParams.update({'font.size':13,'figure.figsize':(10,8)})
-    argumentit()
-    
+def valmista_data():
     koppdoy,doy = klaat.dataframe_luokka_avgdoy(startend,palauta_doy=True) #pd.DataFrame,xr.DataArray
-
     ikirouta = prf.Prf('1x1','xarray').rajaa( (doy.lat.min(), doy.lat.max()+1) )
-    ikirstr = prf.luokittelu_str_xr(ikirouta.data.mean(dim='time'))
-
-    ikirluokat = prf.luokat[1:] #distinguishing_isolated puuttuu datasta
+    ikirstr = prf.luokittelu1_str_xr(ikirouta.data.mean(dim='time'))
+    ikirluokat = prf.luokat1
     ikirdatalis = np.empty(len(ikirluokat),object)
     for i,ikirluok in enumerate(ikirluokat):
         a = ikirstr==ikirluok
         ikirdatalis[i] = koppdoy[a.data.flatten()]
+    return ikirdatalis,ikirluokat
+
+if __name__ == '__main__':
+    rcParams.update({'font.size':13,'figure.figsize':(10,8)})
+    argumentit(sys.argv[1:])
+    ikirdatalis,ikirluokat = valmista_data()
     mmin = np.inf
     mmax = -np.inf
     for d in ikirdatalis:

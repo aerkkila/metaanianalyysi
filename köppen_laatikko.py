@@ -41,6 +41,17 @@ def valitse_luokat( sluokka:np.ndarray, luokat:str ) -> np.ndarray:
             sluokka[i] = ''
     return sluokka
 
+def lue_luokitus_xr(ncnimi='köppen1x1.nc') -> xr.DataArray:
+    luokitus = xr.open_dataset(ncnimi).sluokka
+    if not len(args.alaluokat):
+        print("Varoitus: %s sai argumentteja, jotka on poistettu käytöstä" %(__name__))
+        return luokitus
+    npdata = luokitus.data.flatten()
+    pudota_keskiluokka(npdata)
+    valitse_alaluokat(npdata,args.alaluokat)
+    luokitus.data = npdata.reshape(luokitus.shape)
+    return luokitus
+
 def lue_luokitus( ncnimi='köppen1x1.nc' ) -> np.ndarray:
     luokitus = xr.open_dataset(ncnimi).sluokka.data.flatten()
     if len(args.alaluokat):

@@ -3,48 +3,11 @@ import numpy as np
 import prf_maa_laatikko as pml
 import prf
 import pandas as pd
+import prf_apu_histog as pah
 from matplotlib.pyplot import *
-from numpy import sin
 
 maaluokat = ['boreal_forest','tundra_dry','tundra_wetland+\npermafrost_bog']
 ikir_ind=0
-
-# laskee paljonko pinta-alaa on kullakin xjaon osuudella (km²).
-# xjako on oltava tasavälinen
-# Jos dt on dataframe, tämä on hirvittävän hidas. Olkoon dt numpy-array.
-def pintaalat1x1(dt,lat,lon,xjako):
-    aste = 0.0174532925199
-    R2 = 40592558970441
-    PINTAALA = lambda _lat: aste*R2*( sin((_lat+1)*aste) - sin(_lat*aste) )*1.0e-6
-    
-    lukualat = np.zeros(len(xjako))
-    tarkk = xjako[1]-xjako[0]
-    minluku = xjako[0]
-    for j,la in enumerate(lat):
-        ala = PINTAALA(la)
-        x_rantu = dt[ j*lon.size : (j+1)*lon.size ]
-        x_rantu = x_rantu[x_rantu >= minluku]
-        for luku in x_rantu.astype(int):
-            lukualat[(luku-minluku)//tarkk] += ala
-    return lukualat
-
-def luo_xjako(dt,tarkk):
-    minluku = int(999999999)
-    maxluku = int(-999999999)
-    for luok in maaluokat:
-        d = dt[luok]
-        minluku = min(minluku,int(np.nanmin(d)))
-        maxluku = max(maxluku,int(np.nanmax(d)))
-    if pml.verbose:
-        print( 'minluku: %d\n'
-               'maxluku: %d' %(minluku,maxluku) )
-    return np.arange(minluku,maxluku+1,tarkk)
-
-def tee_luokka(xtaul,ytaul):
-    xtaul[ikir_ind] = luo_xjako(pml.dflista[ikir_ind], tarkk)
-    for i,mluok in enumerate(maaluokat):
-        tmp = pml.dflista[ikir_ind]
-        ytaul[ikir_ind,i] = pintaalat1x1( np.array(tmp[mluok]), np.array(tmp.lat), np.array(tmp.lon), xtaul[ikir_ind] )
 
 def piirra():
     leveys = 0.8*tarkk/len(maaluokat)
@@ -64,7 +27,7 @@ def vaihda_luokka(hyppy):
     global ikir_ind,xtaul,ytaul
     ikir_ind = ( ikir_ind + len(prf.luokat1) + hyppy ) % len(prf.luokat1)
     if xtaul[ikir_ind] is None:
-        tee_luokka(xtaul,ytaul)
+        pah.tee_luokka(xtaul,ytaul, dflista=pml.dflista, dfind=ikir_ind, luokat2=maaluokat, tarkk=tarkk)
     clf()
     piirra()
     viimeistele()
