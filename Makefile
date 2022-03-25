@@ -1,7 +1,13 @@
-kuvat: kuvia/LPX2019_flux1x1_kartta*.png kuvia/köppen_kartta.png kuvia/köppen_laatikko_*.png kuvia/prf_ft_histog_*.png kuvia/prf_ft_laatikko_*.png kuvia/prf_kartta_mean.png kuvia/prf_köppen_laatikko_*.png kuvia/prf_maa_histog*.png kuvia/prf_maa_laatikko_*.png kuvia/prf_metaani_kartta*.png kuvia/prf_metaani_laatikko.png
+all: köppen1x1maski.nc kuvia/LPX2019_flux1x1_kartta*.png kuvia/köppen_kartta.png kuvia/köppen_laatikko_*.png kuvia/prf_ft_histog_*.png kuvia/prf_ft_laatikko_*.png kuvia/prf_kartta_mean.png kuvia/prf_köppen_laatikko_*.png kuvia/prf_maa_histog*.png kuvia/prf_maa_laatikko_*.png kuvia/prf_metaani_kartta*.png kuvia/prf_metaani_laatikko.png
+
+köppen1x1maski.nc: muunna_shapefile
+	./muunna_shapefile -o $@
 
 muunna_shapefile: muunna_shapefile.c köppentunnisteet.c
-	gcc -o $@ muunna_shapefile.c -lshp -lnetcdf -lm -pthread -Ofast
+	gcc -Wall -o $@ muunna_shapefile.c -lshp -lnetcdf -lm -pthread -Ofast
+
+muunna_shapefile0: muunna_shapefile.c köppentunnisteet.c
+	gcc -Wall -o $@ muunna_shapefile.c -lshp -lnetcdf -lm -pthread -g
 
 kuvia/LPX2019_flux1x1_kartta*.png: LPX2019_flux1x1_kartta.py
 	./LPX2019_flux1x1_kartta.py -s

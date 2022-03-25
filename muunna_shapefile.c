@@ -18,11 +18,13 @@
 #include <math.h>
 
 #define Printf(...) do { if(verbose) printf(__VA_ARGS__); } while(0)
-#define NCVIRHE(arg) printf("\033[31mNetcdf-virhe:\033[0m %s\n", nc_strerror(arg))
+#define NCVIRHE(arg) printf("\033[1;31mNetcdf-virhe:\033[0m %s\n", nc_strerror(arg))
 #define NCFUNK(fun, ...)			\
   do {						\
-    if((ncpalaute = fun(__VA_ARGS__)))		\
+    if((ncpalaute = fun(__VA_ARGS__))) {	\
       NCVIRHE(ncpalaute);			\
+      exit(1);					\
+    }						\
   } while(0)
 
 /*näistä yhtä muutettaessa pitää tarkistaa muutkin kentät*/
@@ -45,18 +47,29 @@ double vektpituus(piste p);
 double pistetulo(piste a, piste b);
 
 static const char* tiednimi = "köppen_shp/1976-2000";
-static const char* nc_luett_nimi = "../../FT_implementointi/FT_percents_pixel_ease_flag/DOY/winter_start_doy_2010.nc";
-static const char* nc_kirj_nimi0 = "köppen1x1.nc";
+static const char* nc_luett_nimi = "/media/levy/Tyotiedostot/FT_implementointi/FT_percents_pixel_ease_flag/DOY/winter_start_doy_2014.nc";
+static const char* nc_kirj_nimi0 = "köppen1x1maski.nc";
 static const char* dbfnimi = "GRIDCODE";
 
 static int nEnt, shptype, verbose, njobs=1, ncpalaute, arg_luettu, ncid;
+static int lukeva_saie = -1, i_kopp = 0;
+static char* lmaskit;
 static double hila, hila_lon, hila_lat;
 char* nc_kirj_nimi;
 SHPObject** shpoliot;
-size_t pit_lat, pit_lon;
+size_t pit_lat, pit_lon, pit_latlon;
+int koppluokkia;
 double *lat, *lon;
 nc_kirj_tyyppi* nc_kirj_data;
 dbftyyppi* dbfdata;
+
+struct {
+  int id;
+  char* str;
+} kopptunnisteet[] =
+  {
+#include "köppentunnisteet.c"
+  };
 
 int main(int argc, char** argv) {
   clock_t kello = clock();
@@ -141,9 +154,11 @@ int main(int argc, char** argv) {
     for(size_t i=0; i<pit_lat; i++)
       lat[i] = shpmin[1] + i*hila_lat;
   }
-  Printf("pit_lat = %zu\t pit_lon = %zu\n", pit_lat, pit_lon);
-  nc_kirj_data = malloc(pit_lat*pit_lon*sizeof(nc_kirj_tyyppi));
-  memset( nc_kirj_data, 0, pit_lat*pit_lon*sizeof(nc_kirj_tyyppi) );
+  pit_latlon = pit_lat*pit_lon;
+  Printf("pit_lat = %zu\t pit_lon = %zu\t pit_latlon = %zu\n", pit_lat, pit_lon, pit_latlon);
+  nc_kirj_data = calloc(pit_latlon, sizeof(nc_kirj_tyyppi));
+  koppluokkia = sizeof(kopptunnisteet)/sizeof(*kopptunnisteet);
+  lmaskit = malloc(pit_latlon*koppluokkia);
 
   /*Luodaan säikeet*/
   pthread_t saikeet[njobs];
@@ -164,6 +179,7 @@ int main(int argc, char** argv) {
   free(dbfdata);
   free(nc_kirj_data);
   free(nc_kirj_nimi);
+  free(lmaskit);
   free(lat);
   free(lon);
   double aika = (double)(clock()-kello) / CLOCKS_PER_SEC;
@@ -179,21 +195,16 @@ void kirjoita_netcdf_str(int ncid, int latid, int lonid) {
   int varid;
   int nc_pit = pit_lat*pit_lon;
   char **nimet = malloc(nc_pit*sizeof(char*));
-  struct {
-    int id;
-    char* str;
-  } tunnisteet[] = {
-#include "köppentunnisteet.c"
-  };
   int j_edel = 0;
+  int luokkia = koppluokkia;
   for(int nc_id=0; nc_id<nc_pit; nc_id++) {
-    if( nc_kirj_data[nc_id] == tunnisteet[j_edel].id ) { //luultavimmin seuraava on sama kuin edellinen
-      nimet[nc_id] = strdup( tunnisteet[j_edel].str );
+    if( nc_kirj_data[nc_id] == kopptunnisteet[j_edel].id ) { //luultavimmin seuraava on sama kuin edellinen
+      nimet[nc_id] = strdup( kopptunnisteet[j_edel].str );
       continue;
     }
-    for(int j=0; j<sizeof(tunnisteet)/sizeof(*tunnisteet); j++)
-      if( nc_kirj_data[nc_id] == tunnisteet[j].id ) {
-	nimet[nc_id] = strdup( tunnisteet[j].str );
+    for(int j=0; j<luokkia; j++)
+      if( nc_kirj_data[nc_id] == kopptunnisteet[j].id ) {
+	nimet[nc_id] = strdup( kopptunnisteet[j].str );
 	j_edel = j;
 	goto FOR_NC_PIT;
       }
@@ -211,6 +222,55 @@ void kirjoita_netcdf_str(int ncid, int latid, int lonid) {
   free(nimet);
 }
 
+void luo_netcdf_maski(int monesko) {
+  size_t pit = pit_latlon; //int restrict
+  char* lmaski = lmaskit+pit*monesko;
+  nc_kirj_tyyppi tunniste = kopptunnisteet[monesko].id;
+  for(int i=0; i<pit; i++)
+    lmaski[i] = nc_kirj_data[i]==tunniste;
+}
+
+void* tee_maskit(void* arg) {
+  int saie = *(int*)arg;
+  arg_luettu = 1;
+  int monesko;
+ KOKO_FUNKTIO:
+  while(1) {
+    while(lukeva_saie >= 0)
+      usleep(1);
+    lukeva_saie = saie;
+    usleep(3);
+    if(lukeva_saie==saie) {
+      monesko = i_kopp++;
+      lukeva_saie = -1;
+      break;
+    }
+    else
+      Printf("Säie %i ei saanut lukuvuoroa\n", saie);
+  }
+  if(monesko >= koppluokkia)
+    return NULL;
+  luo_netcdf_maski(monesko);
+  goto KOKO_FUNKTIO;
+}
+
+void kirjoita_netcdf_maski(int ncid, int latid, int lonid) {
+  pthread_t saikeet[njobs];
+  for(int i=0; i<njobs; i++) {
+    pthread_create(saikeet+i, NULL, tee_maskit, &i);
+    while(!arg_luettu)
+      usleep(5);
+    arg_luettu = 0;
+  }
+  int latlonid[] = {latid,lonid}, varid;
+  for(int i=0; i<njobs; i++)
+    pthread_join(saikeet[i],NULL);
+  for(int i=0; i<koppluokkia; i++) {
+    NCFUNK( nc_def_var, ncid, kopptunnisteet[i].str, NC_BYTE, 2, latlonid, &varid );
+    NCFUNK( nc_put_var, ncid, varid, lmaskit+pit_latlon*i );
+  }
+}
+
 void kirjoita_netcdf() {
   int ncid, latid, lonid, varid;
   NCFUNK( nc_create, nc_kirj_nimi, NC_CLOBBER|NC_NETCDF4, &ncid );
@@ -223,7 +283,8 @@ void kirjoita_netcdf() {
   int latlonid[] = {latid,lonid};
   NCFUNK( nc_def_var, ncid, "luokka", NC_KIRJTYYPPI_ENUM, 2, latlonid, &varid );
   NCFUNK( nc_put_var, ncid, varid, nc_kirj_data );
-  kirjoita_netcdf_str( ncid, latid, lonid );
+  kirjoita_netcdf_maski(ncid, latid, lonid);
+  //kirjoita_netcdf_str( ncid, latid, lonid );
   NCFUNK( nc_close, ncid );
 }
 
