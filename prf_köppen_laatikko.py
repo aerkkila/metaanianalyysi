@@ -1,9 +1,9 @@
-#!/usr/bin/python3.9
+#!/usr/bin/python3
 import pandas as pd
 import xarray as xr
 import numpy as np
 from matplotlib.pyplot import *
-import sys
+import sys, warnings
 import prf as prf
 import talven_ajankohta as taj
 import köppen_laatikko as klaat
@@ -28,7 +28,9 @@ def vaihda_ikirluokka(hyppy:int):
     global ikir_ind # myös data, ax ja ikirluokat ovat pääfunktiosta
     ikir_ind = ( ikir_ind + len(ikirdatalis) + hyppy ) % len(ikirdatalis)
     ax.clear()
-    ikirdatalis[ikir_ind].boxplot( whis=(5,95), ax=gca() )
+    with warnings.catch_warnings():
+         warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
+         ikirdatalis[ikir_ind].boxplot( whis=(5,95), ax=ax )
     viimeistele()
     draw()
 
@@ -60,8 +62,10 @@ if __name__ == '__main__':
     mmin = np.floor(mmin/10)*10
     mmax = np.ceil(mmax/10)*10
     fig = figure()
-    ax = ikirdatalis[ikir_ind].boxplot( whis=(5,95) )
-    viimeistele()
+    ax = axes()
+    vaihda_ikirluokka(0)
+    #ax = ikirdatalis[ikir_ind].boxplot( whis=(5,95) )
+    #viimeistele()
     tight_layout()
     if not tallenna:
         fig.canvas.mpl_connect('key_press_event',nappainfunk)
