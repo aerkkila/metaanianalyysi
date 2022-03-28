@@ -4,9 +4,6 @@ import xarray as xr
 import numpy as np
 from matplotlib.pyplot import *
 import sys, warnings
-import prf as prf
-import talven_ajankohta as taj
-import maalajit as ml
 
 ikir_ind = 0
 vari1 = '\033[1;32m'
@@ -57,52 +54,23 @@ def nappainfunk(tapaht):
         vaihda_ikirluokka(-1,dflista)
     return
 
-def valmista_data():
-    global mmin,mmax,dflista,ikirluokat
-    turha,maa = ml.lue_maalajit(ml.tunnisteet.keys()) #xr.DataSet (lat,lon)
-    maa = ml.maalajien_yhdistamiset(maa,pudota=True)
-    maadf = maa.to_dataframe() #index = lat,lon
-    
-    doy = taj.lue_avgdoy(startend)
-    maadf.where( maadf >= osuusraja, np.nan, inplace=True )
-    maadf.where( maadf != maadf,     1,      inplace=True )
-    if verbose:
-        print('\n'+vari1+'Datapisteitä:'+vari0)
-        print(maadf.sum(axis='index').astype(int))
-    maadf = maadf.mul( doy.data.flatten(), axis='index' )
-    jarj = maadf.median().to_numpy().argsort() #järjestetään maalajit mediaanin mukaan
-    if startend == 'end':
-        jarj = jarj[::-1]
-    maadf = maadf.iloc[:,jarj]
-
-    ikirouta = prf.Prf('1x1','xarray').rajaa( (doy.lat.min(), doy.lat.max()+1) ).data.mean(dim='time')
-    ikirstr = prf.luokittelu1_str_xr(ikirouta)
-
-    ml.nimen_jako(maadf)
-    ikirluokat = prf.luokat1
-    dflista = np.empty(len(ikirluokat),object)
-    for i,ikirluok in enumerate(ikirluokat):
-        maski = ikirstr.data.flatten()==ikirluok
-        dflista[i] = maadf.loc[maski,:].reset_index().drop(['wetland'],axis=1)
+def min_ja_max():
+    global mmin,mmax
     mmin = np.inf
     mmax = -np.inf
     for df in dflista:
-        mmin = min((min(df.min()),mmin))
-        mmax = max((max(df.max()),mmax))
+        mmin = min((min(df.drop(['lat','lon'],axis=1).min()),mmin))
+        mmax = max((max(df.drop(['lat','lon'],axis=1).max()),mmax))
     mmin = np.floor(mmin/10)*10
     mmax = np.ceil(mmax/10)*10
-    if verbose:
-        print('min/max:',mmin,mmax)
-        print('\n'+vari1+'Datapisteitä ikiroutaluokissa:'+vari0,end='')
-        for df,luok in zip(dflista,ikirluokat):
-            print('\n'+vari2+luok+vari0)
-            print(np.isfinite(df).sum())
 
 if __name__ == '__main__':
     rcParams.update({'font.size':13,'figure.figsize':(10,8)})
     argumentit()
 
     valmista_data()
+    min_ja_max()
+    
     for l in dflista:
         l.drop(['lat','lon'],axis=1,inplace=True)
     
