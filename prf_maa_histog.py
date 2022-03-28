@@ -2,16 +2,25 @@
 import numpy as np
 import pandas as pd
 from matplotlib.pyplot import *
-import prf
+import prf, sys
 import prf_apu_histog as pah
 
-maaluokat = ['boreal_forest','tundra_dry','tundra_wetland+\npermafrost_bog']
+luokat2 = ['boreal_forest','tundra_dry','tundra_wetland+\npermafrost_bog']
 startend = ['start','end']
 ikir_ind=0
 
+def argumentit(argv):
+    global tallenna,verbose
+    tallenna = False; verbose = False
+    for a in argv:
+        if a == '-s':
+            tallenna = True
+        elif a == '-v':
+            verbose = True
+
 def piirra(xtaul,ytaul):
-    leveys = 0.8*tarkk/len(maaluokat)
-    for i,mluok in enumerate(maaluokat):
+    leveys = 0.8*tarkk/len(luokat2)
+    for i,mluok in enumerate(luokat2):
         isiirto = i*leveys+0.5*leveys
         palkit = bar( xtaul[ikir_ind]+isiirto, ytaul[ikir_ind,i]/1000, width=leveys, label=mluok )
 
@@ -29,7 +38,7 @@ def vaihda_luokka(hyppy,kumpi):
     ikir_ind = ( ikir_ind + len(prf.luokat1) + hyppy ) % len(prf.luokat1)
     if xtaul[kumpi,ikir_ind] is None:
         pah.tee_luokka(xtaul[kumpi,...], ytaul[kumpi,...], dflista=dflista[kumpi,...],
-                       dfind=ikir_ind, luokat2=maaluokat, tarkk=tarkk)
+                       dfind=ikir_ind, luokat2=luokat2, tarkk=tarkk)
     gca().clear()
     piirra(xtaul[kumpi,...],ytaul[kumpi,...])
     viimeistele(kumpi)
@@ -50,23 +59,25 @@ def nappainfunk(tapaht):
 
 def main():
     global xtaul,ytaul,tarkk,axs,dflista
+    argumentit(sys.argv[1:])
     tarkk = 15
-    lse = len(startend)
     rcParams.update({'font.size':13,'figure.figsize':(16,8)})
+    
+    lse = len(startend)
     dflista = np.empty([lse,len(prf.luokat1)],object)
     for j in range(lse):
         for i in range(dflista.shape[1]):
             dflista[j,i] = pd.read_csv('prf_maa_%s%i.csv' %(startend[j],i))
     xtaul = np.full([lse,len(prf.luokat1)], None, object)
-    ytaul = np.full([lse,len(prf.luokat1),len(maaluokat)], None, object)
+    ytaul = np.full([lse,len(prf.luokat1),len(luokat2)], None, object)
 
     fig,axs = subplots(1,len(startend))
     axs = np.array(axs).flatten()
     
     vaihda_luokat(0)
-    if False:
+    if tallenna:
         while True:
-            if False:
+            if verbose:
                 print(prf.luokat1[ikir_ind])
             savefig("kuvia/%s%s%i.png"
                     %(sys.argv[0][:-3], ('_'+startend[0] if len(startend)==1 else ''), ikir_ind))

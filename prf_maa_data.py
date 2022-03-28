@@ -49,7 +49,7 @@ def valmista_data(startend):
     ikirluokat = prf.luokat1
     for i,ikirluok in enumerate(ikirluokat):
         maski = ikirstr.data.flatten()==ikirluok
-        df = maadf.loc[maski,:].reset_index().drop(['wetland'],axis=1)
+        df = maadf.loc[maski,:]
         df.to_csv("prf_maa_%s%i.csv" %(startend,i))
 
     if verbose:
@@ -59,6 +59,6 @@ def valmista_data(startend):
             print(np.isfinite(df).sum())
 
 if __name__ == '__main__':
-    argumentit(sys.argv)
+    argumentit(sys.argv[1:])
     valmista_data('start')
     valmista_data('end')

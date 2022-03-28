@@ -20,4 +20,6 @@ def lue_oletusluokkamaskit_dataset(ncnimi='köppen1x1maski.nc'):
     return xr.Dataset(data_vars=dvars,coords=dset.coords)
 
 if __name__ == '__main__':
-    print(lue_oletusluokkamaskit_dataset())
+    ds = lue_oletusluokkamaskit_dataset()
+    df = ds.to_dataframe()
+    print(df)

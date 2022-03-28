@@ -24,7 +24,7 @@ tunnisteet = {
     # 'rockland'       : 'ROC',
     'tundra_dry'     : 'TUN',
     'boreal_forest'  : 'BOR',
-    'wetland'        : 'WET',
+    # 'wetland'        : 'WET',
     'permafrost_bog' : 'PEB',
     'tundra_wetland' : 'WTU',
     # 'marsh'          : 'MAR',

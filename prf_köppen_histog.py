@@ -1,100 +1,95 @@
 #!/usr/bin/python3
 import numpy as np
-import prf
 import pandas as pd
-import xarray as xr
-import talven_ajankohta as taj
-from config import tyotiedostot
 from matplotlib.pyplot import *
+from config import tyotiedostot
 import prf_apu_histog as pah
-import köppen
+import prf
 
+luokat2 = ['D.c','D.d','ET']
 ikir_ind=0
-tallenna = False
-startend = 'start'
+startend = ['start','end']
 
 def argumentit(argv):
-    global tallenna,startend
+    global tallenna,verbose
+    tallenna = False; verbose = False
     for a in argv:
         if a == '-s':
             tallenna = True
-        if a == 'start' or a == 'end':
-            startend = a
+        elif a == '-v':
+            verbose = True
 
-def viimeistele():
+def piirra(xtaul,ytaul):
+    leveys = 0.8*tarkk/len(luokat2)
+    for i,mluok in enumerate(luokat2):
+        isiirto = i*leveys+0.5*leveys
+        palkit = bar( xtaul[ikir_ind]+isiirto, ytaul[ikir_ind,i]/1000, width=leveys, label=mluok )
+
+def viimeistele(kumpi):
     ylabel('Extent (1000 km$^2$)')
-    xlabel('winter %s day' %pml.startend)
-    ajat = pd.to_datetime(xtaul[ikir_ind],unit='D')
-    xticks(xtaul[ikir_ind],labels=ajat.strftime("%m/%d"),rotation=30)
+    xlabel('winter %s day' %startend[kumpi])
+    ajat = pd.to_datetime(xtaul[kumpi,ikir_ind],unit='D')
+    xticks(xtaul[kumpi,ikir_ind],labels=ajat.strftime("%m/%d"),rotation=30)
     title(prf.luokat1[ikir_ind])
+    tight_layout()
     legend()
 
-def vaihda_luokka(hyppy):
+
+def vaihda_luokka(hyppy,kumpi):
     global ikir_ind,xtaul,ytaul
     ikir_ind = ( ikir_ind + len(prf.luokat1) + hyppy ) % len(prf.luokat1)
-    if xtaul[ikir_ind] is None:
-        pah.tee_luokka(xtaul,ytaul, dflista=ikirdflis, dfind=ikir_ind, tarkk=tarkk, luokat2=luokat2)
-    clf()
-    piirra()
-    viimeistele()
+    if xtaul[kumpi,ikir_ind] is None:
+        pah.tee_luokka(xtaul[kumpi,...], ytaul[kumpi,...], dflista=dflista[kumpi,...],
+                       dfind=ikir_ind, luokat2=luokat2, tarkk=tarkk)
+    gca().clear()
+    piirra(xtaul[kumpi,...],ytaul[kumpi,...])
+    viimeistele(kumpi)
     draw()
+
+def vaihda_luokat(hyppy):
+    for i in range(len(startend)):
+        sca(axs[i])
+        vaihda_luokka(hyppy,i)
+        hyppy = 0 #toisella kierroksella ikir_ind on jo vaihdettu
 
 def nappainfunk(tapaht):
     if tapaht.key == 'right' or tapaht.key == 'o' or tapaht.key == 'i':
-        vaihda_luokka(1)
+        vaihda_luokat(1)
     elif tapaht.key == 'left' or tapaht.key == 'g' or tapaht.key == 'a':
-        vaihda_luokka(-1)
-
-def valmista_data():
-    #talven ajankohta
-    doy = taj.lue_avgdoy(startend)
-    #köppen-data
-    koppdf = köppen.lue_oletusluokkamaskit_dataset('köppen1x1.nc').to_dataframe()
-    #ikiroutadata
-    ikirouta = prf.Prf('1x1','xarray').rajaa( (doy.lat.min(), doy.lat.max()+1) ).data.mean(dim='time')
-    ikirstr = prf.luokittelu1_str_xr(ikirouta).data.flatten()
-    #rajataan tarkemmin määrittelyalueeseen
-    doy = doy.data.flatten()
-    valinta = doy==doy
-    koppdf = koppdf[valinta]
-    ikirstr = ikirstr[valinta]
-    doy = doy[valinta]
-    #yhdistetään talven ajankohta
-    for nimi in koppdf:
-        koppdf[nimi] = koppdf[nimi].mul(doy)
-    #yhdistetään ikirouta
-    ikirluokat = prf.luokat1 # np.unique(ikirstr) sekoittaisi järjestyksen
-    ikirdflis = np.empty(len(ikirluokat),object)
-    for i,ikirluok in enumerate(ikirluokat):
-        valinta = ikirstr==ikirluok
-        ikirdflis[i] = koppdf.loc[valinta,:]
-    return ikirdflis,ikirluokat
+        vaihda_luokat(-1)
+    return
 
 def main():
-    global xtaul,ytaul,tarkk,luokat2,ikirdflis
+    global xtaul,ytaul,tarkk,axs,dflista
+    argumentit(sys.argv[1:])
     tarkk = 10
-    argumentit(sys.argv[1:]) #tallenna,startend
-    rcParams.update({'font.size':13,'figure.figsize':(10,8)})
-    ikirdflis,ikirluokat = valmista_data()
-    luokat2 = list(ikirdflis[0].keys())
-    xtaul = np.full(len(ikirluokat), None, object)
-    ytaul = np.full([len(ikirluokat),len(luokat2)], None, object)
-    for i in range(len(ikirdflis)):
-        ikirdflis[i] = ikirdflis[i].reset_index()
+    rcParams.update({'font.size':13,'figure.figsize':(16,8)})
 
-    fig = figure()
-    vaihda_luokka(0)
-    if pkl.tallenna:
+    lse = len(startend)
+    dflista = np.empty([lse,len(prf.luokat1)],object)
+    for j in range(lse):
+        for i in range(dflista.shape[1]):
+            dflista[j,i] = pd.read_csv('prf_köppen_%s%i.csv' %(startend[j],i))
+    xtaul = np.full([lse,len(prf.luokat1)], None, object)
+    ytaul = np.full([lse,len(prf.luokat1),len(luokat2)], None, object)
+
+    fig,axs = subplots(1,len(startend))
+    axs = np.array(axs).flatten()
+
+    vaihda_luokat(0)
+    if tallenna:
         while True:
-            savefig("kuvia/%s_%s%i.png" %(sys.argv[0][:-3],pkl.startend,ikir_ind))
-            if ikir_ind==len(ikirluokat)-1:
+            if verbose:
+                print(prf.luokat1[ikir_ind])
+            savefig("kuvia/%s%s%i.png"
+                    %(sys.argv[0][:-3], ('_'+startend[0] if len(startend)==1 else ''), ikir_ind))
+            if ikir_ind==len(prf.luokat1)-1:
                 exit()
-            vaihda_luokka(1)
+            vaihda_luokat(1)
         return
-    else:
-        fig.canvas.mpl_connect('key_press_event',nappainfunk)
-        show()
-        return
+    fig.canvas.mpl_connect('key_press_event',nappainfunk)
+    show()
+    return
 
 if __name__ == '__main__':
     main()
