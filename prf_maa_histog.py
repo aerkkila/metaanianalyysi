@@ -25,7 +25,7 @@ def viimeistele(kumpi):
     legend()
 
 def vaihda_luokka(hyppy,kumpi):
-    global ikir_ind,xtaul,ytaul
+    global ikir_ind
     ikir_ind = ( ikir_ind + len(prf.luokat1) + hyppy ) % len(prf.luokat1)
     if xtaul[kumpi,ikir_ind] is None:
         pah.tee_luokka(xtaul[kumpi,...], ytaul[kumpi,...], dflista=dflista[kumpi,...],
@@ -60,8 +60,8 @@ def main():
     xtaul = np.full([lse,len(prf.luokat1)], None, object)
     ytaul = np.full([lse,len(prf.luokat1),len(maaluokat)], None, object)
 
-    fig = figure()
-    axs = fig.subplots(1,len(startend)).flatten()
+    fig,axs = subplots(1,len(startend))
+    axs = np.array(axs).flatten()
     
     vaihda_luokat(0)
     if False:
