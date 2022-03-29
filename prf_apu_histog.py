@@ -24,8 +24,11 @@ def luo_xjako(dt,tarkk,luokat2):
     maxluku = int(-999999999)
     for luok in luokat2:
         d = dt[luok]
-        minluku = min(minluku,int(np.nanmin(d)))
-        maxluku = max(maxluku,int(np.nanmax(d)))
+        try:
+            minluku = min(minluku,int(np.nanmin(d)))
+            maxluku = max(maxluku,int(np.nanmax(d)))
+        except:
+            continue # Tällöin taulukon d kaikki jäsenet olivat epälukuja. Kyse ei ole virheestä.
     return np.arange(minluku,maxluku+1,tarkk)
 
 def tee_luokka(xtaul,ytaul,dflista,dfind,luokat2,tarkk):
