@@ -4,12 +4,10 @@ import numpy as np
 from numpy import log
 import cartopy.crs as ccrs
 from matplotlib.pyplot import *
-import matplotlib
 import matplotlib.colors as mcolors
 from matplotlib.colors import ListedColormap as lcmap
-from config import edgartno_lpx_m, edgartno_lpx_t, tyotiedostot
-import sys
-import prf as prf
+import matplotlib, sys
+import config, prf
 
 def argumentit(argv):
     global tallenna,verbose,ikir_ind
@@ -61,7 +59,7 @@ def piirra():
     muu.plot.pcolormesh( transform=platecarree, ax=gca(), cmap=harmaa, add_colorbar=False )
 #                         cbar_kwargs={'label':'no permafrost data','ticks':[]} )
     #Varsinainen data
-    cbar_nimio = (r'%s ($\frac{\mathrm{mol}}{\mathrm{m}^2\mathrm{s}}$)' %edgartno_lpx_m).replace('_','\\_')
+    cbar_nimio = r'CH$_4$ flux ($\frac{\mathrm{mol}}{\mathrm{m}^2\mathrm{s}}$)'
     ch4data.where(ikirluokat==prf.luokat1[ikir_ind],np.nan).plot.\
         pcolormesh( transform=platecarree, cmap=vkartta, norm=mcolors.DivergingNorm(0,max(pienin*6,-suurin),suurin),
                     cbar_kwargs={'label':cbar_nimio} )
@@ -93,15 +91,16 @@ if __name__ == '__main__':
     vari0 = '\033[0m'
     rcParams.update({'font.size':18,'figure.figsize':(12,10),'text.usetex':True})
     argumentit(sys.argv)
-    datamaski = xr.open_dataset(tyotiedostot + 'FT_implementointi/FT_percents_pixel_ease_flag/DOY/winter_end_doy_2014.nc')
+    datamaski = xr.open_dataset(config.tyotiedostot + 'FT_implementointi/FT_percents_pixel_ease_flag/DOY/winter_end_doy_2014.nc')
     
     ikiroutaolio = prf.Prf('1x1').rajaa([datamaski.lat.min(),datamaski.lat.max()+0.01])
     ikirouta = ikiroutaolio.data.mean(dim='time')
     ikirluokat = prf.luokittelu1_str_xr(ikirouta)
 
-    ch4data = xr.open_dataset(edgartno_lpx_t)[edgartno_lpx_m].\
-        mean(dim='record').\
-        loc[datamaski.lat.min():datamaski.lat.max(),:].\
+    ch4data0 = xr.open_dataset(config.edgartno_lpx_t)
+    ch4data = ch4data0[config.edgartno_lpx_m]*ch4data0[config.edgartno_lpx_kerr]
+    ch4data0.close()
+    ch4data = ch4data.mean(dim='record').loc[datamaski.lat.min():datamaski.lat.max(),:].\
         where(datamaski.spring_start==datamaski.spring_start,np.nan)
 
     platecarree = ccrs.PlateCarree()
