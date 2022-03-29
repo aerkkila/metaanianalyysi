@@ -20,12 +20,12 @@ def pintaalat1x1(osdet,paivat,lat,lon,xjako):
     return lukualat
 
 def luo_xjako(dt,tarkk):
-    minluku = int(np.nanmin(dt))
-    maxluku = int(np.nanmax(dt))
+    minluku = int(np.nanmin(dt.day))
+    maxluku = int(np.nanmax(dt.day))
     return np.arange(minluku,maxluku+1,tarkk)
 
 def tee_luokka(xtaul,ytaul,dflista,dfind,luokat2,tarkk):
-    xtaul[dfind] = luo_xjako(dflista.day, tarkk)
+    xtaul[dfind] = luo_xjako(dflista[dfind], tarkk)
     for i,mluok in enumerate(luokat2):
         tmp = dflista[dfind]
         ytaul[dfind,i] = pintaalat1x1(np.array(tmp[mluok]), np.array(tmp.day), np.array(tmp.lat), np.array(tmp.lon), xtaul[dfind]) 

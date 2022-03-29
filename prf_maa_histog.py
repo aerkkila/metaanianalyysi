@@ -73,7 +73,7 @@ def main():
 
     fig,axs = subplots(1,len(startend))
     axs = np.array(axs).flatten()
-    
+
     vaihda_luokat(0)
     if tallenna:
         while True:
