@@ -27,20 +27,22 @@ def argumentit(argv):
 
 def valmista_data(startend):
     turha,maa = ml.lue_maalajit(ml.tunnisteet.keys()) #xr.DataSet (lat,lon)
-    maa = ml.maalajien_yhdistamiset(maa,pudota=True)
+    maa = ml.maalajien_yhdistamiset(maa,pudota=False)
     maadf = maa.to_dataframe() #index = lat,lon
     
     doy = taj.lue_avgdoy(startend)
     maadf.where( maadf >= osuusraja, np.nan, inplace=True )
-    maadf.where( maadf != maadf,     1,      inplace=True )
     if verbose:
         print('\n'+vari1+'Datapisteitä:'+vari0)
         print(maadf.sum(axis='index').astype(int))
-    maadf = maadf.mul( doy.data.flatten(), axis='index' )
-    jarj = maadf.median().to_numpy().argsort() #järjestetään maalajit mediaanin mukaan
+    #järjestetään maalajit mediaanin mukaan
+    tmpdf = maadf.mul(doy.data.flatten(), axis='index')
+    jarj = tmpdf.median().to_numpy().argsort()
     if startend == 'end':
         jarj = jarj[::-1]
     maadf = maadf.iloc[:,jarj]
+    #lisätään ft-päivä
+    maadf['day'] = doy.data.flatten()
 
     ikirouta = prf.Prf('1x1','xarray').rajaa( (doy.lat.min(), doy.lat.max()+1) ).data.mean(dim='time')
     ikirstr = prf.luokittelu1_str_xr(ikirouta)

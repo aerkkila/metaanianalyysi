@@ -5,7 +5,7 @@ from matplotlib.pyplot import *
 import prf, sys
 import prf_apu_histog as pah
 
-luokat2 = ['boreal_forest','tundra_dry','tundra_wetland+\npermafrost_bog']
+luokat2 = ['boreal_forest','tundra_dry','tundra_wetland+\npermafrost_bog','bog+fen']
 startend = ['start','end']
 ikir_ind=0
 
