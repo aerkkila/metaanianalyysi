@@ -7,7 +7,8 @@ import prf_apu_histog as pah
 
 luokat2 = ['boreal_forest','tundra_dry','tundra_wetland+\npermafrost_bog','bog+fen']
 startend = ['start','end']
-ikir_ind=0
+ikir_ind = 0
+osuusraja = 30
 
 def argumentit(argv):
     global tallenna,verbose
@@ -67,7 +68,9 @@ def main():
     dflista = np.empty([lse,len(prf.luokat1)],object)
     for j in range(lse):
         for i in range(dflista.shape[1]):
-            dflista[j,i] = pd.read_csv('prf_maa_%s%i.csv' %(startend[j],i))
+            tmp = pd.read_csv('prf_maa_%s%i.csv' %(startend[j],i))
+            tmp.set_index(['lat','lon','day'])
+            dflista[j,i] = tmp.where(tmp>=osuusraja, 0).reset_index()
     xtaul = np.full([lse,len(prf.luokat1)], None, object)
     ytaul = np.full([lse,len(prf.luokat1),len(luokat2)], None, object)
 

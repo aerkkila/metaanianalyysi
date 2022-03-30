@@ -2,7 +2,7 @@ from numpy import sin
 import numpy as np
 # laskee paljonko pinta-alaa on kullakin xjaon osuudella (km²).
 # xjaon on oltava tasavälinen
-# Jos dt on dataframe, tämä on hirvittävän hidas. Olkoon dt numpy-array.
+# Jos tyyppi on dataframe, tämä on hirvittävän hidas. Olkoon tyyppi numpy-array.
 def pintaalat1x1(osdet,paivat,lat,lon,xjako):
     aste = 0.0174532925199
     R2 = 40592558970441
@@ -13,10 +13,13 @@ def pintaalat1x1(osdet,paivat,lat,lon,xjako):
     minluku = xjako[0]
     for j,la in enumerate(lat):
         ala = PINTAALA(la)
-        x_rantu = paivat[ j*lon.size : (j+1)*lon.size ]
-        x_rantu = x_rantu[x_rantu >= minluku]
-        for luku in x_rantu.astype(int):
-            lukualat[(luku-minluku)//tarkk] += ala
+        x_rantu_paiva = paivat[ j*lon.size : (j+1)*lon.size ]
+        x_rantu_osuus = osdet[ j*lon.size : (j+1)*lon.size ]
+        maski = x_rantu_paiva >= minluku #onko tämä nan-poistaja?
+        x_rantu_paiva = x_rantu_paiva[maski]
+        x_rantu_osuus = x_rantu_osuus[maski]
+        for i,luku in enumerate(x_rantu_paiva.astype(int)):
+            lukualat[(luku-minluku)//tarkk] += ala*x_rantu_osuus[i]
     return lukualat
 
 def luo_xjako(dt,tarkk):
