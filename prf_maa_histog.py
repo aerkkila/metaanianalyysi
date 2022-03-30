@@ -38,7 +38,7 @@ def vaihda_luokka(hyppy,kumpi):
     ikir_ind = ( ikir_ind + len(prf.luokat1) + hyppy ) % len(prf.luokat1)
     if xtaul[kumpi,ikir_ind] is None:
         pah.tee_luokka(xtaul[kumpi,...], ytaul[kumpi,...], dflista=dflista[kumpi,...],
-                       dfind=ikir_ind, luokat2=luokat2, tarkk=tarkk)
+                       dfind=ikir_ind, luokat2=luokat2, tarkk=tarkk, pa_kerr=osuudet)
     gca().clear()
     piirra(xtaul[kumpi,...],ytaul[kumpi,...])
     viimeistele(kumpi)
@@ -58,7 +58,7 @@ def nappainfunk(tapaht):
     return
 
 def main():
-    global xtaul,ytaul,tarkk,axs,dflista
+    global xtaul,ytaul,tarkk,axs,dflista,osuuslis
     argumentit(sys.argv[1:])
     tarkk = 15
     rcParams.update({'font.size':13,'figure.figsize':(16,8)})
@@ -67,7 +67,10 @@ def main():
     dflista = np.empty([lse,len(prf.luokat1)],object)
     for j in range(lse):
         for i in range(dflista.shape[1]):
-            dflista[j,i] = pd.read_csv('prf_maa_%s%i.csv' %(startend[j],i))
+            dflista[j,i] = pd.read_csv('prf_maa_DOY_%s%i.csv' %(startend[j],i))
+    osuuslis = np.empty(dflista.shape[1])
+    for i in range(len(prf.luokat1)):
+        osuuslis[i] = pd.read_csv('prf_maa_osuus_%i.csv' %(startend[j],i))
     xtaul = np.full([lse,len(prf.luokat1)], None, object)
     ytaul = np.full([lse,len(prf.luokat1),len(luokat2)], None, object)
 
