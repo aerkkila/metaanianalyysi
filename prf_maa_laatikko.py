@@ -71,7 +71,7 @@ if __name__ == '__main__':
     ikirluokat = prf.luokat1
     dflista = np.full(len(ikirluokat),None,object)
     for i in range(dflista.shape[0]):
-        dflista[i] = pd.read_csv('prf_maa_%s%i.csv' %(startend,i))
+        dflista[i] = pd.read_csv('prf_maa_DOY_%s%i.csv' %(startend,i))
         
     min_ja_max()
     

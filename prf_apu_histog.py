@@ -20,9 +20,6 @@ def pintaalat1x1(dt,lat,lon,xjako):
     return lukualat
 
 def pintaalat1x1_kerr(dt,lat,lon,xjako,kerr):
-    if not kerr:
-        return pintaalat1x1(dt,lat,lon,xjako)
-    
     aste = 0.0174532925199
     R2 = 40592558970441
     PINTAALA = lambda _lat: aste*R2*( sin((_lat+1)*aste) - sin(_lat*aste) )*1.0e-6
@@ -53,8 +50,13 @@ def luo_xjako(dt,tarkk,luokat2):
             continue # Tällöin taulukon d kaikki jäsenet olivat epälukuja. Kyse ei ole virheestä.
     return np.arange(minluku,maxluku+1,tarkk)
 
-def tee_luokka(xtaul,ytaul,dflista,dfind,luokat2,tarkk,pa_kerr=False):
+def tee_luokka(xtaul,ytaul,dflista,dfind,luokat2,tarkk,pa_kerr=None):
     xtaul[dfind] = luo_xjako(dflista[dfind], tarkk, luokat2)
+    if pa_kerr is None:
+        for i,mluok in enumerate(luokat2):
+            tmp = dflista[dfind]
+            ytaul[dfind,i] = pintaalat1x1(np.array(tmp[mluok]), np.array(tmp.lat), np.array(tmp.lon), xtaul[dfind])
+        return
     for i,mluok in enumerate(luokat2):
         tmp = dflista[dfind]
-        ytaul[dfind,i] = pintaalat1x1_kerr(np.array(tmp[mluok]), np.array(tmp.lat), np.array(tmp.lon), xtaul[dfind], pa_kerr)
+        ytaul[dfind,i] = pintaalat1x1_kerr(np.array(tmp[mluok]), np.array(tmp.lat), np.array(tmp.lon), xtaul[dfind], pa_kerr[mluok].to_numpy())
