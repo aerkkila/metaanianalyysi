@@ -1,5 +1,6 @@
 prf_koppen_csv = prf_köppen_['end''start']*[0-9]*.csv
-prf_maa_csv = prf_maa_['end''start']*[0-9]*.csv
+prf_maa_DOY_csv = prf_maa_DOY_['end''start']*[0-9]*.csv
+prf_maa_osuus_csv = prf_maa_osuus_[0-9]*.csv
 
 all: köppen1x1maski.nc kuvia/LPX2019_flux1x1_kartta*.png kuvia/köppen_kartta.png kuvia/köppen_laatikko_*.png kuvia/prf_ft_histog_*.png kuvia/prf_ft_laatikko_*.png kuvia/prf_kartta_mean.png kuvia/prf_köppen_histog*.png kuvia/prf_köppen_laatikko_*.png kuvia/prf_maa_histog*.png kuvia/prf_maa_laatikko_*.png kuvia/prf_metaani_kartta*.png kuvia/prf_metaani_laatikko.png
 
@@ -39,10 +40,10 @@ kuvia/prf_köppen_laatikko_*.png: prf_köppen_laatikko.py
 	./prf_köppen_laatikko.py -s start
 	./prf_köppen_laatikko.py -s end
 
-kuvia/prf_maa_histog[0-9]*.png: prf_maa_histog.py ${prf_maa_csv}
+kuvia/prf_maa_histog*.png: prf_maa_histog.py ${prf_maa_osuus_csv} ${prf_maa_doy_csv}
 	./prf_maa_histog.py -s
 
-kuvia/prf_maa_laatikko_*.png: prf_maa_laatikko.py ${prf_maa_csv}
+kuvia/prf_maa_laatikko_*.png: prf_maa_laatikko.py ${prf_maa_DOY_csv}
 	./prf_maa_laatikko.py -s start
 	./prf_maa_laatikko.py -s end
 
@@ -55,7 +56,10 @@ kuvia/prf_metaani_kartta*.png: prf_metaani_kartta.py
 ${prf_koppen_csv}: prf_köppen_data.py
 	./prf_köppen_data.py -s
 
-${prf_maa_csv}: prf_maa_data.py
+${prf_maa_DOY_csv}: prf_maa_data.py
+	./prf_maa_data.py -s
+
+${prf_maa_osuus_csv}: prf_maa_data.py
 	./prf_maa_data.py -s
 
 LPX2019_flux1x1_kartta.py: config_muutt.py
