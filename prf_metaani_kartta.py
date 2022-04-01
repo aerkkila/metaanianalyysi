@@ -2,12 +2,16 @@
 import xarray as xr
 import numpy as np
 from numpy import log
+import pandas as pd
 import cartopy.crs as ccrs
 from matplotlib.pyplot import *
 import matplotlib.colors as mcolors
 from matplotlib.colors import ListedColormap as lcmap
 import matplotlib, sys
 import config, prf
+
+varoitusvari = '\033[1;33m'
+vari0 = '\033[0m'
 
 def argumentit(argv):
     global tallenna,verbose,ikir_ind
@@ -23,7 +27,7 @@ def argumentit(argv):
             print("%sVaroitus:%s tuntematon argumentti \"%s\"" %(varoitusvari,vari0,a))
         i+=1
 
-def luo_varikartta():
+def luo_varikartta(ch4data):
     global pienin,suurin
     pienin = np.nanpercentile(ch4data.data, 1)
     suurin = np.nanpercentile(ch4data.data,99)
@@ -71,7 +75,7 @@ def piirra():
     #väripalkki ulkoalueista
     harmaa = lcmap([ulkovari,harmaavari])
     norm = matplotlib.colors.Normalize(vmin=-2, vmax=2)
-    cbar = fig.colorbar(matplotlib.cm.ScalarMappable(cmap=harmaa,norm=norm),ticks=[-1,1])
+    cbar = gcf().colorbar(matplotlib.cm.ScalarMappable(cmap=harmaa,norm=norm),ticks=[-1,1])
     cbar.set_ticklabels(['undefined', 'other\ncategories'])
 
 def vaihda_luokka(hyppy):
@@ -86,29 +90,55 @@ def nappainfunk(tapaht):
     elif tapaht.key == 'left' or tapaht.key == 'g' or tapaht.key == 'a':
         vaihda_luokka(-1)
 
-if __name__ == '__main__':
-    varoitusvari = '\033[1;33m'
-    vari0 = '\033[0m'
+def main():
+    global projektio,platecarree,kattavuus,ch4data,ikirluokat,vkartta
     rcParams.update({'font.size':18,'figure.figsize':(12,10),'text.usetex':True})
-    argumentit(sys.argv)
-    datamaski = xr.open_dataset(config.tyotiedostot + 'FT_implementointi/FT_percents_pixel_ease_flag/DOY/winter_end_doy_2014.nc')
+    argumentit(sys.argv[1:])
+    vuodet = range(2010,2019)
+    kansio = config.tyotiedostot+'FT_implementointi/FT_percents_pixel_ease_flag/DOY/'
+    alkuajat = np.empty(len(vuodet),object)
+    loppuajat = alkuajat.copy()
+    for i,vuosi in enumerate(vuodet):
+        alkuajat[i] = xr.open_dataarray(kansio+'freezing_start_doy_%4d.nc' %vuosi)
+        loppuajat[i] = xr.open_dataarray(kansio+'winter_start_doy_%4d.nc' %vuosi)
+    alku = xr.concat(alkuajat,dim='time')
+    loppu = xr.concat(loppuajat,dim='time')
+    for i in range(len(vuodet)):
+        alkuajat[i].close()
+        loppuajat[i].close()
     
-    ikiroutaolio = prf.Prf('1x1').rajaa([datamaski.lat.min(),datamaski.lat.max()+0.01])
+    ikiroutaolio = prf.Prf('1x1').rajaa([loppu.lat.min(),loppu.lat.max()+0.01])
     ikirouta = ikiroutaolio.data.mean(dim='time')
     ikirluokat = prf.luokittelu1_str_xr(ikirouta)
 
-    ch4data0 = xr.open_dataset(config.edgartno_lpx_t)
-    ch4data = ch4data0[config.edgartno_lpx_m]*ch4data0[config.edgartno_lpx_kerr]
-    ch4data0.close()
-    ch4data = ch4data.mean(dim='record').loc[datamaski.lat.min():datamaski.lat.max(),:].\
-        where(datamaski.spring_start==datamaski.spring_start,np.nan)
+    #Joka vuodelta pd.Timestamp dataarray alku- ja loppuajoista
+    alkuajat=np.empty(len(vuodet),object)
+    loppuajat=np.empty(len(vuodet),object)
+    for i,vuosi in enumerate(vuodet):
+        nollakohta = pd.Period('%4i-01-01' %(vuosi+1))
+        #epälukujen kohdalla laitetaan alkuhetki varmasti loppuhetkeä suuremmaksi
+        alkuajat[i] = nollakohta + alku[i,...].where(alku[i,...]==alku[i,...],99999).astype(int)
+        loppuajat[i] = nollakohta + loppu[i,...].where(loppu[i,...]==loppu[i,...],0).astype(int)
+
+    #muunnetaan pd.Timestamp -> pd.Period
+    ch4data = xr.open_dataarray('../edgartno_lpx/flux1x1_1d.nc').loc[:,loppu.lat.min():loppu.lat.max(),:]
+    ch4ajat = np.empty(ch4data.sizes['time'],pd.Period)
+    for i in range(len(ch4ajat)):
+        ch4ajat[i] = pd.Period(ch4data.time.data[i], freq='D')
+
+    #poistetaan jäätymiskauden ulkopuoliset ajat
+    for i in range(len(loppuajat)-1):
+        maski = (loppuajat[i] <= ch4ajat[i]) & (ch4ajat[i] < alkuajat[i+1]) 
+        ch4data[i,...] = ch4data[i,...].where(maski,np.nan)
+
+    ch4data = ch4data.mean(dim='time')
 
     platecarree = ccrs.PlateCarree()
     projektio   = ccrs.LambertAzimuthalEqualArea(central_latitude=90)
     kattavuus   = [-180,180,30,90]
     fig = figure()
 
-    vkartta = luo_varikartta()
+    vkartta = luo_varikartta(ch4data)
 
     piirra()
     if not tallenna:
@@ -123,3 +153,6 @@ if __name__ == '__main__':
         if ikir_ind==len(prf.luokat1)-1:
             exit()
         vaihda_luokka(1)
+
+if __name__ == '__main__':
+    main()
