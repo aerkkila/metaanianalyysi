@@ -4,6 +4,12 @@ prf_maa_osuus_csv = prf_maa_osuus_[0-9]*.csv
 
 all: köppen1x1maski.nc kuvia/LPX2019_flux1x1_kartta*.png kuvia/köppen_kartta.png kuvia/köppen_laatikko_*.png kuvia/prf_ft_histog_*.png kuvia/prf_ft_laatikko_*.png kuvia/prf_kartta_mean.png kuvia/prf_köppen_histog*.png kuvia/prf_köppen_laatikko_*.png kuvia/prf_maa_histog*.png kuvia/prf_maa_laatikko_*.png kuvia/prf_metaani_kartta*.png kuvia/prf_metaani_laatikko.png
 
+../edgartno_lpx/flux1x1_1d.nc: ../edgartno_lpx/interpoloi_flux1x1.nc
+	cd ../edgarttno_lpx/ && ./interpoloi_flux1x1.nc
+
+flux1x1_jäätymiskausi.nc: flux1x1_jäätymiskausi.py ../edgartno_lpx/flux1x1_1d.nc
+	./flux1x1_jäätymiskausi.py
+
 köppen1x1maski.nc: muunna_shapefile
 	./muunna_shapefile -o $@
 
