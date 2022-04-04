@@ -16,7 +16,7 @@ vari0 = '\033[0m'
 def argumentit(argv):
     global tallenna,verbose,ikir_ind
     tallenna=False; verbose=False; ikir_ind=0
-    i=1
+    i=0
     while i < len(argv):
         a = argv[i]
         if a == '-s':
@@ -90,48 +90,21 @@ def nappainfunk(tapaht):
     elif tapaht.key == 'left' or tapaht.key == 'g' or tapaht.key == 'a':
         vaihda_luokka(-1)
 
-def main():
+def main(tiedosto):
     global projektio,platecarree,kattavuus,ch4data,ikirluokat,vkartta
     rcParams.update({'font.size':18,'figure.figsize':(12,10),'text.usetex':True})
     argumentit(sys.argv[1:])
-    vuodet = range(2010,2019)
     kansio = config.tyotiedostot+'FT_implementointi/FT_percents_pixel_ease_flag/DOY/'
-    alkuajat = np.empty(len(vuodet),object)
-    loppuajat = alkuajat.copy()
-    for i,vuosi in enumerate(vuodet):
-        alkuajat[i] = xr.open_dataarray(kansio+'freezing_start_doy_%4d.nc' %vuosi)
-        loppuajat[i] = xr.open_dataarray(kansio+'winter_start_doy_%4d.nc' %vuosi)
-    alku = xr.concat(alkuajat,dim='time')
-    loppu = xr.concat(loppuajat,dim='time')
-    for i in range(len(vuodet)):
-        alkuajat[i].close()
-        loppuajat[i].close()
+    ajat = xr.open_dataarray(kansio+'winter_start_doy_2014.nc')
     
-    ikiroutaolio = prf.Prf('1x1').rajaa([loppu.lat.min(),loppu.lat.max()+0.01])
+    ikiroutaolio = prf.Prf('1x1').rajaa([ajat.lat.min(),ajat.lat.max()+0.01])
     ikirouta = ikiroutaolio.data.mean(dim='time')
     ikirluokat = prf.luokittelu1_str_xr(ikirouta)
 
-    #Joka vuodelta pd.Timestamp dataarray alku- ja loppuajoista
-    alkuajat=np.empty(len(vuodet),object)
-    loppuajat=np.empty(len(vuodet),object)
-    for i,vuosi in enumerate(vuodet):
-        nollakohta = pd.Period('%4i-01-01' %(vuosi+1))
-        #epälukujen kohdalla laitetaan alkuhetki varmasti loppuhetkeä suuremmaksi
-        alkuajat[i] = nollakohta + alku[i,...].where(alku[i,...]==alku[i,...],99999).astype(int)
-        loppuajat[i] = nollakohta + loppu[i,...].where(loppu[i,...]==loppu[i,...],0).astype(int)
-
-    #muunnetaan pd.Timestamp -> pd.Period
-    ch4data = xr.open_dataarray('../edgartno_lpx/flux1x1_1d.nc').loc[:,loppu.lat.min():loppu.lat.max(),:]
-    ch4ajat = np.empty(ch4data.sizes['time'],pd.Period)
-    for i in range(len(ch4ajat)):
-        ch4ajat[i] = pd.Period(ch4data.time.data[i], freq='D')
-
-    #poistetaan jäätymiskauden ulkopuoliset ajat
-    for i in range(len(loppuajat)-1):
-        maski = (loppuajat[i] <= ch4ajat[i]) & (ch4ajat[i] < alkuajat[i+1]) 
-        ch4data[i,...] = ch4data[i,...].where(maski,np.nan)
-
+    ch4data = xr.open_dataarray(tiedosto).loc[:,ajat.lat.min():ajat.lat.max(),:].\
+        where(ajat.data==ajat.data,np.nan)
     ch4data = ch4data.mean(dim='time')
+    ajat.close()
 
     platecarree = ccrs.PlateCarree()
     projektio   = ccrs.LambertAzimuthalEqualArea(central_latitude=90)
@@ -155,4 +128,4 @@ def main():
         vaihda_luokka(1)
 
 if __name__ == '__main__':
-    main()
+    main('../edgartno_lpx/flux1x1_1d.nc')
