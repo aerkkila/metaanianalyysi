@@ -89,7 +89,7 @@ def main():
                              coords = {'time':ch4data.time.data[365:], 'lat':ch4data.lat.data, 'lon':ch4data.lon.data},
                              dims = ['time','lat','lon'],
                              name = ch4data.name)
-    tallennus.to_netcdf('flux1x1_jäätymiskausi.nc')
+    tallennus.to_netcdf('%s.nc' %sys.argv[0][:-3])
 
 if __name__ == '__main__':
     main()
