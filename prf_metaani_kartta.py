@@ -100,7 +100,7 @@ if __name__ == '__main__':
     ch4data0 = xr.open_dataset(config.edgartno_lpx_t)
     ch4data = ch4data0[config.edgartno_lpx_m]*ch4data0[config.edgartno_lpx_kerr]
     ch4data0.close()
-    ch4data = ch4data.mean(dim='record').loc[datamaski.lat.min():datamaski.lat.max(),:].\
+    ch4data = ch4data.mean(dim='time').loc[datamaski.lat.min():datamaski.lat.max(),:].\
         where(datamaski.spring_start==datamaski.spring_start,np.nan)
 
     platecarree = ccrs.PlateCarree()
