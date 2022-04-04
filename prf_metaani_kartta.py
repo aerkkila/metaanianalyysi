@@ -2,6 +2,7 @@
 import xarray as xr
 import numpy as np
 from numpy import log
+import pandas as pd
 import cartopy.crs as ccrs
 from matplotlib.pyplot import *
 import matplotlib.colors as mcolors
@@ -9,10 +10,13 @@ from matplotlib.colors import ListedColormap as lcmap
 import matplotlib, sys
 import config, prf
 
+varoitusvari = '\033[1;33m'
+vari0 = '\033[0m'
+
 def argumentit(argv):
     global tallenna,verbose,ikir_ind
     tallenna=False; verbose=False; ikir_ind=0
-    i=1
+    i=0
     while i < len(argv):
         a = argv[i]
         if a == '-s':
@@ -23,7 +27,7 @@ def argumentit(argv):
             print("%sVaroitus:%s tuntematon argumentti \"%s\"" %(varoitusvari,vari0,a))
         i+=1
 
-def luo_varikartta():
+def luo_varikartta(ch4data):
     global pienin,suurin
     pienin = np.nanpercentile(ch4data.data, 1)
     suurin = np.nanpercentile(ch4data.data,99)
@@ -71,7 +75,7 @@ def piirra():
     #väripalkki ulkoalueista
     harmaa = lcmap([ulkovari,harmaavari])
     norm = matplotlib.colors.Normalize(vmin=-2, vmax=2)
-    cbar = fig.colorbar(matplotlib.cm.ScalarMappable(cmap=harmaa,norm=norm),ticks=[-1,1])
+    cbar = gcf().colorbar(matplotlib.cm.ScalarMappable(cmap=harmaa,norm=norm),ticks=[-1,1])
     cbar.set_ticklabels(['undefined', 'other\ncategories'])
 
 def vaihda_luokka(hyppy):
@@ -86,29 +90,28 @@ def nappainfunk(tapaht):
     elif tapaht.key == 'left' or tapaht.key == 'g' or tapaht.key == 'a':
         vaihda_luokka(-1)
 
-if __name__ == '__main__':
-    varoitusvari = '\033[1;33m'
-    vari0 = '\033[0m'
+def main(tiedosto):
+    global projektio,platecarree,kattavuus,ch4data,ikirluokat,vkartta
     rcParams.update({'font.size':18,'figure.figsize':(12,10),'text.usetex':True})
-    argumentit(sys.argv)
-    datamaski = xr.open_dataset(config.tyotiedostot + 'FT_implementointi/FT_percents_pixel_ease_flag/DOY/winter_end_doy_2014.nc')
+    argumentit(sys.argv[1:])
+    kansio = config.tyotiedostot+'FT_implementointi/FT_percents_pixel_ease_flag/DOY/'
+    ajat = xr.open_dataarray(kansio+'winter_start_doy_2014.nc')
     
-    ikiroutaolio = prf.Prf('1x1').rajaa([datamaski.lat.min(),datamaski.lat.max()+0.01])
+    ikiroutaolio = prf.Prf('1x1').rajaa([ajat.lat.min(),ajat.lat.max()+0.01])
     ikirouta = ikiroutaolio.data.mean(dim='time')
     ikirluokat = prf.luokittelu1_str_xr(ikirouta)
 
-    ch4data0 = xr.open_dataset(config.edgartno_lpx_t)
-    ch4data = ch4data0[config.edgartno_lpx_m]*ch4data0[config.edgartno_lpx_kerr]
-    ch4data0.close()
-    ch4data = ch4data.mean(dim='time').loc[datamaski.lat.min():datamaski.lat.max(),:].\
-        where(datamaski.spring_start==datamaski.spring_start,np.nan)
+    ch4data = xr.open_dataarray(tiedosto).loc[:,ajat.lat.min():ajat.lat.max(),:].\
+        where(ajat.data==ajat.data,np.nan)
+    ch4data = ch4data.mean(dim='time')
+    ajat.close()
 
     platecarree = ccrs.PlateCarree()
     projektio   = ccrs.LambertAzimuthalEqualArea(central_latitude=90)
     kattavuus   = [-180,180,30,90]
     fig = figure()
 
-    vkartta = luo_varikartta()
+    vkartta = luo_varikartta(ch4data)
 
     piirra()
     if not tallenna:
@@ -123,3 +126,6 @@ if __name__ == '__main__':
         if ikir_ind==len(prf.luokat1)-1:
             exit()
         vaihda_luokka(1)
+
+if __name__ == '__main__':
+    main('../edgartno_lpx/flux1x1_1d.nc')
