@@ -82,20 +82,38 @@ ${prf_maa_osuus_csv}: prf_maa_data.py
 	./prf_maa_data.py -s
 
 BAWLD1x1.py: maalajit.py
+	touch $@
 LPX2019_flux1x1_kartta.py: config_muutt.py
+	touch $@
 köppen_kartta.py: köppen_laatikko.py
+	touch $@
 köppen_laatikko.py: talven_ajankohta.py
+	touch $@
 prf__histog.py: prf.py maalajit.py
+	touch $@
 prf_ft_histog.py: prf.py talven_ajankohta.py
+	touch $@
 prf_ft_laatikko.py: prf.py talven_ajankohta.py
+	touch $@
 prf_kartta_mean.py: prf.py
+	touch $@
 prf_köppen_histog.py: prf__histog.py
+	touch $@
 prf_köppen_laatikko.py: köppen_laatikko.py prf.py talven_ajankohta.py
+	touch $@
 prf_maa.py:
+	touch $@
 prf_maa_data.py: maalajit.py prf.py talven_ajankohta.py
+	touch $@
 prf_maa_histog.py: prf__histog.py
+	touch $@
 prf_maa_laatikko.py: prf.py maalajit.py
+	touch $@
 prf_metaani_kartta_*.py: prf_metaani_kartta.py
+	touch $@
 prf_metaani_kartta.py: prf.py
+	touch $@
 prf_metaani_laatikko.py: config_muutt.py prf.py
+	touch $@
 prf.py:
+	touch $@

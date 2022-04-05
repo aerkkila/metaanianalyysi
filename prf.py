@@ -23,7 +23,7 @@ def lue_numpy(hila='1x1') -> dict:
         with Image.open( kansio + nimi0 + str(vuosi) + nimi1 ) as im:
             tifdata[i] = np.flip( np.array(im.getdata()).reshape(muoto), axis=0 ).flatten()
     muoto = [ len(vuodet), muoto[0], muoto[1] ]
-    return { 'vuodet':vuodet, 'data':tifdata.reshape(muoto) }
+    return {'vuodet':vuodet, 'data':tifdata.reshape(muoto)}
 
 def lue_xarray(hila) -> dict:
     lnp = lue_numpy(hila)

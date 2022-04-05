@@ -85,7 +85,7 @@ if __name__ == '__main__':
     ikiroutaolio = prf.Prf('1x1').rajaa([datamaski.lat.min(),datamaski.lat.max()])
     ikirouta = ikiroutaolio.data.mean(dim='time')
 
-    vuodata = xr.open_dataset(edgartno_lpx_t)[edgartno_lpx_m].mean(dim='record')
+    vuodata = xr.open_dataset(edgartno_lpx_t)[edgartno_lpx_m].mean(dim='time')
     vuoolio = laske_vuot( vuodata.loc[datamaski.lat.min():datamaski.lat.max(),:].\
                           where(datamaski.spring_start==datamaski.spring_start,np.nan) )
     vuodata.close()
