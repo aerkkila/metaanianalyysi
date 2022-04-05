@@ -44,7 +44,7 @@ def maalajien_yhdistamiset(setti, pudota=False):
                 break
         if ohita:
             continue
-        taul = setti[lajit[0]]
+        taul = setti[lajit[0]].copy()
         nimi=lajit[0]
         lista.append(lajit[0])
         for laji in lajit[1:]:

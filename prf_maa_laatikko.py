@@ -59,8 +59,8 @@ def min_ja_max():
     mmin = np.inf
     mmax = -np.inf
     for df in dflista:
-        mmin = min((min(df.drop(['lat','lon'],axis=1).min()),mmin))
-        mmax = max((max(df.drop(['lat','lon'],axis=1).max()),mmax))
+        mmin = min((np.nanmin(df.drop(['lat','lon'],axis=1).min()),mmin))
+        mmax = max((np.nanmax(df.drop(['lat','lon'],axis=1).max()),mmax))
     mmin = np.floor(mmin/10)*10
     mmax = np.ceil(mmax/10)*10
 
