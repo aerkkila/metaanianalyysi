@@ -45,7 +45,7 @@ def valmista_data(startend):
     maadf_DOY = maadf_DOY.iloc[:,jarj]
     maadf = maadf.iloc[:,jarj]
     #lisätään ft-päivä
-    maadf['day'] = doy.data.flatten()
+    maadf['day'] = doy.data.flatten()*100 # myöhemmin jaetaan sadalla, koska osuudet ovat %
 
     ml.nimen_jako(maadf_DOY)
     ml.nimen_jako(maadf)
