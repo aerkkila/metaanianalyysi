@@ -3,6 +3,7 @@ from PIL import Image
 import numpy as np
 import re, os, sys
 import xarray as xr
+import pandas as pd
 from config import tyotiedostot
 
 def lue_numpy(hila='1x1') -> dict:
@@ -98,7 +99,10 @@ def luokittelu1_num_xr(data:xr.DataArray) -> xr.DataArray:
 if __name__ == '__main__':
     prfolio = Prf()
     prfdata = xr.concat(prfolio.data, dim='time')
-    prfdata.assign_coords({'time':prfolio.vuodet})
+    ajat = np.empty(len(prfolio.vuodet),object)
+    for i,vuosi in enumerate(prfolio.vuodet):
+        ajat[i] = pd.Period(vuosi,freq='Y')
+    prfdata.assign_coords({'time':ajat})
     prfluok = luokittelu1_num_xr(prfdata)
     luokat_set = {}
     for i,luok in enumerate(luokat1):

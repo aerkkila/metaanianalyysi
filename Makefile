@@ -3,10 +3,10 @@ prf_maa_DOY_csv = prf_maa_DOY_['end''start']*[0-9]*.csv
 prf_maa_osuus_csv = prf_maa_osuus_[0-9]*.csv
 tyotiedostot = "/media/levy/tyotiedostot"
 
-all: köppen1x1maski.nc kuvia/LPX2019_flux1x1_kartta*.png kuvia/köppen_kartta.png kuvia/köppen_laatikko_*.png kuvia/prf_ft_histog_*.png kuvia/prf_ft_laatikko_*.png kuvia/prf_kartta_mean.png kuvia/prf_köppen_histog*.png kuvia/prf_köppen_laatikko_*.png kuvia/prf_maa_histog*.png kuvia/prf_maa_laatikko_*.png kuvia/prf_metaani_kartta_jäätymiskausi*.png kuvia/prf_metaani_kartta_kokoaika*.png kuvia/prf_metaani_laatikko.png
+all: flux1x1_jäätymiskausi.nc köppen1x1maski.nc kuvia/LPX2019_flux1x1_kartta*.png kuvia/köppen_kartta.png kuvia/köppen_laatikko_*.png kuvia/prf_ft_histog_*.png kuvia/prf_ft_laatikko_*.png kuvia/prf_kartta_mean.png kuvia/prf_köppen_histog*.png kuvia/prf_köppen_laatikko_*.png kuvia/prf_maa_histog*.png kuvia/prf_maa_laatikko_*.png kuvia/prf_metaani_kartta_jäätymiskausi*.png kuvia/prf_metaani_kartta_kokoaika*.png kuvia/prf_metaani_laatikko.png prf_maa.nc
 
 ../edgartno_lpx/flux1x1_1d.nc: ../edgartno_lpx/interpoloi_flux1x1.py
-	cd ../edgarttno_lpx/ && ./interpoloi_flux1x1.py
+	cd ../edgartno_lpx/ && ./interpoloi_flux1x1.py
 
 BAWLD1x1.nc: BAWLD1x1.py
 	./BAWLD1x1.py
@@ -81,6 +81,8 @@ ${prf_maa_DOY_csv}: prf_maa_data.py
 ${prf_maa_osuus_csv}: prf_maa_data.py
 	./prf_maa_data.py -s
 
+../edgartno_lpx/interpoloi_flux1x1.py: interpoloi_flux1x1.py
+	cp interpoloi_flux1x1.py $@
 BAWLD1x1.py: maalajit.py
 	touch $@
 LPX2019_flux1x1_kartta.py: config_muutt.py
