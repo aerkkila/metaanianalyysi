@@ -1,6 +1,7 @@
+#!/usr/bin/python3
 from PIL import Image
 import numpy as np
-import re, os
+import re, os, sys
 import xarray as xr
 from config import tyotiedostot
 
@@ -84,3 +85,22 @@ def luokittelu1_str_xr(data:xr.DataArray) -> xr.DataArray:
     uusi[ (50<=dt) & (dt<90) ] = luokat1[2]
     uusi[ (90<=dt)           ] = luokat1[3]
     return xr.DataArray( data=uusi.reshape(data.data.shape), coords=data.coords, dims=data.dims )
+
+def luokittelu1_num_xr(data:xr.DataArray) -> xr.DataArray:
+    dt = data.data.flatten()
+    uusi = np.empty(dt.shape,object)
+    uusi[  (dt<10)           ] = 0
+    uusi[ (10<=dt) & (dt<50) ] = 1
+    uusi[ (50<=dt) & (dt<90) ] = 2
+    uusi[ (90<=dt)           ] = 3
+    return xr.DataArray( data=uusi.reshape(data.data.shape), coords=data.coords, dims=data.dims )
+
+if __name__ == '__main__':
+    prfolio = Prf()
+    prfdata = xr.concat(prfolio.data, dim='time')
+    prfdata.assign_coords({'time':prfolio.vuodet})
+    prfluok = luokittelu1_num_xr(prfdata)
+    luokat_set = {}
+    for i,luok in enumerate(luokat1):
+        luokat_set.update({luok: xr.where(prfluok==i,1,0)})
+    xr.Dataset(luokat_set).to_netcdf('%s.nc' %sys.argv[0][:-3])
