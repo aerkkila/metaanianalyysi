@@ -3,7 +3,7 @@ import pandas as pd
 import xarray as xr
 import numpy as np
 from matplotlib.pyplot import *
-import sys, warnings, prf
+import sys, warnings, prf, maalajit
 
 ikir_ind = 0
 vari1 = '\033[1;32m'
@@ -71,7 +71,7 @@ if __name__ == '__main__':
     ikirluokat = prf.luokat1
     dflista = np.full(len(ikirluokat),None,object)
     for i in range(dflista.shape[0]):
-        dflista[i] = pd.read_csv('prf_maa_DOY_%s%i.csv' %(startend,i))
+        dflista[i] = maalajit.nimen_jako(pd.read_csv('prf_maa_DOY_%s%i.csv' %(startend,i)))
         
     min_ja_max()
     

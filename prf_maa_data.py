@@ -47,9 +47,6 @@ def valmista_data(startend):
     #lisätään ft-päivä
     maadf['day'] = doy.data.flatten()*100 # myöhemmin jaetaan sadalla, koska osuudet ovat %
 
-    ml.nimen_jako(maadf_DOY)
-    ml.nimen_jako(maadf)
-
     #tallennetaan
     ikirluokat = prf.luokat1
     for i,ikirluok in enumerate(ikirluokat):

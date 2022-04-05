@@ -3,7 +3,7 @@ import numpy as np
 from numpy import sin
 import pandas as pd
 from matplotlib.pyplot import *
-import prf, sys
+import prf, sys, maalajit
 
 # laskee paljonko pinta-alaa on kullakin xjaon osuudella (km²).
 # xjaon on oltava tasavälinen
@@ -130,11 +130,11 @@ def data_maa():
     doydflis = np.empty([lse,len(prf.luokat1)],object)
     for j in range(lse):
         for i in range(doydflis.shape[1]):
-            doydflis[j,i] = pd.read_csv('prf_maa_DOY_%s%i.csv' %(startend[j],i))
+            doydflis[j,i] = maalajit.nimen_jako(pd.read_csv('prf_maa_DOY_%s%i.csv' %(startend[j],i)))
     #osuusdata
     osuuslis = np.empty(doydflis.shape[1],object)
     for i in range(len(prf.luokat1)):
-        osuuslis[i] = pd.read_csv('prf_maa_osuus_%i.csv' %(i))
+        osuuslis[i] = maalajit.nimen_jako(pd.read_csv('prf_maa_osuus_%i.csv' %(i)))
     xtaul = np.full([lse,len(prf.luokat1)], None, object)
     ytaul = np.full([lse,len(prf.luokat1),len(luokat2)], None, object)
 
