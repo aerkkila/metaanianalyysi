@@ -10,7 +10,7 @@ def kirjoita(data,vuosi):
     xr.concat(data,dim='time').to_netcdf('%s_%i.nc' %(sys.argv[0][:-3],vuosi))
 
 def main():
-    maan_osuusraja = 30 # %
+    maan_osuusraja = 0.3
     ikirmaa = xr.open_dataset('prf_maa.nc')
     ikirmaa = xr.where(ikirmaa<maan_osuusraja,0,ikirmaa)
     metaani = xr.open_dataarray(edgartno1d_t).sel({'lat':slice(ikirmaa.lat.min(),ikirmaa.lat.max())})
@@ -29,7 +29,7 @@ def main():
         aikaraja = pd.Period('%s-01-01' %(vuosi+1), freq='D')
         n = (aikaraja-pd.Period(metaani.time.data[i],freq='D')).n
         kerrottava = ikirmaa.isel({'time':v})
-        #koko aikasarja ei mahdu muistiin samanaikaisesti, joten tallennetaan vuosi kerrallaan
+        #koko aikasarja ei mahtune ram-muistiin samanaikaisesti, joten tallennetaan vuosi kerrallaan
         uusi = np.empty(n,object)
         for j in range(n):
             print("\r%i/%i\033[K" %(j+1,n), end='')
