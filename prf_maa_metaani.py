@@ -12,7 +12,7 @@ def kirjoita(data,vuosi):
 def main():
     maan_osuusraja = 0.3
     ikirmaa = xr.open_dataset('prf_maa.nc')
-    ikirmaa = xr.where(ikirmaa<maan_osuusraja,0,ikirmaa)
+    ikirmaa = xr.where(ikirmaa<maan_osuusraja,0,1) #1 tekee tästä binääristä
     metaani = xr.open_dataarray(edgartno1d_t).sel({'lat':slice(ikirmaa.lat.min(),ikirmaa.lat.max())})
     #metaani rajataan prfdatan aikasarjaan
     prf0 = pd.Period('%s-01-01' %(ikirmaa.time.data[0]), freq='D')
