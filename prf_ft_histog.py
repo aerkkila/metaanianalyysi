@@ -75,7 +75,7 @@ if __name__ == '__main__':
     ikir_ind = 0
     rcParams.update({'font.size':13,'figure.figsize':(12,10)})
     doy = taj.lue_avgdoy(startend)
-    ikirdat = xr.open_dataset("prf.nc").avg.sel({'lat':slice(doy.lat.min(),doy.lat.max())})
+    ikirdat = xr.open_dataarray("prfdata_avg.nc").sel({'lat':slice(doy.lat.min(),doy.lat.max())})
 
     xarrlis = [None]*len(ikirluokat.dt)
     yarrlis = xarrlis.copy()

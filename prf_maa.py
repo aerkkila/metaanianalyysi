@@ -14,7 +14,7 @@ def vanha_main():
 
 def main():
     maadata = xr.open_dataset('BAWLD1x1.nc')
-    prfdata = xr.open_dataset('prf.nc').sel({'lat':slice(maadata.lat.min(),maadata.lat.max())})
+    prfdata = xr.open_dataset('prfdata.nc').sel({'lat':slice(maadata.lat.min(),maadata.lat.max())})
     prf_maa = np.full(len(prfdata.keys()), {}, object)
     for i, ikirl in enumerate(prfdata.keys()):
         for m, maalaji in enumerate(maadata.keys()):

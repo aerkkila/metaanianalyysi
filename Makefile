@@ -32,11 +32,11 @@ kuvia/köppen_kartta.png: köppen_kartta.py
 kuvia/köppen_laatikko_*.png: köppen_laatikko.py
 	./köppen_laatikko.py -s
 
-kuvia/prf_ft_histog_*.png: prf_ft_histog.py prf.nc
+kuvia/prf_ft_histog_*.png: prf_ft_histog.py prfdata_avg.nc
 	./prf_ft_histog.py -s start
 	./prf_ft_histog.py -s end
 
-kuvia/prf_ft_laatikko_*.png: prf_ft_laatikko.py
+kuvia/prf_ft_laatikko_*.png: prf_ft_laatikko.py prfdata_avg.nc
 	./prf_ft_laatikko.py -s start
 	./prf_ft_laatikko.py -s end
 
@@ -69,7 +69,7 @@ kuvia/prf_metaani_kartta_kokoaika*.png: prf_metaani_kartta_kokoaika.py ../edgart
 prfdata.nc: prfdata.py
 	./prfdata.py
 
-prf_maa.nc: prf_maa.py BAWLD1x1.nc prf.nc
+prf_maa.nc: prf_maa.py BAWLD1x1.nc prfdata.nc
 	./prf_maa.py
 
 ${prf_koppen_csv}: prf_köppen_data.py
@@ -95,7 +95,7 @@ prf__histog.py: maalajit.py ikirluokat.py
 	touch $@
 prf_ft_histog.py: talven_ajankohta.py ikirluokat.py
 	touch $@
-prf_ft_laatikko.py: prf.py talven_ajankohta.py
+prf_ft_laatikko.py: ikirluokat.py talven_ajankohta.py
 	touch $@
 prf_kartta_mean.py: prf.py
 	touch $@
@@ -119,5 +119,7 @@ prf_metaani_laatikko.py: config_muutt.py prf.py
 	touch $@
 prf.py: ikirluokat.py
 	touch $@
-prfdata.py:
+prfdata.py: prf.py
+	touch $@
+prfdata_avg.py: prf.py
 	touch $@
