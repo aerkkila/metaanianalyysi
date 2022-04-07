@@ -3,7 +3,7 @@ prf_maa_DOY_csv = prf_maa_DOY_['end''start']*[0-9]*.csv
 prf_maa_osuus_csv = prf_maa_osuus_[0-9]*.csv
 tyotiedostot = "/media/levy/tyotiedostot"
 
-all: flux1x1_jäätymiskausi.nc köppen1x1maski.nc kuvia/LPX2019_flux1x1_kartta*.png kuvia/köppen_kartta.png kuvia/köppen_laatikko_*.png kuvia/prf_ft_histog_*.png kuvia/prf_ft_laatikko_*.png kuvia/prf_kartta_mean.png kuvia/prf_köppen_histog*.png kuvia/prf_köppen_laatikko_*.png kuvia/prf_maa_histog*.png kuvia/prf_maa_laatikko_*.png kuvia/prf_metaani_kartta_jäätymiskausi*.png kuvia/prf_metaani_kartta_kokoaika*.png kuvia/prf_metaani_laatikko.png prf_maa.nc
+all: flux1x1_jäätymiskausi.nc köppen1x1maski.nc kuvia/LPX2019_flux1x1_kartta*.png kuvia/köppen_kartta.png kuvia/köppen_laatikko_*.png kuvia/prf_ft_histog_*.png kuvia/prf_ft_laatikko_*.png kuvia/prf_kartta_mean.png kuvia/prf_köppen_histog*.png kuvia/prf_köppen_laatikko_*.png kuvia/prf_maa_histog*.png kuvia/prf_maa_laatikko_*.png kuvia/prf_metaani_kartta_jäätymiskausi*.png kuvia/prf_metaani_kartta_kokoaika*.png kuvia/prf_metaani_laatikko.png prf_maa.nc prf_maa_metaani_*.nc
 
 ../edgartno_lpx/flux1x1_1d.nc: ../edgartno_lpx/interpoloi_flux1x1.py
 	cd ../edgartno_lpx/ && ./interpoloi_flux1x1.py
@@ -71,6 +71,9 @@ prfdata.nc: prfdata.py
 
 prf_maa.nc: prf_maa.py BAWLD1x1.nc prfdata.nc
 	./prf_maa.py
+
+prf_maa_metaani_*.nc: prf_maa_metaani.py prf_maa.nc ../edgartno_lpx/flux1x1_1d.nc
+	./prf_maa_metaani.py
 
 ${prf_koppen_csv}: prf_köppen_data.py
 	./prf_köppen_data.py -s

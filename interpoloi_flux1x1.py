@@ -37,10 +37,6 @@ def main():
         print('\r%i/%i' %(i+1,len(ajat0)-1), end='')
     data = xr.concat(data,dim='time').transpose('time','lat','lon').\
         assign_coords({'time':ajat1}).rename(uusi_muuttuja)
-    #kopioidaan, jotta aika-attribuutti päivittyy
-    tallennus = xr.DataArray(data = data.data,
-                             coords = {'time':data.time.data, 'lat':data.lat.data, 'lon':data.lon.data},
-                             dims = ['time','lat','lon'])
     print('')
     data.to_netcdf('flux1x1_1d.nc')
     return
