@@ -4,6 +4,9 @@ import numpy as np
 from matplotlib.pyplot import *
 import config, locale
 
+def wlvuo(maski):
+    return vuo[maski]/wl[maski]
+
 ei_paivit__ = False
 def paivita_wetlandraja(arvo):
     global wetlandraja,ei_paivit__
@@ -26,9 +29,10 @@ def paivita_osuusraja_wl(arvo):
     global osuusraja_wl
     osuusraja_wl = arvo
     maski = (wl>=osuusraja_wl)
+    v = wlvuo(maski)
     viivat_wl.set_xdata(wl[maski])
-    viivat_wl.set_ydata(vuo[maski])
-    avg = np.mean(vuo[maski])
+    viivat_wl.set_ydata(v)
+    avg = np.mean(v)
     avgviiva_wl.set_ydata([avg]*2)
     teksti_wl.set_text(locale.format_string('σ = %.2e', avg))
     teksti_wl.set_y(avg)
@@ -76,14 +80,15 @@ def main():
     teksti = text(1.02,avg,locale.format_string('σ = %.2e', avg))
 
     maski = (wl>=osuusraja_wl)
-    viivat_wl, = plot(wl[maski], vuo[maski], 'x', label=wlluokka, color='r')
-    avg = np.mean(vuo[maski])
+    v = wlvuo(maski)
+    viivat_wl, = plot(wl[maski], v, 'x', label=wlluokka, color='r')
+    avg = np.mean(v)
     avgviiva_wl, = plot([osuusraja,1], [avg]*2, color='lightsalmon')
     teksti_wl = text(1.02,avg,locale.format_string('σ = %.2e', avg))
 
     grid('on')
-    ymax = vuo[maski].max()
-    ymin = vuo.min()
+    ymax = v.max()*0.66666
+    ymin = min(v.min(), vuo.min())
     ylim([ymin,ymax])
     ylabel('CH$_4$ (mol/m$^2$/s)')
     xlabel('osuus')
