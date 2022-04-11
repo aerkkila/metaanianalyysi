@@ -45,29 +45,32 @@ def piirra(data:xr.DataArray, subpl:int):
 def main():
     global cmap, subplmuoto
     luokka_wl = 'wetland'
-    luokka_muu = 'boreal_forest'
+    luokka_muu = ['boreal_forest']
     raja_wl_muu = 0.02 #muuluokan pisteissä on tätä vähemmän wlluokkaa
     raja_muu_muu = 0.3 #muuluokan pisteissä on vähintään näin paljon muuluokkaa
     raja_wl_wl = 0.3   #wlluokan pisteissä on vähintään näin paljon wlluokkaa
-    raja_yht = 0.8     #wl- ja muuluokan yhteenlaskettu osuus on vähintään tämän verran
+    raja_yht = 0.5     #wl- ja muuluokan yhteenlaskettu osuus on vähintään tämän verran
     baw = xr.open_dataset('BAWLD1x1.nc')
     vuot = xr.open_dataarray(config.edgartno_dir+'posterior.nc').mean(dim='time').\
         sel({'lat': slice(baw.lat.min(),baw.lat.max())})
-    bm = baw[luokka_muu]
     bw = baw[luokka_wl]
-    muuvuo = xr.where((bm>=raja_muu_muu) & (bw<raja_wl_muu) & (bm+bw>=raja_yht), vuot, np.nan)
+    muuvuot = np.empty(len(luokka_muu), object)
+    for i in range(len(muuvuot)):
+        bm = baw[luokka_muu[i]]
+        muuvuot[i] = xr.where((bm>=raja_muu_muu) & (bw<raja_wl_muu) & (bm+bw>=raja_yht), vuot, np.nan)
     wlvuo = xr.where((bw>=raja_wl_wl) & (bm+bw>=raja_yht), vuot, np.nan)
     wlvuo_jaett = xr.where((bw>=raja_wl_wl) & (bm+bw>=raja_yht), vuot/bw, np.nan)
 
     rcParams.update({'figure.figsize':(14,12), 'font.size':14})
     cmap=luo_varikartta(wlvuo)
     subplmuoto = [2,2]
-    piirra(muuvuo,0)
-    title(luokka_muu)
-    piirra(wlvuo,1)
+    for i,luokka in enumerate(luokka_muu):
+        piirra(muuvuot[i],i)
+        title(luokka)
+    piirra(wlvuo,2)
     title(luokka_wl)
     cmap=luo_varikartta(wlvuo_jaett)
-    piirra(wlvuo_jaett,2)
+    piirra(wlvuo_jaett,3)
     title('%s/frac(%s)' %(luokka_wl,luokka_wl))
     show()
     return
