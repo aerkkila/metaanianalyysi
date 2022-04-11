@@ -29,28 +29,26 @@ def piirra(data:xr.DataArray, subpl:int):
     platecarree = ccrs.PlateCarree()
     projektio   = ccrs.LambertAzimuthalEqualArea(central_latitude=90)
     kattavuus   = [-180,180,35,90]
-    subplmuoto = [1,2]
-    subpl_y = subpl // subplmuoto[1]
+    subpl_y = subplmuoto[0]-1 - subpl // subplmuoto[1]
     subpl_x = subpl % subplmuoto[1]
-    xkoko = 0.9/subplmuoto[1]
-    ykoko = 0.85/subplmuoto[0]
+    xkoko = 0.94/subplmuoto[1]
+    ykoko = 0.94/subplmuoto[0]
     ax = axes([0.04 + subpl_x*xkoko,
                0.04 + subpl_y*ykoko,
-               xkoko-0.03, ykoko],
+               xkoko-0.03, ykoko-0.05],
               projection=projektio)
     ax.coastlines()
     ax.set_extent(kattavuus,platecarree)
-    data.plot.pcolormesh(transform=platecarree, cmap=cmap, norm=matplotlib.colors.DivergingNorm(0,max(pienin*1.5,-suurin),suurin))
+    data.plot.pcolormesh(transform=platecarree, cmap=cmap, norm=matplotlib.colors.DivergingNorm(0,max(pienin*4,-suurin),suurin))
     return
 
 def main():
-    global cmap
-    rcParams.update({'figure.figsize':(14,10), 'font.size':14})
+    global cmap, subplmuoto
     luokka_wl = 'wetland'
     luokka_muu = 'boreal_forest'
     raja_wl_muu = 0.02 #muuluokan pisteissä on tätä vähemmän wlluokkaa
     raja_muu_muu = 0.3 #muuluokan pisteissä on vähintään näin paljon muuluokkaa
-    raja_wl_wl = 0.2   #wlluokan pisteissä on vähintään näin paljon wlluokkaa
+    raja_wl_wl = 0.3   #wlluokan pisteissä on vähintään näin paljon wlluokkaa
     raja_yht = 0.8     #wl- ja muuluokan yhteenlaskettu osuus on vähintään tämän verran
     baw = xr.open_dataset('BAWLD1x1.nc')
     vuot = xr.open_dataarray(config.edgartno_dir+'posterior.nc').mean(dim='time').\
@@ -59,12 +57,18 @@ def main():
     bw = baw[luokka_wl]
     muuvuo = xr.where((bm>=raja_muu_muu) & (bw<raja_wl_muu) & (bm+bw>=raja_yht), vuot, np.nan)
     wlvuo = xr.where((bw>=raja_wl_wl) & (bm+bw>=raja_yht), vuot, np.nan)
+    wlvuo_jaett = xr.where((bw>=raja_wl_wl) & (bm+bw>=raja_yht), vuot/bw, np.nan)
 
-    cmap=luo_varikartta(vuot)
+    rcParams.update({'figure.figsize':(14,12), 'font.size':14})
+    cmap=luo_varikartta(wlvuo)
+    subplmuoto = [2,2]
     piirra(muuvuo,0)
     title(luokka_muu)
     piirra(wlvuo,1)
     title(luokka_wl)
+    cmap=luo_varikartta(wlvuo_jaett)
+    piirra(wlvuo_jaett,2)
+    title('%s/frac(%s)' %(luokka_wl,luokka_wl))
     show()
     return
 
