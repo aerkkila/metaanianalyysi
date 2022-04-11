@@ -2,7 +2,7 @@
 import xarray as xr
 import numpy as np
 from matplotlib.pyplot import *
-import config, locale
+import config, locale, sys
 
 def luokan_vuo(maski,ind2):
     return vuo[maski]#/osuus[ind2][maski]
@@ -15,7 +15,8 @@ def paivita_raja(ind2):
     avg = np.mean(v)
     avgviiva[ind2].set_ydata([avg]*2)
     teksti[ind2].set_text(locale.format_string('σ = %.2e', avg))
-    teksti[ind2].set_y(avg)
+    if np.isfinite(avg):
+        teksti[ind2].set_y(avg)
     draw()
     return
 
@@ -43,11 +44,26 @@ def paivita_raja_yht_wl(arvo):
     paivita_raja(1)
     return
 
+def argumentit(argv):
+    global kuivaluokka, wlluokka
+    kuivaluokka = 'tundra_dry'; wlluokka = 'wetland'
+    i=0
+    while i<len(argv):
+        a = argv[i]
+        if a=='-k':
+            i+=1
+            kuivaluokka = argv[i]
+        elif a=='-m':
+            i+=1
+            markaluokka = argv[i]
+        else:
+            print("Varoitus: tuntematon argumentti \"%s\"" %(a))
+        i+=1
+
 def main():
     global viivat,avgviiva,teksti,vuo,luokmaski,osuus,rajat
     locale.setlocale(locale.LC_ALL,'')
-    kuivaluokka='tundra_dry'
-    wlluokka='wetland'
+    argumentit(sys.argv[1:])
     raja_kuiva_kuiva = 0.2 #vähintään kuivaa kuivassa
     raja_wl_kuiva = 0.010 #alle tämän verran märkää kuivassa
     raja_wl_wl = 0.05 #vähintään märkää märässä
