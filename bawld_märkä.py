@@ -3,7 +3,7 @@ import xarray as xr
 import numpy as np
 import cartopy.crs as ccrs
 from matplotlib.pyplot import *
-import matplotlib
+import matplotlib, sys
 import config
 
 #Käsitellään pisteitä, joissa on jotain wetland-luokkaa tai yhtä muuta luokkaa tai molempia.
@@ -48,8 +48,11 @@ def main():
     raja_luokka = 0.1   #luokan pisteissä on vähintään näin paljon luokkaa
     raja_osuus = 0.5 #luokan pisteet ovat vähintään näin suuri osa kaikista wlluokista kys. pisteessä
     baw = xr.open_dataset('BAWLD1x1.nc')
-    vuot = xr.open_dataarray(config.edgartno_dir+'posterior.nc').mean(dim='time').\
-        sel({'lat': slice(baw.lat.min(),baw.lat.max())})
+    if '-jk' in sys.argv:
+        vuot = xr.open_dataarray('flux1x1_jäätymiskausi.nc').mean(dim='time')
+    else:
+        vuot = xr.open_dataarray(config.edgartno_dir+'posterior.nc').mean(dim='time').\
+            sel({'lat': slice(baw.lat.min(),baw.lat.max())})
 
     bw = baw.wetland
     wlvuo = xr.where((bw>=raja_luokka), vuot, np.nan)
@@ -60,8 +63,6 @@ def main():
     subplmuoto = [2,3]
     for i,luokka in enumerate(luokat_wl):
         maski = (baw[luokka]>=raja_luokka) & (baw[luokka]/bw>=raja_osuus)
-        if not any(maski.data.flatten()):
-            continue
         piirra(xr.where(maski,vuot,np.nan),i)
         title(luokka)
     show()
