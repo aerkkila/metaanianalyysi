@@ -17,7 +17,7 @@ def tee_data(prf_ind):
     df = dsbaw.drop_vars('wetland').to_dataframe().reset_index('prf')
     df = df.assign(vuo=dsvuo.to_dataframe()).reset_index()
     #df = df[df.prf==prf_ind]
-    df.drop(['lon'], axis=1, inplace=True)
+    df.drop(['lat','lon','prf'], axis=1, inplace=True)
     df.dropna(how='any', subset=df.drop('vuo',axis=1).keys(), inplace=True)
     df.dropna(subset='vuo',inplace=True)
     df.insert(0, 'yksi', [1]*len(df.vuo))
@@ -64,7 +64,7 @@ def main():
               linear_model.Ridge(fit_intercept=False, alpha=1),
               ensemble.RandomForestRegressor(n_estimators=50, random_state=12345),
               svm.SVR(cache_size=4000, **{'C': 4570, 'epsilon': 1.224, 'gamma': 5.5540816326530615})]
-    mallit[4] = svm.SVR(cache_size=4000, **{'C': 250, 'epsilon': 1.461, 'gamma': 0.499}) #prf ja lat mukana
+    #mallit[4] = svm.SVR(cache_size=4000, **{'C': 250, 'epsilon': 1.461, 'gamma': 0.499}) #prf ja lat mukana
     nsum_data = np.sum((df.vuo-np.mean(df.vuo))**2)
     npist = len(df)
     for mnimi,malli in zip(taulukko.index,mallit):
