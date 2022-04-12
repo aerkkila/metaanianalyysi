@@ -4,7 +4,7 @@ import numpy as np
 import xarray as xr
 import pandas as pd
 import matplotlib.pyplot as plt
-import config, time
+import config, time, sys
 
 def tee_data(prf_ind):
     raja_wl = 0.25
@@ -12,12 +12,14 @@ def tee_data(prf_ind):
         [['wetland','bog','fen','marsh','tundra_wetland','permafrost_bog']]
     dsvuo = xr.open_dataarray(config.edgartno_dir+'posterior.nc').mean(dim='time').\
         sel({'lat':slice(dsbaw.lat.min(), dsbaw.lat.max())})
-    prfind = 0
+    #dsvuo = xr.open_dataarray('flux1x1_jäätymiskausi.nc').mean(dim='time')
     dsbaw = xr.where(dsbaw.wetland>=raja_wl, dsbaw, np.nan)
     df = dsbaw.drop_vars('wetland').to_dataframe().reset_index('prf')
     df = df.assign(vuo=dsvuo.to_dataframe()).reset_index()
-    df = df[df.prf==prfind].drop(['prf','lat','lon'], axis=1)
-    df.dropna(how='all', subset=df.drop('vuo',axis=1).keys(), inplace=True)
+    #df = df[df.prf==prf_ind]
+    df.drop(['lon'], axis=1, inplace=True)
+    df.dropna(how='any', subset=df.drop('vuo',axis=1).keys(), inplace=True)
+    df.dropna(subset='vuo',inplace=True)
     df.insert(0, 'yksi', [1]*len(df.vuo))
     dsbaw.close()
     dsvuo.close()
@@ -62,6 +64,7 @@ def main():
               linear_model.Ridge(fit_intercept=False, alpha=1),
               ensemble.RandomForestRegressor(n_estimators=50, random_state=12345),
               svm.SVR(cache_size=4000, **{'C': 4570, 'epsilon': 1.224, 'gamma': 5.5540816326530615})]
+    mallit[4] = svm.SVR(cache_size=4000, **{'C': 250, 'epsilon': 1.461, 'gamma': 0.499}) #prf ja lat mukana
     nsum_data = np.sum((df.vuo-np.mean(df.vuo))**2)
     npist = len(df)
     for mnimi,malli in zip(taulukko.index,mallit):
@@ -73,7 +76,7 @@ def main():
 def svr_param(df,param,args={}):
     pit = 50
     if param=='C':
-        arvot = np.geomspace(100, 16000, pit) #C
+        arvot = np.geomspace(0.1, 16000, pit) #C
     elif param=='gamma':
         arvot = np.linspace(0.01, 8, pit) #gamma
     elif param=='epsilon':
@@ -87,14 +90,13 @@ def svr_param(df,param,args={}):
     for i,c in enumerate(arvot):
         print("\033[F%i/%i\033[K" %(i+1,pit))
         args.update({param:c}) #gamma=2.58, epsilon=1.3
-        a,b = ristivalidoi(df, svm.SVR(tol=0.005, **args), 10)
+        a,b = ristivalidoi(df, svm.SVR(tol=0.005, **args), 5)
         pisteet[i] = 1-a/nsum_data
     return arvot, pisteet
 
-def svr_param_kaikki(df):
-    args = {}
-    if False:
-        a,p = svr_param(df,'C')
+def svr_param_kaikki(df,args={}):
+    if True:
+        a,p = svr_param(df,'C',args)
         ind = np.argmax(p)
         m = a[ind]
         print('C = %.0f\t R2 = %.3f' %(m,p[ind]))
@@ -102,7 +104,7 @@ def svr_param_kaikki(df):
         plt.plot(a,p)
         plt.gca().set_xscale('log')
         plt.show()
-    else:
+    elif 'C' not in args:
         args.update({'C':4570})
 
     if False:
@@ -114,10 +116,10 @@ def svr_param_kaikki(df):
         plt.plot(a,p)
         plt.gca().set_xscale('log')
         plt.show()
-    else:
+    elif 'epsilon' not in args:
         args.update({'epsilon':1.224})
 
-    if True:
+    if False:
         a,p = svr_param(df,'gamma',args)
         ind = np.argmax(p)
         m = a[ind]
@@ -126,22 +128,22 @@ def svr_param_kaikki(df):
         plt.plot(a,p)
         plt.gca().set_xscale('log')
         plt.show()
-    else:
+    elif 'gamma' not in args:
         args.update({'gamma':5.717})
-
-    print(args)
+    return args
 
 def main_tutki_svr():
     prf_ind = 0
     df = tee_data(prf_ind)
     df.vuo = df.vuo*1e9 #pienet luvut sotkevat menetelmiä
-    svr_param_kaikki(df)
-    exit()
-    x,pisteet = svr_param_kaikki(df)
-    plt.plot(x,pisteet)
-    plt.gca().set_xscale('log')
-    plt.show()
+    args = {'C': 900, 'epsilon': 1.5204081632653061, 'gamma': 5.391020408163265} #jäätymiskausi C=17700, mutta hidas
+    args = {'C': 500, 'epsilon': 1.4612244897959183, 'gamma': 0.4991836734693878} #jäätymiskausi sis prf ja lat
+    args = svr_param_kaikki(df,args)
+    print(args)
     return 0
 
 if __name__ == '__main__':
-    exit(main())
+    if 'svr' in sys.argv:
+        exit(main_tutki_svr())
+    else:
+        exit(main())
