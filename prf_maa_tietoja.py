@@ -16,8 +16,8 @@ def piirra(data,tasoja):
 
 def bogfen_alueen_muut_luokat():
     #ikir_ind = 0
-    osuusraja = 0.8
-    ikirmaa = xr.open_dataset('prf_maa_kaikki.nc').\
+    osuusraja = 0.3
+    ikirmaa = xr.open_dataset('prf_maa.nc').\
         drop_vars(['wetland','bog','fen','tundra_wetland','permafrost_bog']).median(dim='time').sum(dim='prf')
     bf = (ikirmaa['bog+fen'])
     ikirmaa = ikirmaa.drop_vars(['bog+fen'])
@@ -71,7 +71,7 @@ def luokat_ilman_wetland():
     fig = figure()
     sij = [[0,0.05,w,h],[0.5,0.05,w,h],[0,0.55,w,h],[0.5,0.55,w,h]]
     for l,luokka in enumerate(luokat):
-        ikirmaa = xr.open_dataset('prf_maa_kaikki.nc').median(dim='time').sum(dim='prf')
+        ikirmaa = xr.open_dataset('prf_maa.nc').median(dim='time').sum(dim='prf')
         bf = ikirmaa[luokka]
         bfdata = bf.data.flatten()
         wetdata = ikirmaa.wetland.data.flatten()
@@ -83,6 +83,6 @@ def luokat_ilman_wetland():
     ikirmaa.close()
 
 if __name__ == '__main__':
-    wetlandraja = 0.03
+    wetlandraja = 0.02
     bogfen_alueen_muut_luokat()
     luokat_ilman_wetland()
