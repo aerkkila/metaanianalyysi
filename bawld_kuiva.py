@@ -11,8 +11,8 @@ import config
 
 def luo_varikartta(ch4data):
     global pienin,suurin
-    pienin = np.nanpercentile(ch4data.data, 0.5)
-    suurin = np.nanpercentile(ch4data.data,99.5)
+    pienin = np.nanpercentile(ch4data.data, 1)
+    suurin = np.nanpercentile(ch4data.data,99)
     N = 1024
     cmap = matplotlib.cm.get_cmap('coolwarm',N)
     varit = np.empty(N,object)
@@ -45,11 +45,9 @@ def piirra(data:xr.DataArray, subpl:int):
 def main():
     global cmap, subplmuoto
     luokka_wl = 'wetland'
-    luokka_muu = ['boreal_forest']
-    raja_wl_muu = 0.02 #muuluokan pisteissä on tätä vähemmän wlluokkaa
-    raja_muu_muu = 0.3 #muuluokan pisteissä on vähintään näin paljon muuluokkaa
-    raja_wl_wl = 0.3   #wlluokan pisteissä on vähintään näin paljon wlluokkaa
-    raja_yht = 0.5     #wl- ja muuluokan yhteenlaskettu osuus on vähintään tämän verran
+    luokka_muu = ['boreal_forest','tundra_dry']
+    raja_wl = 0.15 #muuluokan pisteissä on tätä vähemmän wlluokkaa
+    raja_muu = 0.5 #muuluokan pisteissä on vähintään näin paljon muuluokkaa
     baw = xr.open_dataset('BAWLD1x1.nc')
     vuot = xr.open_dataarray(config.edgartno_dir+'posterior.nc').mean(dim='time').\
         sel({'lat': slice(baw.lat.min(),baw.lat.max())})
@@ -57,21 +55,14 @@ def main():
     muuvuot = np.empty(len(luokka_muu), object)
     for i in range(len(muuvuot)):
         bm = baw[luokka_muu[i]]
-        muuvuot[i] = xr.where((bm>=raja_muu_muu) & (bw<raja_wl_muu) & (bm+bw>=raja_yht), vuot, np.nan)
-    wlvuo = xr.where((bw>=raja_wl_wl) & (bm+bw>=raja_yht), vuot, np.nan)
-    wlvuo_jaett = xr.where((bw>=raja_wl_wl) & (bm+bw>=raja_yht), vuot/bw, np.nan)
+        muuvuot[i] = xr.where((bm>=raja_muu) & (bw<raja_wl), vuot, np.nan)
 
-    rcParams.update({'figure.figsize':(14,12), 'font.size':14})
-    cmap=luo_varikartta(wlvuo)
-    subplmuoto = [2,2]
+    rcParams.update({'figure.figsize':(14,8), 'font.size':14})
+    cmap=luo_varikartta(vuot)
+    subplmuoto = [1,2]
     for i,luokka in enumerate(luokka_muu):
         piirra(muuvuot[i],i)
         title(luokka)
-    piirra(wlvuo,2)
-    title(luokka_wl)
-    cmap=luo_varikartta(wlvuo_jaett)
-    piirra(wlvuo_jaett,3)
-    title('%s/frac(%s)' %(luokka_wl,luokka_wl))
     show()
     return
 
