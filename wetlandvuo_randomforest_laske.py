@@ -6,6 +6,8 @@ import xarray as xr
 import config, sys
 from threading import Thread
 
+#Tekee datan randomforest-menetelmän validointia varten
+
 class RandomSubspace():
     def __init__(self, df, nmax, samp_kwargs={}):
         self.df = df
@@ -57,7 +59,7 @@ def tee_data(prf_ind):
     df.dropna(subset='vuo',inplace=True)
     dsbaw.close()
     dsvuo.close()
-    return df.sample(frac=1).reset_index(drop=True)
+    return df.reset_index(drop=True)
 
 def taita_sarja(sarja, n_taitteet, n_sij):
     pit = len(sarja) // n_taitteet
@@ -134,7 +136,8 @@ def main():
     nelsum_sovit /= toistoja
     print('ŷ (σ,R²):\t%.5f\t%.5f' %(np.sqrt(nelsum_sovit/npist), 1-nelsum_sovit/nelsum_data))
 
-    np.savez('wetlandvuo_randomforest', yhattu=yhatut, rajat_hattu=luotthatut, rajat=luottamusrajat)
+    np.savez('wetlandvuo_randomforest', yhattu=yhatut, rajat_hattu=luotthatut.transpose(0,2,1), rajat=luottamusrajat)
+    df.to_csv('wetlandvuo_randomforest_data.csv')
     return 0
 
     #nämä eivät toimi
