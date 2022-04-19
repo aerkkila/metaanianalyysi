@@ -14,8 +14,9 @@ def tee_data(prf_ind):
         sel({'lat':slice(dsbaw.lat.min(), dsbaw.lat.max())})
     #dsvuo = xr.open_dataarray('flux1x1_jäätymiskausi.nc').mean(dim='time')
     dsbaw = xr.where(dsbaw.wetland>=raja_wl, dsbaw, np.nan)
-    df = dsbaw.drop_vars('wetland').to_dataframe().reset_index('prf')
+    df = dsbaw.to_dataframe().reset_index('prf')
     df = df.assign(vuo=dsvuo.to_dataframe()).reset_index()
+    df = df.drop('wetland',axis=1).div(df.wetland, axis='index')
     #df = df[df.prf==prf_ind]
     df.drop(['lat','lon','prf'], axis=1, inplace=True)
     df.dropna(how='any', subset=df.drop('vuo',axis=1).keys(), inplace=True)
@@ -58,20 +59,38 @@ def main():
     df = tee_data(prf_ind)
     df.vuo = df.vuo*1e9 #pienet luvut sotkevat menetelmiä
     taulukko = pd.DataFrame(0,
-                            index = ['dummy','linregr','ridge','random_forest','SVR'],
+                            index = ['dummy','ols','ridge','RANSAC(ols)','Theil-Sen','random_forest','SVR'],
                             columns = ['std','R2','aika'])
     mallit = [Dummy(),
               linear_model.LinearRegression(fit_intercept=False),
               linear_model.Ridge(fit_intercept=False, alpha=1),
+              linear_model.RANSACRegressor(base_estimator=linear_model.LinearRegression(fit_intercept=False),
+                                           min_samples=10),
+              linear_model.TheilSenRegressor(),
               ensemble.RandomForestRegressor(n_estimators=50, random_state=12345),
-              svm.SVR(cache_size=4000, **{'C': 4570, 'epsilon': 1.224, 'gamma': 5.5540816326530615})]
-    #mallit[4] = svm.SVR(cache_size=4000, **{'C': 250, 'epsilon': 1.461, 'gamma': 0.499}) #prf ja lat mukana
+              svm.SVR(cache_size=4000, **{'C': 2070, 'epsilon': 1.224, 'gamma': 5.5540816326530615})]
     nsum_data = np.sum((df.vuo-np.mean(df.vuo))**2)
     npist = len(df)
-    for mnimi,malli in zip(taulukko.index,mallit):
-        nsum_sovit,aika = ristivalidoi(df, malli, 20)
-        taulukko.loc[mnimi,:] = [np.sqrt(nsum_sovit/npist), 1-nsum_sovit/nsum_data, aika]
-    print(taulukko)
+    if 0:
+        for mnimi,malli in zip(taulukko.index,mallit):
+            nsum_sovit,aika = ristivalidoi(df, malli, 20)
+            taulukko.loc[mnimi,:] = [np.sqrt(nsum_sovit/npist), 1-nsum_sovit/nsum_data, aika]
+        print(taulukko)
+
+    muutama_malli = ['ols','Theil-Sen','RANSAC(ols)']
+    x = df.drop('vuo',axis=1)
+    y = df.vuo
+    plt.plot(x['bog'],y,'.')
+    plt.show(block=False)
+    plt.waitforbuttonpress()
+    viivat, = plt.plot(x['bog'],y,'.')
+    for mnimi in muutama_malli:
+        ind = np.where(taulukko.index==mnimi)[0][0]
+        malli = mallit[ind].fit(x,y)
+        viivat.set_ydata(malli.predict(x))
+        plt.title(mnimi)
+        plt.draw()
+        plt.waitforbuttonpress()
     return 0
 
 def svr_param(df,param,args={}):
