@@ -59,7 +59,7 @@ def main():
     #vuo_jaett = xr.where((bw>=raja_luokka), vuot/bw, np.nan)
     cmap=luo_varikartta(wlvuo)
 
-    rcParams.update({'figure.figsize':(14,12), 'font.size':14})
+    rcParams.update({'figure.figsize':(14,11), 'font.size':14})
     subplmuoto = [2,3]
     for i,luokka in enumerate(luokat_wl):
         maski = (baw[luokka]>=raja_luokka) & (baw[luokka]/bw>=raja_osuus)
