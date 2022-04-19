@@ -23,7 +23,7 @@ def tee_data(prf_ind):
     df.insert(0, 'yksi', [1]*len(df.vuo))
     dsbaw.close()
     dsvuo.close()
-    return df.sample(frac=1,random_state=12345)
+    return df.sample(frac=1)
 
 class Dummy():
     def fit(self,x,y):
@@ -53,6 +53,7 @@ def ristivalidoi(df, malli, n_yht):
     return neliosumma, time.process_time()-alku
 
 def main():
+    np.random.seed(12345)
     prf_ind = 0
     df = tee_data(prf_ind)
     df.vuo = df.vuo*1e9 #pienet luvut sotkevat menetelmiä
@@ -133,6 +134,7 @@ def svr_param_kaikki(df,args={}):
     return args
 
 def main_tutki_svr():
+    np.random.seed(12345)
     prf_ind = 0
     df = tee_data(prf_ind)
     df.vuo = df.vuo*1e9 #pienet luvut sotkevat menetelmiä
@@ -142,8 +144,58 @@ def main_tutki_svr():
     print(args)
     return 0
 
+class RandomSubspace():
+    def __init__(self, df, nmax, samp_kwargs={}):
+        self.df = df
+        self.nmax = nmax
+        self.samp_kwargs = samp_kwargs
+    def __iter__(self):
+        self.n = 0
+        return self
+    def __next__(self):
+        if self.n >= self.nmax:
+            raise StopIteration
+        self.n += 1
+        return self.df.sample(**self.samp_kwargs)
+
+class OmaRandomForest():
+    def __init__(self, n_estimators=100, samp_kwargs={'frac':0.025}, tree_kwargs={}):
+        self.n_estimators = n_estimators
+        self.samp_kwargs = samp_kwargs
+        self.tree_kwargs = tree_kwargs
+    def fit(self,x,y):
+        df = pd.concat([x,y],axis=1)
+        self.puut = np.empty(self.n_estimators, object)
+        for i,dt in enumerate(RandomSubspace(df, self.n_estimators, samp_kwargs=self.samp_kwargs)):
+            self.puut[i] = tree.DecisionTreeRegressor(**self.tree_kwargs).fit(dt.drop(y.name,axis=1), dt[y.name])
+        return self
+    def predict(self, x, palauta=True):
+        self.yhatut = np.empty([x.shape[0], len(self.puut)])
+        for i,puu in enumerate(self.puut):
+            self.yhatut[:,i] = puu.predict(x)
+        return np.mean(self.yhatut, axis=1) if palauta else None
+    def confidence(arvo,x=None):
+        if not x is None:
+            self.predict(x, palauta=False)
+        return (np.percentile(self.yhatut, arvo, axis=1), np.percentile(self.yhatut, 1-arvo, axis=1))
+
+def main_random_forest():
+    np.random.seed(12345)
+    prf_ind = 0
+    df = tee_data(prf_ind).drop('yksi',axis=1)
+    df.vuo = df.vuo*1e9
+    npist = len(df)
+    nsum_data = np.sum((df.vuo-np.mean(df.vuo))**2)
+
+    #malli = ensemble.RandomForestRegressor(n_estimators=100)
+    malli = OmaRandomForest(n_estimators=100, samp_kwargs={'frac':0.5})
+    nsum_sovit, aika = ristivalidoi(df, malli, 15)
+    print(np.sqrt(nsum_sovit/npist), 1-nsum_sovit/nsum_data, aika)
+
 if __name__ == '__main__':
     if 'svr' in sys.argv:
         exit(main_tutki_svr())
+    elif 'rf' in sys.argv:
+        exit(main_random_forest())
     else:
         exit(main())
