@@ -4,22 +4,10 @@ import pandas as pd
 from matplotlib.pyplot import *
 import sys
 
-def piirra(df, luku):
-    suo = suot[suoind]
-    taul_osuus = df[suo] / wetl
-    jarj = np.argsort(taul_osuus)
-    x = taul_osuus[jarj]
-    y = df.vuo[jarj]
-    yhattu = taul_raja[jarj]
-    plot(x,y,color='k')
-    maski = (y<=yhattu)
-    plot(x[maski], yhattu[maski], '.', color='b')
-    plot(x[~maski], yhattu[~maski], '.', color='r')
-
 def main():
     rcParams.update({'figure.figsize':(14,10), 'font.size':14})
     d = np.load('./wetlandvuo_randomforest.npz')
-    df = pd.read_csv('./wetlandvuo_randomforest_data.csv',index_col=0)
+    df = pd.read_csv('./wetlandvuo_randomforest_data.csv')
     wetl = np.array(df.drop('vuo',axis=1).sum(axis=1))
     #järjestetään suotyypin osuuden mukaan
     suot = df.drop('vuo',axis=1).columns
@@ -28,10 +16,10 @@ def main():
     rindex = np.where(d['rajat']==raja)[0][0]
     taul_raja = d['rajat_hattu'][ajo,rindex,:]
     for i,suo in enumerate(suot):
-        taul_osuus = df[suo] / wetl
+        taul_osuus = df[suo]
         jarj = np.argsort(taul_osuus)
         x = np.array(taul_osuus[jarj])
-        y = np.array(df.vuo[jarj]) / wetl
+        y = np.array(df.vuo[jarj])
         yhattu = taul_raja[jarj]
         plot(x,y,'.',color='k')
         maski = (y<=yhattu)

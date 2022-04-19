@@ -51,8 +51,9 @@ def tee_data(prf_ind):
         sel({'lat':slice(dsbaw.lat.min(), dsbaw.lat.max())})
     #dsvuo = xr.open_dataarray('flux1x1_jäätymiskausi.nc').mean(dim='time')
     dsbaw = xr.where(dsbaw.wetland>=raja_wl, dsbaw, np.nan)
-    df = dsbaw.drop_vars('wetland').to_dataframe().reset_index('prf')
+    df = dsbaw.to_dataframe().reset_index('prf')
     df = df.assign(vuo=dsvuo.to_dataframe()).reset_index()
+    df = df.drop('wetland',axis=1).div(df.wetland, axis='index')
     #df = df[df.prf==prf_ind]
     df.drop(['lat','lon','prf'], axis=1, inplace=True)
     df.dropna(how='any', subset=df.drop('vuo',axis=1).keys(), inplace=True)
@@ -108,7 +109,7 @@ def main():
     nelsum_data = np.sum((df.vuo-np.mean(df.vuo))**2)
 
     #luodaan säikeet
-    toistoja = 16
+    toistoja = 4
     saikeita = 4
     saikeet = np.empty(toistoja,object)
     yhatut = np.empty([toistoja,len(df.index)])
@@ -137,7 +138,7 @@ def main():
     print('ŷ (σ,R²):\t%.5f\t%.5f' %(np.sqrt(nelsum_sovit/npist), 1-nelsum_sovit/nelsum_data))
 
     np.savez('wetlandvuo_randomforest', yhattu=yhatut, rajat_hattu=luotthatut.transpose(0,2,1), rajat=luottamusrajat)
-    df.to_csv('wetlandvuo_randomforest_data.csv')
+    df.to_csv('wetlandvuo_randomforest_data.csv', index=False)
     return 0
 
     #nämä eivät toimi
