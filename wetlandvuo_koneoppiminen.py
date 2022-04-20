@@ -6,8 +6,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import config, time, sys
 
+suot = ['bog','fen','marsh','tundra_wetland','permafrost_bog']
+
 def tee_data(prf_ind):
-    raja_wl = 0.25
+    raja_wl = 0.05
     dsbaw = xr.open_dataset('prf_maa.nc').isel({'time':range(1,10)}).median(dim='time')\
         [['wetland','bog','fen','marsh','tundra_wetland','permafrost_bog']]
     dsvuo = xr.open_dataarray(config.edgartno_dir+'posterior.nc').mean(dim='time').\
@@ -15,13 +17,13 @@ def tee_data(prf_ind):
     #dsvuo = xr.open_dataarray('flux1x1_jäätymiskausi.nc').mean(dim='time')
     dsbaw = xr.where(dsbaw.wetland>=raja_wl, dsbaw, np.nan)
     df = dsbaw.to_dataframe().reset_index('prf')
-    df = df.assign(vuo=dsvuo.to_dataframe()).reset_index()
-    df = df.drop('wetland',axis=1).div(df.wetland, axis='index')
+        df = df.assign(vuo=dsvuo.to_dataframe()).reset_index()
+    df = df.drop('wetland',axis=1)#.div(df.wetland, axis='index')
     #df = df[df.prf==prf_ind]
     df.drop(['lat','lon','prf'], axis=1, inplace=True)
     df.dropna(how='any', subset=df.drop('vuo',axis=1).keys(), inplace=True)
     df.dropna(subset='vuo',inplace=True)
-    df.insert(0, 'yksi', [1]*len(df.vuo))
+    #df.insert(0, 'yksi', [1]*len(df.vuo))
     dsbaw.close()
     dsvuo.close()
     return df.sample(frac=1)
@@ -54,6 +56,7 @@ def ristivalidoi(df, malli, n_yht):
     return neliosumma, time.process_time()-alku
 
 def main():
+    plt.rcParams.update({'figure.figsize':(14,12)})
     np.random.seed(12345)
     prf_ind = 0
     df = tee_data(prf_ind)
@@ -63,9 +66,9 @@ def main():
                             index = ['dummy','ols','ridge','RANSAC(ols)','Theil-Sen','random_forest','SVR'],
                             columns = ['std','R2','aika'])
     mallit = [Dummy(),
-              linear_model.LinearRegression(fit_intercept=False),
-              linear_model.Ridge(fit_intercept=False, alpha=1),
-              linear_model.RANSACRegressor(base_estimator=linear_model.LinearRegression(fit_intercept=False),
+              linear_model.LinearRegression(fit_intercept=True),
+              linear_model.Ridge(fit_intercept=True, alpha=1),
+              linear_model.RANSACRegressor(base_estimator=linear_model.LinearRegression(fit_intercept=True),
                                            min_samples=10),
               linear_model.TheilSenRegressor(),
               ensemble.RandomForestRegressor(n_estimators=50, random_state=12345),
@@ -78,11 +81,11 @@ def main():
             taulukko.loc[mnimi,:] = [np.sqrt(nsum_sovit/npist), 1-nsum_sovit/nsum_data, aika]
         print(taulukko)
 
-    muutama_malli = ['ols','Theil-Sen','RANSAC(ols)']
+    muutama_malli = ['ols','Theil-Sen','RANSAC(ols)','random_forest']
     x = df.drop('vuo',axis=1)
     y = df.vuo
 
-    if 0:
+    if 1:
         plt.plot(x['bog'].to_numpy(),y.to_numpy(),'.')
         plt.waitforbuttonpress()
         viivat, = plt.plot(x['bog'].to_numpy(),y.to_numpy(),'.')
@@ -93,30 +96,36 @@ def main():
             plt.title(mnimi)
             plt.waitforbuttonpress()
 
-    plt.gca().clear()
-    viivat, = plt.plot(x['bog'].to_numpy(), y.to_numpy(), '.')
-    pit = len(x['bog'].to_numpy()[x['bog'].to_numpy()<=np.percentile(x['bog'],90)])
-    viivat2, = plt.plot(x['bog'].to_numpy()[:pit], y.to_numpy()[:pit], '.', label='model fit')
-    viivat3, = plt.plot(x['bog'].to_numpy()[pit:], y.to_numpy()[pit:], '.', label='model extrapolation')
-    plt.legend(loc='upper right')
-    plt.xlim([0,1])
-    for suo in x.drop('yksi',axis=1).columns:
+    pit = int(len(x['bog'])//10*8.5)
+    for mnimi in muutama_malli:
+        ind = np.where(taulukko.index==mnimi)[0][0]
+        malli = mallit[ind].fit(x,y)
+        print('\033[1;32m%s\033[0m' %(mnimi))
+        for suo in suot:
+            _df = df.drop('vuo',axis=1).iloc[0].copy() 
+            _df[:] = 0
+            _df.at[suo] = 1
+            _df = pd.DataFrame(_df).transpose()
+            print('%s\t%.3f' %(suo,malli.predict(_df)))
+    for suo in suot:
+        fig,axs = plt.subplots(2,3)
+        axs = axs.flatten()
+        plt.sca(axs[0])
         xnp = x[suo].to_numpy()
         jarj = np.argsort(xnp)
         xnp = xnp[jarj]
         ynp = y.to_numpy()[jarj]
-        viivat.set_ydata(ynp)
-        viivat.set_xdata(xnp)
-        plt.waitforbuttonpress()
-        viivat2.set_xdata(xnp[:pit])
-        viivat3.set_xdata(xnp[pit:])
-        for mnimi in muutama_malli:
+        plt.plot(xnp, ynp, '.')
+        for mnimi,ax in zip(muutama_malli,axs[1:]):
+            plt.sca(ax)
+            plt.plot(xnp, ynp, '.')
             ind = np.where(taulukko.index==mnimi)[0][0]
             malli = mallit[ind].fit(x[:pit],y[:pit])
-            viivat2.set_ydata(malli.predict(x[:pit]))
-            viivat3.set_ydata(malli.predict(x[pit:]))
+            plt.plot(xnp[:pit], malli.predict(x[:pit]), '.', label='model fit')
+            plt.plot(xnp[pit:], malli.predict(x[pit:]), '.', label='model extrapolation')
+            plt.legend(loc='upper right')
             plt.title('%s, %s' %(suo,mnimi))
-            plt.waitforbuttonpress()
+        plt.show()
     return 0
 
 def svr_param(df,param,args={}):
