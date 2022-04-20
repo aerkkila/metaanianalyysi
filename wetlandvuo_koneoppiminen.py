@@ -58,6 +58,7 @@ def main():
     prf_ind = 0
     df = tee_data(prf_ind)
     df.vuo = df.vuo*1e9 #pienet luvut sotkevat menetelmiä
+    viivat = None
     taulukko = pd.DataFrame(0,
                             index = ['dummy','ols','ridge','RANSAC(ols)','Theil-Sen','random_forest','SVR'],
                             columns = ['std','R2','aika'])
@@ -80,17 +81,42 @@ def main():
     muutama_malli = ['ols','Theil-Sen','RANSAC(ols)']
     x = df.drop('vuo',axis=1)
     y = df.vuo
-    plt.plot(x['bog'],y,'.')
-    plt.show(block=False)
-    plt.waitforbuttonpress()
-    viivat, = plt.plot(x['bog'],y,'.')
-    for mnimi in muutama_malli:
-        ind = np.where(taulukko.index==mnimi)[0][0]
-        malli = mallit[ind].fit(x,y)
-        viivat.set_ydata(malli.predict(x))
-        plt.title(mnimi)
-        plt.draw()
+
+    if 0:
+        plt.plot(x['bog'].to_numpy(),y.to_numpy(),'.')
         plt.waitforbuttonpress()
+        viivat, = plt.plot(x['bog'].to_numpy(),y.to_numpy(),'.')
+        for mnimi in muutama_malli:
+            ind = np.where(taulukko.index==mnimi)[0][0]
+            malli = mallit[ind].fit(x,y)
+            viivat.set_ydata(malli.predict(x))
+            plt.title(mnimi)
+            plt.waitforbuttonpress()
+
+    plt.gca().clear()
+    viivat, = plt.plot(x['bog'].to_numpy(), y.to_numpy(), '.')
+    pit = len(x['bog'].to_numpy()[x['bog'].to_numpy()<=np.percentile(x['bog'],90)])
+    viivat2, = plt.plot(x['bog'].to_numpy()[:pit], y.to_numpy()[:pit], '.', label='model fit')
+    viivat3, = plt.plot(x['bog'].to_numpy()[pit:], y.to_numpy()[pit:], '.', label='model extrapolation')
+    plt.legend(loc='upper right')
+    plt.xlim([0,1])
+    for suo in x.drop('yksi',axis=1).columns:
+        xnp = x[suo].to_numpy()
+        jarj = np.argsort(xnp)
+        xnp = xnp[jarj]
+        ynp = y.to_numpy()[jarj]
+        viivat.set_ydata(ynp)
+        viivat.set_xdata(xnp)
+        plt.waitforbuttonpress()
+        viivat2.set_xdata(xnp[:pit])
+        viivat3.set_xdata(xnp[pit:])
+        for mnimi in muutama_malli:
+            ind = np.where(taulukko.index==mnimi)[0][0]
+            malli = mallit[ind].fit(x[:pit],y[:pit])
+            viivat2.set_ydata(malli.predict(x[:pit]))
+            viivat3.set_ydata(malli.predict(x[pit:]))
+            plt.title('%s, %s' %(suo,mnimi))
+            plt.waitforbuttonpress()
     return 0
 
 def svr_param(df,param,args={}):
