@@ -1,8 +1,6 @@
-#!/usr/bin/python3
-import xarray as xr
 import numpy as np
 import pandas as pd
-import time
+import sys
 
 tyhja_taulukko = lambda index: pd.DataFrame(0, columns=['Keskiarvo', 'Keskiarvo 90 %', '5 %', '95 %'], index=index)
 
@@ -48,13 +46,7 @@ def taul_pintaaloista(dt):
     dt = dt.mean(dim='time')
     return taulukon_teko(dt, tee_data_maarista, maarat)
 
-def main():
-    dt = xr.open_dataset('./köppen_metaani.nc')
-    print('tasoittamaton')
-    print(taulukon_teko(dt, tee_data_suoraan))
-    print('tasoitettu')
-    print(taul_pintaaloista(dt))
-    dt.close()
+suot = ['bog','fen','tundra_wetland','permafrost_bog']
 
 if __name__ == '__main__':
-    main()
+    print('Tätä ei ole tarkoitus ajaa pääohjelmana (%s).' %(sys.argv[0]))
