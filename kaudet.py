@@ -27,21 +27,18 @@ def nimesta_vuosi(ds):
     return ds
 
 avaa = lambda nimi: xr.open_mfdataset(nimi, engine='h5netcdf', combine='nested', concat_dim=['vuosi'], preprocess=nimesta_vuosi)
-aikamaski_lambda = lambda dt: ~((dt<=-300) | (300<=dt)).any(axis=[1,2]).data.compute() # 0. vuosi jää pois
-muokkaa_array = lambda darr,aikamaski: darr.sel({'vuosi':aikamaski}).transpose('lat','lon','vuosi')
+muokkaa_array = lambda darr: darr[1:-1,...].transpose('lat','lon','vuosi') #ensimmäinen ja viimeinen vuosi ovat huonoja
 
 def aja():
     argumentit(sys.argv[1:])
+    kausiluvut = [1,2,3] #kesä, jäätyminen, talvi. Nolla on varattu määrittelemättömälle kaudelle.
     kansio = config.tyotiedostot+'FT_implementointi/FT_percents_pixel_ease_flag/DOY/'
     jaatym_alku = avaa(kansio+'freezing_start_doy_*.nc').freezing_start
-    aikamaski = aikamaski_lambda(jaatym_alku)
     talven_alku = avaa(kansio+'winter_start_doy_*.nc').autumn_end
-    aikamaski |= aikamaski_lambda(talven_alku)
     talven_loppu = avaa(kansio+'winter_end_doy_*.nc').spring_start
-    aikamaski |= aikamaski_lambda(talven_loppu)
-    jaatym_alku = muokkaa_array(jaatym_alku,aikamaski)
-    talven_alku = muokkaa_array(talven_alku,aikamaski)
-    talven_loppu = muokkaa_array(talven_loppu,aikamaski)
+    jaatym_alku = muokkaa_array(jaatym_alku)
+    talven_alku = muokkaa_array(talven_alku)
+    talven_loppu = muokkaa_array(talven_loppu)
     ajat = xr.Dataset({'jaatym_alku':jaatym_alku, 'talven_alku':talven_alku, 'talven_loppu':talven_loppu}).load()
     tapahtumat = ['jaatym_alku', 'talven_alku', 'talven_loppu']
     jaatym_alku.close()
@@ -64,30 +61,31 @@ def aja():
 
     #tehdään dataarray vuodenajoista
     dt = np.zeros([ajat.lat.size, ajat.lon.size, pit_aika], np.int8)
-    ind0 = (pd.Period('%4i-01-01' %ajat.vuosi.data[0], freq='D') - alkuaika).n #ensimmäisen nollakohdan indeksi
+    #ind0 = (pd.Period('%4i-01-01' %ajat.vuosi.data[0], freq='D') - alkuaika).n #ensimmäisen nollakohdan indeksi
     print('')
     for j in range(ajat.lat.size):
         print('\033[F%i/%i\033[K' %(j+1,ajat.lat.size))
         for i in range(ajat.lon.size):
-            ind = ind0
+            ind = 0
             for v,vuosi in enumerate(ajat.vuosi):
                 nollakohta = pd.Period('%4i-01-01' %vuosi)
-                for kausi,tapahtuma in zip([3,1,2], tapahtumat):
+                joko0tai1 = 1 #tällä laitetaan puuttuva data nollaksi
+                for kausi,tapahtuma in zip(kausiluvut, tapahtumat):
                     paiva = ajat[tapahtuma].data[j,i,v]
                     if paiva != paiva:
-                        break #oispa goto
+                        joko0tai1 = 0
+                        continue
                     pit = (nollakohta+int(paiva) - ch4ajat[ind]).n
-                    dt[j,i,ind:ind+pit] = kausi
+                    dt[j,i,ind:ind+pit] = kausi*joko0tai1
+                    joko0tai1 = 1
                     ind += pit
-                else:
-                    continue
-                break
+            dt[j,i,ind:] = kausiluvut[0]*joko0tai1 #loppu on kesää
     ajat.close()
     darr = xr.DataArray(dt, name='kausi',
                         dims=('lat','lon','time'),
                         coords=({'lat':ajat.lat,
                                  'lon':ajat.lon,
-                                 'time':ch4data.time.data})) #.data saa time:units-attribuutin muuttumaan
+                                 'time':ch4data.time.data})) #.data saa days since -attribuutin muuttumaan
     ch4data.close()
     darr.to_netcdf('%s_latlontime.nc' %(sys.argv[0][:-3]))
     darr.transpose('time','lat','lon').to_netcdf('%s.nc' %(sys.argv[0][:-3]))
