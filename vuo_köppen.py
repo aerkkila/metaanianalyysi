@@ -2,7 +2,7 @@
 import xarray as xr
 import numpy as np
 import sys, köppen
-from vuo_bawld import kaudet
+from flux1x1 import kaudet
 
 def vuo_koppen(kausi:str):
     kopp = köppen.lue_oletusluokkamaskit_dataset()

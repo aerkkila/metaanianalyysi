@@ -3,7 +3,7 @@ from matplotlib.pyplot import *
 import cartopy.crs as ccrs
 import xarray as xr
 import sys, matplotlib
-from vuo_bawld import kaudet
+from flux1x1 import kaudet
 
 def tee_alikuva(subplmuoto, subpl, projektio):
     subpl_y = subplmuoto[0]-1 - subpl // subplmuoto[1]

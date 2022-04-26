@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 from vuo_kartta_köppen import main
-from vuo_bawld import kaudet
+from flux1x1 import kaudet
 import config, sys
 
 if __name__ == '__main__':

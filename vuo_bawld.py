@@ -2,9 +2,9 @@
 import xarray as xr
 import numpy as np
 import sys
+from flux1x1 import kaudet
 
 suot = ['bog','fen','tundra_wetland','permafrost_bog']
-kaudet = {'freezing':2, 'winter':3, 'summer':1, 'whole_time':4}
 
 def vuo_bawld(kausi:str):
     bawld = xr.open_dataset('./BAWLD1x1.nc')
