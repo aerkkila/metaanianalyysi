@@ -64,29 +64,18 @@ class Prf():
             print( 'Rajaaminen ei onnistu. Tuntematon muoto: \"%s\".' %(self.hila) )
         return self
 
-luokat = ['distinguishing isolated', 'sporadic', 'discontinuous', 'continuous']
-luokat1 = ikirluokat.dt #tämä sijoitus tehdään historiallisista syistä
+luokat = ikirluokat.dt
 
 def luokittelu_str_xr(data:xr.DataArray) -> xr.DataArray:
     dt = data.data.flatten()
     uusi = np.empty(dt.shape,object)
-    uusi[  0==dt             ] = None
-    uusi[ (0 < dt) & (dt<10) ] = luokat[0]
+    uusi[  (dt<10)           ] = luokat[0]
     uusi[ (10<=dt) & (dt<50) ] = luokat[1]
     uusi[ (50<=dt) & (dt<90) ] = luokat[2]
     uusi[ (90<=dt)           ] = luokat[3]
     return xr.DataArray( data=uusi.reshape(data.data.shape), coords=data.coords, dims=data.dims )
 
-def luokittelu1_str_xr(data:xr.DataArray) -> xr.DataArray:
-    dt = data.data.flatten()
-    uusi = np.empty(dt.shape,object)
-    uusi[  (dt<10)           ] = luokat1[0]
-    uusi[ (10<=dt) & (dt<50) ] = luokat1[1]
-    uusi[ (50<=dt) & (dt<90) ] = luokat1[2]
-    uusi[ (90<=dt)           ] = luokat1[3]
-    return xr.DataArray( data=uusi.reshape(data.data.shape), coords=data.coords, dims=data.dims )
-
-def luokittelu1_num_xr(data:xr.DataArray) -> xr.DataArray:
+def luokittelu_num_xr(data:xr.DataArray) -> xr.DataArray:
     dt = data.data.flatten()
     uusi = np.empty(dt.shape,object)
     uusi[  (dt<10)           ] = 0

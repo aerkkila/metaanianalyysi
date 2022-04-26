@@ -14,7 +14,7 @@ def valmista_data(startend):
     koppdf = koppdf.mul(doy.data.flatten(), axis=0)
     #ikiroutadata
     ikirouta = prf.Prf('1x1','xarray').rajaa( (doy.lat.min(), doy.lat.max()+1) ).data.mean(dim='time')
-    ikirstr = prf.luokittelu1_str_xr(ikirouta).data.flatten()
+    ikirstr = prf.luokittelu_str_xr(ikirouta).data.flatten()
     #rajataan tarkemmin määrittelyalueeseen
     doy = doy.data.flatten()
     valinta = doy==doy
@@ -22,7 +22,7 @@ def valmista_data(startend):
     ikirstr = ikirstr[valinta]
     doy = doy[valinta]
     #yhdistetään ikirouta
-    ikirluokat = prf.luokat1
+    ikirluokat = prf.luokat
     for i,ikirluok in enumerate(ikirluokat):
         df = koppdf.loc[ikirstr==ikirluok,:]
         df.to_csv('prf_köppen_%s%i.csv' %(startend,i))

@@ -6,17 +6,12 @@ from matplotlib.pyplot import *
 import sys, warnings, prf, maalajit
 
 ikir_ind = 0
-vari1 = '\033[1;32m'
-vari2 = '\033[1;93m'
-vari0 = '\033[0m'
-
 tallenna = False
 startend = 'start'
 osuusraja = 30
-verbose = False
 
 def argumentit():
-    global tallenna,startend,osuusraja,verbose
+    global tallenna,startend,osuusraja
     i=1
     while i<len(sys.argv):
         a = sys.argv[i]
@@ -24,8 +19,6 @@ def argumentit():
             tallenna = True
         elif a == 'end':
             startend = 'end'
-        elif a == '-v':
-            verbose = True
         elif a == '-o' or a == '--osuusraja':
             i+=1
             osuusraja = float(sys.argv[i])
@@ -35,6 +28,7 @@ def argumentit():
 def viimeistele():
     title(ikirluokat[ikir_ind])
     ax.set_ylim(mmin,mmax)
+    ax.tick_params(axis='x',labelrotation=30)
     ylabel('winter %s doy' %startend)
 
 def vaihda_ikirluokka(hyppy:int,dflista):
@@ -68,7 +62,7 @@ if __name__ == '__main__':
     rcParams.update({'font.size':13,'figure.figsize':(10,8)})
     argumentit()
 
-    ikirluokat = prf.luokat1
+    ikirluokat = prf.luokat
     dflista = np.full(len(ikirluokat),None,object)
     for i in range(dflista.shape[0]):
         dflista[i] = maalajit.nimen_jako(pd.read_csv('prf_maa_DOY_%s%i.csv' %(startend,i)))
@@ -81,7 +75,7 @@ if __name__ == '__main__':
     fig = figure()
     with warnings.catch_warnings():
          warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
-         ax = dflista[ikir_ind].boxplot( whis=(5,95) )
+         ax = dflista[ikir_ind].boxplot(whis=(5,95))
     viimeistele()
     tight_layout()
     if not tallenna:

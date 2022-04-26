@@ -44,8 +44,8 @@ def nappainfunk(tapaht):
 def valmista_data():
     koppdoy,doy = klaat.dataframe_luokka_avgdoy(startend,palauta_doy=True) #pd.DataFrame,xr.DataArray
     ikirouta = prf.Prf('1x1','xarray').rajaa( (doy.lat.min(), doy.lat.max()+1) )
-    ikirstr = prf.luokittelu1_str_xr(ikirouta.data.mean(dim='time'))
-    ikirluokat = prf.luokat1
+    ikirstr = prf.luokittelu_str_xr(ikirouta.data.mean(dim='time'))
+    ikirluokat = prf.luokat
     ikirdatalis = np.empty(len(ikirluokat),object)
     for i,ikirluok in enumerate(ikirluokat):
         a = ikirstr==ikirluok

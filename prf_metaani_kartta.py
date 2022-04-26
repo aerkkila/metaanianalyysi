@@ -64,14 +64,14 @@ def piirra():
 #                         cbar_kwargs={'label':'no permafrost data','ticks':[]} )
     #Varsinainen data
     cbar_nimio = r'CH$_4$ flux ($\frac{\mathrm{mol}}{\mathrm{m}^2\mathrm{s}}$)'
-    ch4data.where(ikirluokat==prf.luokat1[ikir_ind],np.nan).plot.\
+    ch4data.where(ikirluokat==prf.luokat[ikir_ind],np.nan).plot.\
         pcolormesh( transform=platecarree, cmap=vkartta, norm=mcolors.DivergingNorm(0,max(pienin*6,-suurin),suurin),
                     cbar_kwargs={'label':cbar_nimio} )
     #Tämä asettaa muut ikiroutaluokka-alueet harmaaksi.
     harmaa = lcmap(harmaavari)
-    ch4data.where(~(ikirluokat==prf.luokat1[ikir_ind]),np.nan).plot.\
+    ch4data.where(~(ikirluokat==prf.luokat[ikir_ind]),np.nan).plot.\
         pcolormesh( transform=platecarree, ax=gca(), add_colorbar=False, cmap=harmaa )
-    title(prf.luokat1[ikir_ind])
+    title(prf.luokat[ikir_ind])
     #väripalkki ulkoalueista
     harmaa = lcmap([ulkovari,harmaavari])
     norm = matplotlib.colors.Normalize(vmin=-2, vmax=2)
@@ -80,7 +80,7 @@ def piirra():
 
 def vaihda_luokka(hyppy):
     global ikir_ind
-    ikir_ind = ( ikir_ind + len(prf.luokat1) + hyppy ) % len(prf.luokat1)
+    ikir_ind = ( ikir_ind + len(prf.luokat) + hyppy ) % len(prf.luokat)
     piirra()
     draw()
 
@@ -99,7 +99,7 @@ def main(tiedosto):
     
     ikiroutaolio = prf.Prf('1x1').rajaa([ajat.lat.min(),ajat.lat.max()+0.01])
     ikirouta = ikiroutaolio.data.mean(dim='time')
-    ikirluokat = prf.luokittelu1_str_xr(ikirouta)
+    ikirluokat = prf.luokittelu_str_xr(ikirouta)
 
     ch4data = xr.open_dataarray(tiedosto).loc[:,ajat.lat.min():ajat.lat.max(),:].\
         where(ajat.data==ajat.data,np.nan)
@@ -121,9 +121,9 @@ def main(tiedosto):
         exit()
     while True:
         if verbose:
-            print(prf.luokat1[ikir_ind])
+            print(prf.luokat[ikir_ind])
         savefig("kuvia/%s%i.png" %(sys.argv[0][:-3],ikir_ind))
-        if ikir_ind==len(prf.luokat1)-1:
+        if ikir_ind==len(prf.luokat)-1:
             exit()
         vaihda_luokka(1)
 

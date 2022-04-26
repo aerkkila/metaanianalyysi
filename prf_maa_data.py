@@ -32,10 +32,10 @@ def valmista_data(startend):
     maadf = maa.to_dataframe() #index = lat,lon
     maadf.where( maadf >= osuusraja, np.nan, inplace=True )
     #tehdään maa_DOY-data
-    ikirluokat = prf.luokat1
+    ikirluokat = prf.luokat
     doy = taj.lue_avgdoy(startend)
     ikirouta = prf.Prf('1x1','xarray').rajaa((doy.lat.min(), doy.lat.max()+1)).data.mean(dim='time')
-    ikirstr = prf.luokittelu1_str_xr(ikirouta)
+    ikirstr = prf.luokittelu_str_xr(ikirouta)
     maadf_DOY = maadf.where(maadf!=maadf, 1).mul(doy.data.flatten(), axis='index')
 
     #järjestetään maalajit mediaanin mukaan
@@ -48,7 +48,7 @@ def valmista_data(startend):
     maadf['day'] = doy.data.flatten()*100 # myöhemmin jaetaan sadalla, koska osuudet ovat %
 
     #tallennetaan
-    ikirluokat = prf.luokat1
+    ikirluokat = prf.luokat
     for i,ikirluok in enumerate(ikirluokat):
         maski = ikirstr.data.flatten()==ikirluok
         maadf_DOY.loc[maski,:].round(6).to_csv("prf_maa_DOY_%s%i.csv" %(startend,i))
