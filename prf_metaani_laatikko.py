@@ -79,7 +79,7 @@ def laske_vuot(vuodata):
 if __name__ == '__main__':
     rcParams.update({'font.size':13,'figure.figsize':(10,8)})
     argumentit(sys.argv)
-    vuodata = xr.open_dataarray('./flux1x1_whole_time.nc').mean(dim='time')
+    vuodata = xr.open_dataarray('./flux1x1_whole_year.nc').mean(dim='time')
     ikiroutaolio = prf.Prf('1x1').rajaa([vuodata.lat.min(),vuodata.lat.max()])
     ikirouta = ikiroutaolio.data.mean(dim='time')
     vuoolio = laske_vuot(vuodata.where(vuodata==vuodata,np.nan))

@@ -3,7 +3,7 @@ import xarray as xr
 import numpy as np
 import config, sys
 
-kaudet = {'freezing':2, 'winter':3, 'summer':1, 'whole_time':4}
+kaudet = {'freezing':2, 'winter':3, 'summer':1, 'whole_year':4}
 
 def main():
     kausidata = xr.open_dataarray('./kaudet.nc')
@@ -13,7 +13,7 @@ def main():
     print('')
     for i,kausi in enumerate(kaudet.keys()):
         print('\033[F%i/%i\033[K' %(i+1,len(kaudet.keys())))
-        if kausi=='whole_time':
+        if kausi=='whole_year':
             uusi = xr.where(kausidata!=0, vuo, np.nan)
         else:
             uusi = xr.where(kausidata==kaudet[kausi], vuo, np.nan)

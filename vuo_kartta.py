@@ -23,7 +23,7 @@ def argumentit(argv):
         if argv[i] == '-s':
             tallenna = True
 
-def main(tiednimi):
+def aja(jako,kausi):
     argumentit(sys.argv[1:])
     rcParams.update({'font.size':13,'figure.figsize':(12,10)})
     tallenna = False
@@ -32,10 +32,7 @@ def main(tiednimi):
     platecarree = ccrs.PlateCarree()
     projektio   = ccrs.LambertAzimuthalEqualArea(central_latitude=90)
     kattavuus   = [-180,180,39,90]
-    if type(tiednimi) is str:
-        dt = xr.open_dataset(tiednimi).mean(dim='time')
-    else:
-        dt = tiednimi
+    dt = xr.open_dataset('vuo_%s_%s.nc' %(jako,kausi)).mean(dim='time')
 
     pienin = np.inf
     suurin = -np.inf
@@ -59,7 +56,7 @@ def main(tiednimi):
                                                               cmap=harmaa_kartta,
                                                               add_colorbar=False)
     if tallenna:
-        savefig('kuvia/%s.png' %(sys.argv[0][:-3]))
+        savefig('kuvia/%s_%s_%s.png' %(sys.argv[0][:-3],jako,kausi))
         clf()
     else:
         show()
@@ -67,7 +64,6 @@ def main(tiednimi):
 
 if __name__=='__main__':
     arg0 = sys.argv[0]
-    for kausi in kaudet.keys():
-        nimi = './vuo_köppen_%s.nc' %kausi
-        sys.argv[0] = '%s_%s.py' %(arg0[:-3],kausi)
-        main(nimi)
+    for jako in ['köppen','bawld']:
+        for kausi in kaudet.keys():
+            aja(jako,kausi)
