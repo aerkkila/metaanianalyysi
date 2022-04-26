@@ -6,7 +6,7 @@ import sys
 suot = ['bog','fen','tundra_wetland','permafrost_bog']
 kaudet = {'freezing':2, 'winter':3, 'summer':1, 'whole_time':4}
 
-def flux_bawld(kausi:str):
+def vuo_bawld(kausi:str):
     bawld = xr.open_dataset('./BAWLD1x1.nc')
     vuotied = 'flux1x1_%s.nc' %kausi
     vuo = xr.open_dataarray(vuotied)
@@ -33,4 +33,4 @@ if __name__ == '__main__':
     print('')
     for i,kausi in enumerate(kaudet.keys()):
         print('\033[F%i/%i\033[K' %(i+1,len(kaudet.keys())))
-        flux_bawld(kausi).to_netcdf('%s_%s.nc' %(sys.argv[0][:-3],kausi))
+        vuo_bawld(kausi).to_netcdf('%s_%s.nc' %(sys.argv[0][:-3],kausi))

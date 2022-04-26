@@ -3,7 +3,7 @@ from matplotlib.pyplot import *
 import cartopy.crs as ccrs
 import xarray as xr
 import sys, matplotlib
-
+from vuo_bawld import kaudet
 
 def tee_alikuva(subplmuoto, subpl, projektio):
     subpl_y = subplmuoto[0]-1 - subpl // subplmuoto[1]
@@ -31,8 +31,11 @@ def main(tiednimi):
         tallenna = True
     platecarree = ccrs.PlateCarree()
     projektio   = ccrs.LambertAzimuthalEqualArea(central_latitude=90)
-    kattavuus   = [-180,180,29,90]
-    dt = xr.open_dataset(tiednimi).mean(dim='time')
+    kattavuus   = [-180,180,39,90]
+    if type(tiednimi) is str:
+        dt = xr.open_dataset(tiednimi).mean(dim='time')
+    else:
+        dt = tiednimi
 
     pienin = np.inf
     suurin = -np.inf
@@ -57,9 +60,14 @@ def main(tiednimi):
                                                               add_colorbar=False)
     if tallenna:
         savefig('kuvia/%s.png' %(sys.argv[0][:-3]))
+        clf()
     else:
         show()
     return 0
 
 if __name__=='__main__':
-    main('./köppen_metaani_kokovuosi.nc')
+    arg0 = sys.argv[0]
+    for kausi in kaudet.keys():
+        nimi = './vuo_köppen_%s.nc' %kausi
+        sys.argv[0] = '%s_%s.py' %(arg0[:-3],kausi)
+        main(nimi)
