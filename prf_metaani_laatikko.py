@@ -3,7 +3,6 @@ import xarray as xr
 import pandas as pd
 from numpy import sin
 import numpy as np
-from config import edgartno_lpx_m, edgartno_lpx_t, tyotiedostot
 from matplotlib.pyplot import *
 import prf as prf
 import sys, warnings
@@ -80,17 +79,11 @@ def laske_vuot(vuodata):
 if __name__ == '__main__':
     rcParams.update({'font.size':13,'figure.figsize':(10,8)})
     argumentit(sys.argv)
-    datamaski = xr.open_dataset(tyotiedostot + 'FT_implementointi/FT_percents_pixel_ease_flag/DOY/winter_end_doy_2014.nc')
-    
-    ikiroutaolio = prf.Prf('1x1').rajaa([datamaski.lat.min(),datamaski.lat.max()])
+    vuodata = xr.open_dataarray('./flux1x1_whole_time.nc').mean(dim='time')
+    ikiroutaolio = prf.Prf('1x1').rajaa([vuodata.lat.min(),vuodata.lat.max()])
     ikirouta = ikiroutaolio.data.mean(dim='time')
-
-    vuodata = xr.open_dataset(edgartno_lpx_t)[edgartno_lpx_m].mean(dim='time')
-    vuoolio = laske_vuot( vuodata.loc[datamaski.lat.min():datamaski.lat.max(),:].\
-                          where(datamaski.spring_start==datamaski.spring_start,np.nan) )
+    vuoolio = laske_vuot(vuodata.where(vuodata==vuodata,np.nan))
     vuodata.close()
-    datamaski.close()
-
     if verbose:
         print(vuoolio)
 

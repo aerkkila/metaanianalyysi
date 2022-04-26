@@ -1,9 +1,8 @@
 #!/usr/bin/python3
 import xarray as xr
 import numpy as np
-from config import edgartno1d_t
 import pandas as pd
-import sys
+import sys, config
 from threading import Thread
 
 def kirjoita(data,vuosi):
@@ -13,7 +12,7 @@ def main():
     maan_osuusraja = 0.3
     ikirmaa = xr.open_dataset('prf_maa.nc')
     ikirmaa = xr.where(ikirmaa<maan_osuusraja,0,1) #1 tekee tästä binääristä
-    metaani = xr.open_dataarray(edgartno1d_t).sel({'lat':slice(ikirmaa.lat.min(),ikirmaa.lat.max())})
+    metaani = xr.open_dataarray(config.edgartno_dir+'flux1x1_1d').sel({'lat':slice(ikirmaa.lat.min(),ikirmaa.lat.max())})
     #metaani rajataan prfdatan aikasarjaan
     prf0 = pd.Period('%s-01-01' %(ikirmaa.time.data[0]), freq='D')
     prf1 = pd.Period('%s-01-01' %(ikirmaa.time.data[-1]+1), freq='D')

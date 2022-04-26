@@ -6,12 +6,11 @@ import numpy as np
 import pandas as pd
 import cartopy.crs as ccrs
 import cartopy.feature as feature
-import sys
-from config import LPX2019_t, LPX2019_m
+import sys, config
 
 def argumentit(args):
     global tallenna, muuttuja
-    tallenna=False; muuttuja=LPX2019_m
+    tallenna=False; muuttuja='posterior_bio'
     i=1
     while i < len(args):
         if args[i] == '-s':
@@ -68,8 +67,9 @@ def main():
     argumentit(sys.argv)
     
     plt.rcParams.update({'font.size':18,'figure.figsize':(12,10)})
-    
-    data0 = xr.open_dataset(LPX2019_t)[muuttuja]
+
+    tiednimi = config.tyotiedostot + 'FT_implementointi/Results_LPX2019/flux1x1_LPX2019_FTimpl_S3_bio_antro_tot.nc'
+    data0 = xr.open_dataset(tiednimi)[muuttuja]
     ajat = pd.to_datetime(data0.time.data)
 
     fig = plt.figure()
