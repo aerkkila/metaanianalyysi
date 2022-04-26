@@ -1,6 +1,9 @@
+#!/usr/bin/python3
+import xarray as xr
 import numpy as np
 import pandas as pd
 import sys
+from flux1x1 import kaudet
 
 tyhja_taulukko = lambda index: pd.DataFrame(0, columns=['Keskiarvo', 'Keskiarvo 90 %', '5 %', '95 %'], index=index)
 
@@ -16,6 +19,7 @@ def tee_data_maarista(dt,maarat):
             ind_uusi += maara
     return uusi
 
+#Tätä ei käytetä. Tällä jätetään huomiotta hilaruutujen pinta-alan riippuvuus leveyspiiristä.
 def tee_data_suoraan(dt):
     return dt.data.flatten()
 
@@ -46,7 +50,18 @@ def taul_pintaaloista(dt):
     dt = dt.mean(dim='time')
     return taulukon_teko(dt, tee_data_maarista, maarat)
 
-suot = ['bog','fen','tundra_wetland','permafrost_bog']
+def aja(jako):
+    if '-s' in sys.argv:
+        f = open('%s_%s.txt' %(sys.argv[0][:-3],jako), 'w')
+    else:
+        f = sys.stdout
+    for kausi in kaudet.keys():
+        dt = xr.open_dataset('./vuo_%s_%s.nc' %(jako,kausi))
+        f.write('%s\n%s\n\n' %(kausi,taul_pintaaloista(dt).to_string()))
+        dt.close()
+    if f != sys.stdout:
+        f.close()
 
 if __name__ == '__main__':
-    print('Tätä ei ole tarkoitus ajaa pääohjelmana (%s).' %(sys.argv[0]))
+    aja('köppen')
+    aja('bawld')
