@@ -44,6 +44,7 @@ def piirra(data:xr.DataArray, subpl:int):
 
 def main():
     global cmap, subplmuoto
+    print('Varoitus, tämä ohjelma on vanhentunut ja ehkä virheellinen')
     luokat_wl = ['bog','fen','marsh','tundra_wetland','permafrost_bog']
     raja_luokka = 0.1   #luokan pisteissä on vähintään näin paljon luokkaa
     raja_osuus = 0.5 #luokan pisteet ovat vähintään näin suuri osa kaikista wlluokista kys. pisteessä
