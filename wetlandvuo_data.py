@@ -12,7 +12,7 @@ def tee_data(muoto='numpy'):
             return [dt['x'], dt['y'], dt['nimet']]
         except:
             pass
-    raja_wl = 0.2
+    raja_wl = 0.05
     dsbaw = xr.open_dataset('./BAWLD1x1.nc')\
         [['wetland','bog','fen','marsh','tundra_wetland','permafrost_bog']]
     dsbaw = xr.where(dsbaw.wetland>=raja_wl, dsbaw, np.nan)

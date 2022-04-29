@@ -7,7 +7,7 @@ import time
 
 def taita_sarja(x, y, n_taitteet, n_sij):
     pit = len(y) // n_taitteet
-    if(n_sij != n_taitteet-1):
+    if(n_sij < n_taitteet-1):
         validx = x[pit*n_sij : pit*(n_sij+1), ...]
         validy = y[pit*n_sij : pit*(n_sij+1), ...]
         harjx = np.concatenate((x[:pit*n_sij, ...], x[pit*(n_sij+1):]))
@@ -36,6 +36,7 @@ def ristivalidointidata(x, y, malli, n_taitteet, ennusrajat=()):
         for i,e in enumerate(ennusrajat):
             ennushatut[ind:ind1,i] = malli.prediction(e)
         print("\033[F%i/%i\033[K" %(ind_taite+1,n_taitteet))
+        ind = ind1
     print("\033[F\033[K", end='')
     return yhatut, ennushatut, time.process_time()-alku
 
@@ -51,16 +52,20 @@ def main():
         datay = dt[1]
         nimet = dt[2]
 
-    #datax = np.array([np.sum(datax, axis=1),]).transpose() #vain wetland
-
-    vm = Voting(linear_model.LinearRegression(), tyyppi, n_estimators=500, samp_kwargs={'n':100})
-    ennusrajat = (5,20,50,80,95)
-    yhatut, ehatut, aika = ristivalidointidata(datax, datay, vm, 8, ennusrajat)
-    print('aika = %.4f s' %aika)
-    varlin = np.mean((yhatut-np.mean(datay))**2)
-    var = np.var(datay)
-    print("selitetty osuus = %.4f\n"
-          "alkup. varianssi = %.4f" %(1-varlin/var,var))
+    wetl = np.array([np.sum(datax, axis=1),]).transpose()
+    datax0 = datax.copy()
+    for i,nimi in enumerate(nimet):
+        print(nimi)
+        datax = np.concatenate((datax0[:,[i]], wetl), axis=1)
+        vm = Voting(linear_model.LinearRegression(), tyyppi, n_estimators=1000, samp_kwargs={'n':12, 'frac':0.1})
+        ennusrajat = (5,20,50,80,95)
+        yhatut, ehatut, aika = ristivalidointidata(datax, datay, vm, 3, ennusrajat)
+        #print('aika = %.4f s' %aika)
+        varlin = np.mean((yhatut-datay)**2)
+        evarlin = np.mean((ehatut[:,2]-datay)**2)
+        var = np.var(datay)
+        print("selitetty osuus = %.4f" %(1-varlin/var))
+        print("selitetty osuus = %.4f" %(1-evarlin/var))
     return 0
 
 if __name__=='__main__':

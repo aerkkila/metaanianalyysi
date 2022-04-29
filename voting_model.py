@@ -2,25 +2,16 @@ import numpy as np
 import pandas as pd
 import copy
 
-def _sample(dt, n=None, frac=None, axis=0):
+def _sample(dt, n=None, frac=None):
     n_or_frac = 2 - int(n is None) - int(frac is None)
     if n_or_frac == 0:
         n = 1
     elif n_or_frac == 2:
-        n = max([n, int(dt.shape[axis]*frac)])
+        n = max([n, int(dt[0].shape[0]*frac)])
     elif n is None:
-        n = int(dt.shape[axis]*frac)
+        n = int(dt[0].shape[0]*frac)
     order = np.random.permutation(dt[0].shape[0])
     return [dt[0][order[:n],...], dt[1][order[:n],...]]
-
-    if axis==0:
-        return dt[np.random.permutation(dt.shape[0])[:n], ...]
-    if axis==1:
-        return dt[:,np.random.permutation(dt.shape[1])[:n], ...]
-    if axis==2:
-        return dt[:,:,np.random.permutation(dt.shape[2])[:n], ...]
-    komento = 'return dt[%s np.random.Generator.permutation(dt.shape[%i])[:n], ...]' %(':,'*axis, axis)
-    eval(komento)
 
 class RandomSubspace():
     def __init__(self, dt, nmax, dtype, samp_kwargs={}):
