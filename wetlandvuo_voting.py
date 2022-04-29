@@ -3,7 +3,7 @@ from sklearn import linear_model
 import numpy as np
 from voting_model import Voting
 import wetlandvuo_data as wldata
-import time
+import time, locale
 
 def taita_sarja(x, y, n_taitteet, n_sij):
     pit = len(y) // n_taitteet
@@ -42,6 +42,7 @@ def ristivalidointidata(x, y, malli, n_taitteet, ennusrajat=()):
 
 def main():
     np.random.seed(12345)
+    locale.setlocale(locale.LC_ALL, '')
     tyyppi = 'numpy'
     dt = wldata.tee_data(tyyppi)
     if tyyppi == 'pandas':
@@ -55,7 +56,7 @@ def main():
     wetl = np.array([np.sum(datax, axis=1),]).transpose()
     datax0 = datax.copy()
     for i,nimi in enumerate(nimet):
-        print(nimi)
+        print("\033[92m%s\033[0m" %(nimi))
         datax = np.concatenate((datax0[:,[i]], wetl), axis=1)
         vm = Voting(linear_model.LinearRegression(), tyyppi, n_estimators=1000, samp_kwargs={'n':12, 'frac':0.1})
         ennusrajat = (5,20,50,80,95)
@@ -64,8 +65,7 @@ def main():
         varlin = np.mean((yhatut-datay)**2)
         evarlin = np.mean((ehatut[:,2]-datay)**2)
         var = np.var(datay)
-        print("selitetty osuus = %.4f" %(1-varlin/var))
-        print("selitetty osuus = %.4f" %(1-evarlin/var))
+        print(locale.format_string("selitetty osuus = %.4f; %.4f", (1-varlin/var, 1-evarlin/var)))
     return 0
 
 if __name__=='__main__':
