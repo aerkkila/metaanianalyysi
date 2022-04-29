@@ -10,15 +10,15 @@ def _sample(dt, n=None, frac=None, axis=0):
         n = max([n, int(dt.shape[axis]*frac)])
     elif n is None:
         n = int(dt.shape[axis]*frac)
-    order = np.random.Generator.permutation(dt[0].shape[0])
+    order = np.random.permutation(dt[0].shape[0])
     return [dt[0][order[:n],...], dt[1][order[:n],...]]
 
     if axis==0:
-        return dt[np.random.Generator.permutation(dt.shape[0])[:n], ...]
+        return dt[np.random.permutation(dt.shape[0])[:n], ...]
     if axis==1:
-        return dt[:,np.random.Generator.permutation(dt.shape[1])[:n], ...]
+        return dt[:,np.random.permutation(dt.shape[1])[:n], ...]
     if axis==2:
-        return dt[:,:,np.random.Generator.permutation(dt.shape[2])[:n], ...]
+        return dt[:,:,np.random.permutation(dt.shape[2])[:n], ...]
     komento = 'return dt[%s np.random.Generator.permutation(dt.shape[%i])[:n], ...]' %(':,'*axis, axis)
     eval(komento)
 
