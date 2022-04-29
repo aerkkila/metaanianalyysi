@@ -14,7 +14,7 @@ def interpoloi(ds,ch4,kohde,alku,loppu,patka,rivi):
         muoto_mjon = '\033[%iF%%i/%%i\033[%iE' %(rivi,rivi)
         sys.stdout.flush()
         print(muoto_mjon %(t+1,loppu), end='')
-        kohde[t:t+patka, ...] = ds.interp(time=ch4.time.data[t:t+patka], lat=ch4.lat.data, lon=ch4.lon.data)
+        kohde[t:t+patka, ...] = ds.interp(time=ch4.time.data[t:t+patka], lat=ch4.lat.data, lon=ch4.lon.data, method='nearest')
         t += patka
     print(muoto_mjon %(loppu,loppu), end='')
     sys.stdout.flush()
