@@ -7,4 +7,5 @@ köppen_shp
 *.csv
 *.npz
 *.npy
+*.cmp/
 muunna_shapefile

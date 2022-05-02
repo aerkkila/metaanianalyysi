@@ -18,7 +18,7 @@ def vuo_bawld(kausi:str):
         vuodt = vuo.data.reshape([vuo.time.size, vuo.lat.size*vuo.lon.size]).copy()
         bawflat = bawld[nimi].data.flatten()
         wetflat = wetl.data.flatten()
-        maski = (bawflat/wetflat < 0.5) | (bawflat!=bawflat) | (wetflat!=wetflat)
+        maski = (bawflat/wetflat < 0.3) | (bawflat!=bawflat) | (wetflat!=wetflat)
         for t in range(vuo.time.size):
             vuodt[t,maski] = np.nan
         uusi.update({ nimi: xr.DataArray(np.reshape(vuodt, vuo.data.shape),
