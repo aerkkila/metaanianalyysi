@@ -18,14 +18,16 @@ def search_ind(ran, limits):
             upper = ind
             continue
         lower = ind
+        if lower == upper-1:
+            return upper
 
 def sample_with_weights(dt, n, limits, rng):
     num = 0
     negation = False
-    if n > len(dt)//2:
+    if n > len(dt[1])//2:
         negation=True
-        n = len(dt)-n
-    used = np.zeros(len(dt), bool)
+        n = len(dt[1])-n
+    used = np.zeros(len(dt[1]), bool)
     inds = np.empty(n, int)
     while num < n:
         while True:
@@ -37,9 +39,10 @@ def sample_with_weights(dt, n, limits, rng):
                 num += 1
                 break
     if negation:
-        return dt[~used]
-    return dt[inds]
+        return [dt[0][~used,...], dt[1][~used,...]]
+    return [dt[0][inds,...], dt[1][inds,...]]
 
+#Muunnettakoon painot rajoiksi näin. Tämä ohjelma ei tee sitä itse.
 def weights_to_limits(weights):
     for i in range(1,len(weights)):
         weights[i] += weights[i-1]
@@ -74,14 +77,13 @@ class RandomSubspace():
         return self.sampfun(*self.samp_args)
 
 class Voting():
-    def __init__(self, model, dtype, n_estimators=200, samp_kwargs={}):
+    def __init__(self, model, dtype, n_estimators=200):
         self.n_estimators = n_estimators
-        self.samp_kwargs = samp_kwargs
         self.model = model
         self.dtype = dtype #has to be numpy
-    def fit(self,x,y):
+    def fit(self,x,y,samp_kwargs={}):
         self.estimators = np.empty(self.n_estimators, object)
-        ran = lambda dt: RandomSubspace(dt, self.n_estimators, samp_kwargs=self.samp_kwargs)
+        ran = lambda dt: RandomSubspace(dt, self.n_estimators, samp_kwargs=samp_kwargs)
         if self.dtype == 'pandas':
             dt = x.assign(**{y.name:y})
             rss = ran(dt)

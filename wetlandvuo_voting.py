@@ -7,22 +7,41 @@ import multiprocessing as mp
 import multiprocessing.shared_memory as shm
 import time, locale, sys
 
-def taita_sarja(x, y, n_taitteet, n_sij):
-    pit = len(y) // n_taitteet
+aste = 0.0174532925199
+R2 = 40592558970441
+PINTAALA1x1 = lambda _lat: aste*R2*( np.sin((_lat+1)*aste) - np.sin(_lat*aste) )*1.0e-6
+def pintaalat1x1(lat):
+    alat = np.empty_like(lat)
+    for i,la in enumerate(lat):
+        alat[i] = PINTAALA1x1(la)
+    return alat
+
+def pintaalan_painotus(alat):
+    painot = alat/alat[0]
+    #tehdään painoista rajat, joihin voidaan sijoittaa satunnaisluku [0,1[,
+    #jolloin todennäköisyys painottuu oikein huomioiden hilaruutujen koon eroavuuden leveyspiirin suhteen
+    for i in range(1,len(painot)):
+        painot[i] += painot[i-1]
+    for i in range(len(painot)):
+        painot[i] /= painot[-1]
+    return painot
+
+def taita_sarja(lista, n_taitteet, n_sij):
+    pit = len(lista[1]) // n_taitteet
+    harj = np.empty(len(lista),object)
+    valid = np.empty(len(lista),object)
     if(n_sij < n_taitteet-1):
-        validx = x[pit*n_sij : pit*(n_sij+1), ...]
-        validy = y[pit*n_sij : pit*(n_sij+1), ...]
-        harjx = np.concatenate((x[:pit*n_sij, ...], x[pit*(n_sij+1):]))
-        harjy = np.concatenate((y[:pit*n_sij, ...], y[pit*(n_sij+1):]))
+        for i in range(len(lista)):
+            valid[i] = lista[i][pit*n_sij : pit*(n_sij+1), ...]
+            harj[i] = np.concatenate((lista[i][:pit*n_sij, ...], lista[i][pit*(n_sij+1):]))
     else:
-        validx = x[pit*n_sij:]
-        validy = y[pit*n_sij:]
-        harjx = x[:pit*n_sij]
-        harjy = y[:pit*n_sij]
-    return harjx, harjy, validx, validy
+        for i in range(len(lista)):
+            valid[i] = lista[i][pit*n_sij:]
+            harj[i] = lista[i][:pit*n_sij]
+    return harj, valid
 
 def ristivalidointisaie(yhnimi, ehnimi, malli, alku, loppu, n_taitteet, ind):
-    global ennusrajat, datax, datay, eh0, yh0
+    global ennusrajat, datax, datay, eh0, yh0, alat
     y_shm = shm.SharedMemory(name=yhnimi)
     yhatut = np.ndarray(yh0.shape, yh0.dtype, buffer=y_shm.buf)
     e_shm = shm.SharedMemory(name=ehnimi)
@@ -32,10 +51,11 @@ def ristivalidointisaie(yhnimi, ehnimi, malli, alku, loppu, n_taitteet, ind):
     for ind_taite in range(alku,loppu):
         print(muoto %(ind_taite,loppu), end='')
         sys.stdout.flush()
-        harjx,harjy,validx,validy = taita_sarja(datax, datay, n_taitteet, ind_taite)
-        malli.fit(harjx, harjy)
-        yind1 = yind+len(validy)
-        yhatut[yind:yind1] = malli.predict(validx)
+        harj,valid = taita_sarja([datax, datay, alat], n_taitteet, ind_taite)
+        painotus = pintaalan_painotus(harj[2])
+        malli.fit(harj[0], harj[1], samp_kwargs={'n':10, 'limits':painotus})
+        yind1 = yind+len(valid[1])
+        yhatut[yind:yind1] = malli.predict(valid[0])
         for i,e in enumerate(ennusrajat):
             ennushatut[yind:yind1,i] = malli.prediction(e)
         yind = yind1
@@ -63,6 +83,7 @@ def ristivalidointidata(malli, n_taitteet, ennusrajat=(), njobs=4):
     ind = 0
     alku = time.process_time()
     saikeet = np.empty(njobs-1, object) #jakoperuste on taitteet
+    i=-1
     for i in range(njobs-1):
         alku = int(n_taitteet/njobs*i)
         loppu = int(n_taitteet/njobs*(i+1))
@@ -91,7 +112,10 @@ def massojen_suhde(jakaja, dt):
     return a/b
 
 def main():
-    global ennusrajat, datax, datay
+    global ennusrajat, datax, datay, alat
+    njobs = 4
+    if '-j' in sys.argv[1:]:
+        njobs = int(sys.argv[sys.argv.index('-j')+1])
     np.random.seed(12345)
     locale.setlocale(locale.LC_ALL, '')
     tyyppi = 'numpy'
@@ -103,7 +127,9 @@ def main():
         datax = dt[0]
         datay = dt[1]
         nimet = dt[2]
+        lat = dt[3]
 
+    alat = pintaalat1x1(lat)
     wetl = np.array([np.sum(datax, axis=1),]).transpose()
     datax0 = datax.copy()
     yhatut_list = np.empty(len(nimet), object)
@@ -113,12 +139,14 @@ def main():
         np.random.seed(12345)
         print("\033[92m%s\033[0m" %(nimi))
         datax = np.concatenate((datax0[:,[i]], wetl), axis=1)
-        vm = Voting(linear_model.LinearRegression(), tyyppi, n_estimators=10000, samp_kwargs={'n':10})
-        yhatut, ehatut, aika = ristivalidointidata(vm, 16, ennusrajat)
+        vm = Voting(linear_model.LinearRegression(), tyyppi, n_estimators=10000)
+        yhatut, ehatut, aika = ristivalidointidata(vm, 16, ennusrajat, njobs=njobs)
         #print('aika = %.4f s' %aika)
         varlin = np.mean((yhatut-datay)**2)
         evarlin = np.mean((ehatut[:,2]-datay)**2)
         var = np.var(datay)
+        muoto = "\033[%iF" %(njobs)
+        print(muoto, end='')
         print(locale.format_string("selitetty osuus = \033[1m%.4f\033[0m; %.4f", (1-varlin/var, 1-evarlin/var)))        
         for e in range(len(ennusrajat)):
             print("\t%.4f;" %(massojen_suhde(ehatut[:,e],datay)), end='')

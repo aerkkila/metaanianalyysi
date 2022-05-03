@@ -3,6 +3,7 @@ import numpy as np
 from matplotlib.pyplot import *
 from wetlandvuo_data import tee_data
 from matplotlib.pyplot import *
+import sys
 
 #a/b, missä a on summa jakajaa pienempien dt:n pisteitten etäisyydestä jakajaan
 #     ja b on summa kaikkien pisteitten absoluuttisista etäisyyksistä jakajaan
@@ -40,7 +41,10 @@ def yksi_tyyppi(yh,eh,nimi,er,datax,wetl,datay):
 
 def main():
     rcParams.update({'figure.figsize':(14,10)})
-    dt = np.load('./wetlandvuo_voting_data.npz', allow_pickle=True)
+    if '-p' in sys.argv:
+        dt = np.load('./wetvotdat_painottamaton.npz', allow_pickle=True)
+    else:
+        dt = np.load('./wetlandvuo_voting_data.npz', allow_pickle=True)
     yhl = dt['yhatut_list']
     ehl = dt['ehatut_list']
     er = dt['ennusrajat']
