@@ -112,10 +112,13 @@ def massojen_suhde(jakaja, dt):
     return a/b
 
 def main():
-    global ennusrajat, datax, datay, alat
+    global ennusrajat, datax, datay, alat, tmp
     njobs = 4
-    if '-j' in sys.argv[1:]:
+    tmp = False
+    if '-j' in sys.argv:
         njobs = int(sys.argv[sys.argv.index('-j')+1])
+    if '-tmp' in sys.argv:
+        tmp = True
     np.random.seed(12345)
     locale.setlocale(locale.LC_ALL, '')
     tyyppi = 'numpy'
@@ -140,21 +143,22 @@ def main():
         print("\033[92m%s\033[0m" %(nimi))
         datax = np.concatenate((datax0[:,[i]], wetl), axis=1)
         vm = Voting(linear_model.LinearRegression(), tyyppi, n_estimators=10000)
-        yhatut, ehatut, aika = ristivalidointidata(vm, 16, ennusrajat, njobs=njobs)
+        yhatut, ehatut, aika = ristivalidointidata(vm, 8, ennusrajat, njobs=njobs)
         #print('aika = %.4f s' %aika)
         varlin = np.mean((yhatut-datay)**2)
         evarlin = np.mean((ehatut[:,2]-datay)**2)
         var = np.var(datay)
         muoto = "\033[%iF" %(njobs)
         print(muoto, end='')
-        print(locale.format_string("selitetty osuus = \033[1m%.4f\033[0m; %.4f", (1-varlin/var, 1-evarlin/var)))        
+        print(locale.format_string("selitetty varianssi = \033[1m%.4f\033[0m; %.4f", (1-varlin/var, 1-evarlin/var)))
         for e in range(len(ennusrajat)):
             print("\t%.4f;" %(massojen_suhde(ehatut[:,e],datay)), end='')
         print("\n%.4f" %(massojen_suhde(yhatut,datay)), end='')
         print("\n", end='')
         yhatut_list[i] = yhatut
         ehatut_list[i] = ehatut
-    np.savez('wetlandvuo_voting_data.npz', yhatut_list=yhatut_list, ehatut_list=ehatut_list, ennusrajat=ennusrajat, nimet=nimet)
+    np.savez('wetlandvuo_voting_data%s.npz' %("_tmp" if tmp else ""),
+             yhatut_list=yhatut_list, ehatut_list=ehatut_list, ennusrajat=ennusrajat, nimet=nimet)
     return 0
 
 if __name__=='__main__':
