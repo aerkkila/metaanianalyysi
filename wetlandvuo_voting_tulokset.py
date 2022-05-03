@@ -18,29 +18,35 @@ def massojen_suhde(jakaja, dt):
 def yksi_tyyppi(yh,eh,nimi,er,datax,wetl,datay):
     #alussa: eh: pisteet, raja
     eh = eh.transpose()
-    print('\033[32m%s\033[0m' %(nimi))
+    ehi0 = 5
+    ehi1 = -6
     fig,ax = subplots(1,2)
     sca(ax.flatten()[0])
-    plot(datax,datay,'.', color='b', label='arvot')
+    plot(datax,datay,'.', color='b', label='arvot', markersize=7)
     plot(datax,yh,'.', color='g', label='avg arvio')
-    plot(datax,eh[5,:],'.', color='r', label='%i %%' %(er[5]))
-    plot(datax,eh[-6,:],'.', color='y', label='%i %%' %(er[-6]))
+    plot(datax,eh[ehi0,:],'.', color='r', label='%i %%' %(er[ehi0]))
+    plot(datax,eh[ehi1,:],'.', color='y', label='%i %%' %(er[ehi1]))
     xlabel(nimi)
     legend(loc='upper left')
     sca(ax.flatten()[1])
-    plot(wetl,datay,'.', color='b', label='arvot')
+    plot(wetl,datay,'.', color='b', label='arvot', markersize=7)
     plot(wetl,yh,'.', color='g', label='avg arvio')
-    plot(wetl,eh[5,:],'.', color='r', label='%i %%' %(er[5]))
-    plot(wetl,eh[-6,:],'.', color='y', label='%i %%' %(er[-6]))
+    plot(wetl,eh[ehi0,:],'.', color='r', label='%i %%' %(er[ehi0]))
+    plot(wetl,eh[ehi1,:],'.', color='y', label='%i %%' %(er[ehi1]))
     xlabel('wetland')
     legend(loc='upper left')
     
     tight_layout()
-    show()
+    savefig("kuvia/%s_%s.png" %(sys.argv[0][:-3],nimi))
+    clf()
+
+    print('\033[32m%s\033[0m' %(nimi))
+    print(er[ehi0], massojen_suhde(eh[ehi0,:],datay))
+    print(er[ehi1], massojen_suhde(eh[ehi1,:],datay))
     return
 
 def main():
-    rcParams.update({'figure.figsize':(14,10)})
+    rcParams.update({'figure.figsize':(14,10), 'font.size':12})
     if '-p' in sys.argv:
         dt = np.load('./wetvotdat_painottamaton.npz', allow_pickle=True)
     else:

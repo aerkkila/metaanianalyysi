@@ -60,7 +60,7 @@ def main():
         datax = np.concatenate((datax0[:,[i]], wetl), axis=1)
         vm = Voting(linear_model.LinearRegression(), tyyppi, n_estimators=1, samp_kwargs={'frac':1})
         ennusrajat = (5,20,50,80,95)
-        yhatut, ehatut, aika = ristivalidointidata(datax, datay, vm, 3, ennusrajat)
+        yhatut, ehatut, aika = ristivalidointidata(datax, datay, vm, 10, ennusrajat)
         #print('aika = %.4f s' %aika)
         varlin = np.mean((yhatut-datay)**2)
         evarlin = np.mean((ehatut[:,2]-datay)**2)
