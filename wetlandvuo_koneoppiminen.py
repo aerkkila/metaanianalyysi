@@ -4,29 +4,35 @@ import numpy as np
 import xarray as xr
 import pandas as pd
 import matplotlib.pyplot as plt
+from wetlandvuo_data import tee_data
 import config, time, sys
 
-suot = ['bog','fen','marsh','tundra_wetland','permafrost_bog']
+def taita_sarja(lista, n_taitteet, n_sij):
+    pit = len(lista[1]) // n_taitteet
+    harj = np.empty(len(lista),object)
+    valid = np.empty(len(lista),object)
+    if(n_sij < n_taitteet-1):
+        for i in range(len(lista)):
+            valid[i] = lista[i][pit*n_sij : pit*(n_sij+1), ...]
+            harj[i] = np.concatenate((lista[i][:pit*n_sij, ...], lista[i][pit*(n_sij+1):]))
+    else:
+        for i in range(len(lista)):
+            valid[i] = lista[i][pit*n_sij:]
+            harj[i] = lista[i][:pit*n_sij]
+    return harj, valid
 
-def tee_data(prf_ind):
-    raja_wl = 0.2
-    dsbaw = xr.open_dataset('prf_maa.nc').isel({'time':range(1,10)}).median(dim='time')\
-        [['wetland','bog','fen','marsh','tundra_wetland','permafrost_bog']]
-    dsvuo = xr.open_dataarray(config.edgartno_dir+'posterior.nc').mean(dim='time').\
-        sel({'lat':slice(dsbaw.lat.min(), dsbaw.lat.max())})
-    #dsvuo = xr.open_dataarray('flux1x1_jäätymiskausi.nc').mean(dim='time')
-    dsbaw = xr.where(dsbaw.wetland>=raja_wl, dsbaw, np.nan)
-    df = dsbaw.to_dataframe().reset_index('prf')
-    df = df.assign(vuo=dsvuo.to_dataframe()).reset_index()
-    df = df.drop('wetland',axis=1)#.div(df.wetland, axis='index')
-    df = df[df.prf==prf_ind]
-    df.drop(['lat','lon','prf'], axis=1, inplace=True)
-    df.dropna(how='any', subset=df.drop('vuo',axis=1).keys(), inplace=True)
-    df.dropna(subset='vuo',inplace=True)
-    #df.insert(0, 'yksi', [1]*len(df.vuo))
-    dsbaw.close()
-    dsvuo.close()
-    return df.sample(frac=1)
+def ristivalidoi(datax, datay, malli, n_yht):
+    neliosumma = 0
+    alku = time.process_time()
+    for i in range(n_yht):
+        print('\r%i/%i\033[K' %(i+1,n_yht), end='')
+        sys.stdout.flush()
+        harj,valid = taita_sarja([datax,datay], n_yht, i)
+        malli.fit(harj[0], harj[1])
+        yhattu = malli.predict(valid[0])
+        neliosumma += np.sum((yhattu-valid[1])**2)
+    print('')
+    return neliosumma, time.process_time()-alku
 
 class Dummy():
     def fit(self,x,y):
@@ -35,81 +41,50 @@ class Dummy():
     def predict(self,x):
         return [self.v]*len(x)
 
-def taita_sarja(sarja, n_yht, n_sij):
-    pit = len(sarja) // n_yht
-    if(n_sij == n_yht-1):
-        valid = sarja.iloc[pit*n_sij:]
-        harj  = sarja.iloc[:pit*n_sij]
-    else:
-        valid = sarja.iloc[pit*n_sij:pit*(n_sij+1)]
-        harj  = pd.concat([sarja.iloc[:pit*n_sij], sarja.iloc[pit*(n_sij+1):]])
-    return harj,valid
-
-def ristivalidoi(df, malli, n_yht):
-    neliosumma = 0
-    alku = time.process_time()
-    for i in range(n_yht):
-        harj,valid = taita_sarja(df, n_yht, i)
-        malli.fit(harj.drop('vuo', axis=1), harj.vuo)
-        yhattu = malli.predict(valid.drop('vuo', axis=1))
-        neliosumma += np.sum((yhattu-valid.vuo)**2)
-    return neliosumma, time.process_time()-alku
-
 def main():
     plt.rcParams.update({'figure.figsize':(14,12)})
-    np.random.seed(12345)
-    prf_ind = 0
-    df = tee_data(prf_ind)
-    df.vuo = df.vuo*1e9 #pienet luvut sotkevat menetelmiä
-    viivat = None
+    dt = tee_data('numpy')
+    datax = dt[0]
+    datay = dt[1]
+    nimet = dt[2]
+    mnimet = ['dummy','ols','ridge','SVR']
     taulukko = pd.DataFrame(0,
-                            index = ['dummy','ols','ridge','RANSAC(ols)','RANSAC(ridge)','Theil-Sen','random_forest','SVR'],
+                            index = mnimet,
                             columns = ['std','R2','aika'])
-    mallit = [Dummy(),
-              linear_model.LinearRegression(fit_intercept=True),
-              linear_model.Ridge(fit_intercept=True, alpha=1),
-              linear_model.RANSACRegressor(base_estimator=linear_model.LinearRegression(fit_intercept=True),
-                                           min_samples=20),
-              linear_model.RANSACRegressor(base_estimator=linear_model.Ridge(fit_intercept=True, alpha=1)),
-              linear_model.TheilSenRegressor(),
-              ensemble.RandomForestRegressor(n_estimators=50, random_state=12345),
-              svm.SVR(cache_size=4000, **{'C': 2070, 'epsilon': 1.224, 'gamma': 5.5540816326530615})]
-    nsum_data = np.sum((df.vuo-np.mean(df.vuo))**2)
-    npist = len(df)
-    if 0:
-        for mnimi,malli in zip(taulukko.index,mallit):
-            nsum_sovit,aika = ristivalidoi(df, malli, 20)
-            taulukko.loc[mnimi,:] = [np.sqrt(nsum_sovit/npist), 1-nsum_sovit/nsum_data, aika]
-        print(taulukko)
+    mallit = [
+        Dummy(),
+        linear_model.LinearRegression(fit_intercept=True),
+        linear_model.Ridge(fit_intercept=True, alpha=1),
+        svm.SVR(cache_size=4000, **{'C': 2070, 'epsilon': 1.224, 'gamma': 5.5540816326530615})
+    ]
 
-    muutama_malli = ['ols','Theil-Sen','RANSAC(ols)','RANSAC(ridge)','ridge','random_forest']
-    x = df.drop('vuo',axis=1)
-    y = df.vuo
+    for m,mnimi in enumerate(mnimet):
+        malli = mallit[m].fit(datax,datay)
+        print('\033[1;32m%s\033[0m' %(mnimi))
+        for i,nimi in enumerate(nimet):
+            x = np.zeros([1,datax.shape[1]], np.float32)
+            x[0,i] = 1
+            print('%s\t%.3f' %(nimi,malli.predict(x)[0]))
+
+    nsum_data = np.sum((datay-np.mean(datay))**2)
+    for mnimi,malli in zip(taulukko.index,mallit):
+        nsum_sovit,aika = ristivalidoi(datax, datay, malli, 16)
+        taulukko.loc[mnimi,:] = [np.sqrt(nsum_sovit/len(datay)), 1-nsum_sovit/nsum_data, aika]
+    print(taulukko)
 
     if 0:
-        plt.plot(x['bog'].to_numpy(),y.to_numpy(),'.')
+        x = datax[:,[nimet.index('bog')]]
+        plt.plot(x, datay, '.')
         plt.waitforbuttonpress()
-        viivat, = plt.plot(x['bog'].to_numpy(),y.to_numpy(),'.')
-        for mnimi in muutama_malli:
-            ind = np.where(taulukko.index==mnimi)[0][0]
-            malli = mallit[ind].fit(x,y)
+        viivat, = plt.plot(x, datay, '.')
+        for mnimi in mnimet:
+            malli = mallit[nimet.index(mnimi)].fit(x,datay)
             viivat.set_ydata(malli.predict(x))
             plt.title(mnimi)
             plt.waitforbuttonpress()
 
+    return 0
     pit = int(len(x['bog'])//10*8.5)
-    for mnimi in muutama_malli:
-        ind = np.where(taulukko.index==mnimi)[0][0]
-        malli = mallit[ind].fit(x,y)
-        print('\033[1;32m%s\033[0m' %(mnimi))
-        for suo in suot:
-            _df = df.drop('vuo',axis=1).iloc[0].copy() 
-            _df[:] = 0
-            _df.at[suo] = 1
-            _df = pd.DataFrame(_df).transpose()
-            print('%s\t%.3f' %(suo,malli.predict(_df)))
-
-    #return 0
     for suo in suot:
         fig,axs = plt.subplots(2,3)
         axs = axs.flatten()

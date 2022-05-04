@@ -77,10 +77,11 @@ class RandomSubspace():
         return self.sampfun(*self.samp_args)
 
 class Voting():
-    def __init__(self, model, dtype, n_estimators=200):
+    def __init__(self, model, dtype='numpy', n_estimators=200):
         self.n_estimators = n_estimators
         self.model = model
         self.dtype = dtype #has to be numpy
+        self.yhats = None
     def fit(self,x,y,samp_kwargs={}):
         self.estimators = np.empty(self.n_estimators, object)
         ran = lambda dt: RandomSubspace(dt, self.n_estimators, samp_kwargs=samp_kwargs)

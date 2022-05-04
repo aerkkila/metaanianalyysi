@@ -1,8 +1,8 @@
 #!/usr/bin/python3
 import numpy as np
-from matplotlib.pyplot import *
 from wetlandvuo_data import tee_data
 from matplotlib.pyplot import *
+from mpl_toolkits.mplot3d import Axes3D
 import sys
 
 #a/b, missä a on summa jakajaa pienempien dt:n pisteitten etäisyydestä jakajaan
@@ -15,59 +15,56 @@ def massojen_suhde(jakaja, dt):
     b = a + np.sum(dt[maski] - jakaja[maski])
     return a/b
 
-def yksi_tyyppi(yh,eh,nimi,er,datax,wetl,datay):
-    #alussa: eh: pisteet, raja
-    eh = eh.transpose()
+def yksi_tyyppi(datax,datay,yhat,yraja,nimi,rajat):
     ehi0 = 5
     ehi1 = -6
-    fig,ax = subplots(1,2)
-    sca(ax.flatten()[0])
-    plot(datax,datay,'.', color='b', label='arvot', markersize=7)
-    plot(datax,yh,'.', color='g', label='avg arvio')
-    plot(datax,eh[ehi0,:],'.', color='r', label='%i %%' %(er[ehi0]))
-    plot(datax,eh[ehi1,:],'.', color='y', label='%i %%' %(er[ehi1]))
+    wetl = datax[:,-1]
+    datax = datax[:,0]
+    ax = subplot(121, projection='3d')
+    plot(datax,wetl,datay,'.', color='b', label='arvot', markersize=7)
+    plot(datax,wetl,yhat,'.', color='g', label='avg arvio')
+    plot(datax,wetl,yraja[ehi0,:],'.', color='r', label='%i %%' %(rajat[ehi0]))
+    plot(datax,wetl,yraja[ehi1,:],'.', color='y', label='%i %%' %(rajat[ehi1]))
     xlabel(nimi)
     legend(loc='upper left')
-    sca(ax.flatten()[1])
+    ax = subplot(122)
     plot(wetl,datay,'.', color='b', label='arvot', markersize=7)
-    plot(wetl,yh,'.', color='g', label='avg arvio')
-    plot(wetl,eh[ehi0,:],'.', color='r', label='%i %%' %(er[ehi0]))
-    plot(wetl,eh[ehi1,:],'.', color='y', label='%i %%' %(er[ehi1]))
+    plot(wetl,yhat,'.', color='g', label='avg arvio')
+    plot(wetl,yraja[ehi0,:],'.', color='r', label='%i %%' %(rajat[ehi0]))
+    plot(wetl,yraja[ehi1,:],'.', color='y', label='%i %%' %(rajat[ehi1]))
     xlabel('wetland')
     legend(loc='upper left')
     
     tight_layout()
-    savefig("kuvia/%s_%s.png" %(sys.argv[0][:-3],nimi))
+    #savefig("kuvia/%s_%s.png" %(sys.argv[0][:-3],nimi))
+    show()
     clf()
 
     print('\033[32m%s\033[0m' %(nimi))
-    print('selitetty varianssi: %.4f' %(1-np.mean((yh-datay)**2)/np.var(datay)))
-    print(er[ehi0], massojen_suhde(eh[ehi0,:],datay))
-    print(er[ehi1], massojen_suhde(eh[ehi1,:],datay))
+    print('selitetty varianssi = %.4f' %(1-np.mean((yhat-datay)**2)/np.var(datay)))
+    print(rajat[ehi0], massojen_suhde(yraja[ehi0,:],datay))
+    print(rajat[ehi1], massojen_suhde(yraja[ehi1,:],datay))
     return
 
 def main():
+    nimet = ['bog', 'fen', 'marsh', 'tundra_wetland', 'permafrost_bog', 'wetland']
     rcParams.update({'figure.figsize':(14,10), 'font.size':12})
     tmp = False
-    if '-p' in sys.argv:
-        dt = np.load('./wetvotdat_painottamaton.npz', allow_pickle=True)
-    elif '-tmp' in sys.argv:
-        dt = np.load('./wetlandvuo_voting_data_tmp.npz', allow_pickle=True)
+    if '-tmp' in sys.argv:
+        dt = np.load('./wetlandvuo_voting_data_tmp.npz')
         tmp = True
     else:
-        dt = np.load('./wetlandvuo_voting_data.npz', allow_pickle=True)
-    yhl = dt['yhatut_list']
-    ehl = dt['ehatut_list']
-    er = dt['ennusrajat']
+        dt = np.load('./wetlandvuo_voting_data.npz')
+    datax = dt['x']
+    datay = dt['y']
+    yhat = dt['yhat']
+    yhat_vot = dt['yhat_voting']
+    yhat_raj = dt['yhat_raja']
+    rajat = dt['rajat']
     dt.close()
-    dt = tee_data('numpy', tmp)
-    datax = dt[0] #(pisteet, wetltyypit)
-    datay = dt[1]
-    nimet = dt[2]
-    wetl = np.array(np.sum(datax, axis=1))
 
-    for i in range(len(yhl)):
-        yksi_tyyppi(yhl[i],ehl[i],nimet[i],er,datax[:,i],wetl,datay)
+    for i,nimi in enumerate(nimet[:-1]):
+        yksi_tyyppi(datax, datay, yhat_vot[i,...], yhat_raj[i,...], nimi, rajat)
 
 if __name__=='__main__':
     main()
