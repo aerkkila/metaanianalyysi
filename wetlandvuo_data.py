@@ -2,9 +2,9 @@ import numpy as np
 import xarray as xr
 from copy import copy
 
-def tee_data(muoto='numpy'):
+def tee_data(muoto='numpy', tmp=False):
     tallennusnimi = 'wetlandvuo_data.npz'
-    if muoto=='numpy':
+    if muoto=='numpy' and not tmp:
         try:
             dt1 = np.load(tallennusnimi)
             dt = deepcopy(dt1)
@@ -16,8 +16,7 @@ def tee_data(muoto='numpy'):
     dsbaw = xr.open_dataset('./BAWLD1x1.nc')\
         [['wetland','bog','fen','marsh','tundra_wetland','permafrost_bog']]
     dsbaw = xr.where(dsbaw.wetland>=raja_wl, dsbaw, np.nan)
-    dsvuo = xr.open_dataarray('./flux1x1_whole_year.nc').mean(dim='time').\
-        sel({'lat':slice(dsbaw.lat.min(), dsbaw.lat.max())})
+    dsvuo = xr.open_dataarray('./flux1x1_whole_year.nc').mean(dim='time')
     dsvuo *= 1e9
     pit = dsvuo.lon.data.size
     lat = dsvuo.lat.data
@@ -45,7 +44,8 @@ def tee_data(muoto='numpy'):
                 uusiy[ind] = dty[i]
                 uusilat[ind] = lat[i]
                 ind += 1
-        np.savez(tallennusnimi, x=uusix, y=uusiy, nimet=list(ds.keys()), uusilat=lat)
+        if not tmp:
+            np.savez(tallennusnimi, x=uusix, y=uusiy, nimet=list(ds.keys()), uusilat=lat)
         return [uusix, uusiy, list(ds.keys()), uusilat]
 
     #pandas tästä eteenpäin

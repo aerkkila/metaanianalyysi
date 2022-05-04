@@ -41,21 +41,26 @@ def yksi_tyyppi(yh,eh,nimi,er,datax,wetl,datay):
     clf()
 
     print('\033[32m%s\033[0m' %(nimi))
+    print('selitetty varianssi: %.4f' %(1-np.mean((yh-datay)**2)/np.var(datay)))
     print(er[ehi0], massojen_suhde(eh[ehi0,:],datay))
     print(er[ehi1], massojen_suhde(eh[ehi1,:],datay))
     return
 
 def main():
     rcParams.update({'figure.figsize':(14,10), 'font.size':12})
+    tmp = False
     if '-p' in sys.argv:
         dt = np.load('./wetvotdat_painottamaton.npz', allow_pickle=True)
+    elif '-tmp' in sys.argv:
+        dt = np.load('./wetlandvuo_voting_data_tmp.npz', allow_pickle=True)
+        tmp = True
     else:
         dt = np.load('./wetlandvuo_voting_data.npz', allow_pickle=True)
     yhl = dt['yhatut_list']
     ehl = dt['ehatut_list']
     er = dt['ennusrajat']
     dt.close()
-    dt = tee_data('numpy')
+    dt = tee_data('numpy', tmp)
     datax = dt[0] #(pisteet, wetltyypit)
     datay = dt[1]
     nimet = dt[2]

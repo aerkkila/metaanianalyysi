@@ -17,6 +17,7 @@ def poista_epaluvut(lista):
         lista[i] = lista[i][maski]
     return lista
 
+#Tässä ei ole vähimmäismäärää wetlandille, minkä vuoksi selittävyys voi erota wetlandvuo-tiedostoista
 wad2m = xr.open_dataarray(config.WAD2M+'wad2m.nc').mean(dim='time').data.flatten()
 wetl = xr.open_dataset('./BAWLD1x1.nc').wetland.data.flatten()
 vuo = xr.open_dataarray('./flux1x1_whole_year.nc').mean(dim='time').data.flatten()*1e9

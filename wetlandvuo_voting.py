@@ -113,7 +113,7 @@ def massojen_suhde(jakaja, dt):
 
 def main():
     global ennusrajat, datax, datay, alat, tmp
-    njobs = 4
+    njobs = 1
     tmp = False
     if '-j' in sys.argv:
         njobs = int(sys.argv[sys.argv.index('-j')+1])
@@ -121,16 +121,11 @@ def main():
         tmp = True
     np.random.seed(12345)
     locale.setlocale(locale.LC_ALL, '')
-    tyyppi = 'numpy'
-    dt = wldata.tee_data(tyyppi)
-    if tyyppi == 'pandas':
-        datax = dt.drop('vuo', axis=1)
-        datay = dt.vuo
-    elif tyyppi == 'numpy':
-        datax = dt[0]
-        datay = dt[1]
-        nimet = dt[2]
-        lat = dt[3]
+    dt = wldata.tee_data('numpy', tmp=tmp)
+    datax = dt[0]
+    datay = dt[1]
+    nimet = dt[2]
+    lat = dt[3]
 
     alat = pintaalat1x1(lat)
     wetl = np.array([np.sum(datax, axis=1),]).transpose()
@@ -142,7 +137,7 @@ def main():
         np.random.seed(12345)
         print("\033[92m%s\033[0m" %(nimi))
         datax = np.concatenate((datax0[:,[i]], wetl), axis=1)
-        vm = Voting(linear_model.LinearRegression(), tyyppi, n_estimators=10000)
+        vm = Voting(linear_model.LinearRegression(), 'numpy', n_estimators=10000)
         yhatut, ehatut, aika = ristivalidointidata(vm, 8, ennusrajat, njobs=njobs)
         #print('aika = %.4f s' %aika)
         varlin = np.mean((yhatut-datay)**2)
@@ -151,10 +146,7 @@ def main():
         muoto = "\033[%iF" %(njobs)
         print(muoto, end='')
         print(locale.format_string("selitetty varianssi = \033[1m%.4f\033[0m; %.4f", (1-varlin/var, 1-evarlin/var)))
-        for e in range(len(ennusrajat)):
-            print("\t%.4f;" %(massojen_suhde(ehatut[:,e],datay)), end='')
-        print("\n%.4f" %(massojen_suhde(yhatut,datay)), end='')
-        print("\n", end='')
+        print("Arvioidun keskiarvon todellinen arvo: %.4f\n" %(massojen_suhde(yhatut,datay)), end='')
         yhatut_list[i] = yhatut
         ehatut_list[i] = ehatut
     np.savez('wetlandvuo_voting_data%s.npz' %("_tmp" if tmp else ""),
