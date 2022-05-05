@@ -87,6 +87,8 @@ def ristivalidointidata(datax, datay, n_taitteet, njobs, wind):
     ristivalidointisaie(datax, datay, yhat_shm.name, yhat_voting_shm.name, yhat_raja_shm.name, alku, loppu, n_taitteet, njobs-i, wind)
     for i in range(njobs-1):
         prosessit[i].join()
+    muoto = '\033[%iF' %(njobs)
+    print(muoto, end='')
     return
 
 #a/b, missä a on summa jakajaa pienempien dt:n pisteitten etäisyydestä jakajaan
@@ -136,7 +138,7 @@ def main():
         np.random.seed(12345) #lienee turha
         print("\033[92m%s\033[0m" %(nimi))
         x = datax[:,[i,-1]]
-        ristivalidointidata(x, datay, 4, njobs, i)
+        ristivalidointidata(x, datay, n_taitteet=16, njobs=njobs, wind=i)
         if 0:
             varlin = np.mean((yhatut-datay)**2)
             evarlin = np.mean((ehatut[:,2]-datay)**2)

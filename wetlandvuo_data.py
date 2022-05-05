@@ -2,9 +2,9 @@ import numpy as np
 import xarray as xr
 from copy import copy
 
-def tee_data(muoto='numpy', tmp=False):
+def tee_data(muoto='numpy', tmp=False, pakota=False):
     tallennusnimi = 'wetlandvuo_data.npz'
-    if muoto=='numpy' and not tmp:
+    if muoto=='numpy' and not tmp and not pakota:
         try:
             dt1 = np.load(tallennusnimi)
             dt = deepcopy(dt1)
@@ -12,7 +12,7 @@ def tee_data(muoto='numpy', tmp=False):
             return [dt['x'], dt['y'], dt['nimet'], dt['lat']]
         except:
             pass
-    raja_wl = 0.05
+    raja_wl = 0.03
     dsbaw = xr.open_dataset('./BAWLD1x1.nc')\
         [['wetland','bog','fen','marsh','tundra_wetland','permafrost_bog']]
     dsbaw = xr.where(dsbaw.wetland>=raja_wl, dsbaw, np.nan)

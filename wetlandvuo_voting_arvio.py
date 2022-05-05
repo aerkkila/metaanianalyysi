@@ -8,33 +8,37 @@ from wetlandvuo_voting import pintaalat1x1, pintaalan_painotus
 import sys
 
 def yksi_tyyppi(ind, nimi):
-    malli = Voting(linear_model.LinearRegression(), 'numpy', n_estimators=10000)
-    datax = np.concatenate((datax0[:,[ind]], wetl), axis=1)
-    malli.fit(datax, datay, samp_kwargs={'n':10, 'limits':painotus})
-    enn_y = malli.predict(enn_x)
-    enn_yL = malli.prediction(11)
-    enn_yH = malli.prediction(89)
-    print("%14s:\t%.3f\t%.3f\t%.3f" %(nimi, enn_yL, enn_y, enn_yH))
+    global datax
+    pohjamalli = linear_model.LinearRegression()
+    malli = Voting(pohjamalli, 'numpy', n_estimators=10000)
+    maski = datax[:,ind] >= 0.03
+    dtx = datax[:,[ind,-1]]
+    malli.fit(dtx[maski], datay[maski], samp_kwargs={'n':10, 'limits':painotus[maski]})
+    enn_yvot = malli.predict(enn_x)
+    enn_y = pohjamalli.fit(dtx[maski],datay[maski]).predict(enn_x)
+    enn_yL = malli.prediction(10)
+    enn_yH = malli.prediction(90)
+    print("%14s:\t%.3f\t%.3f\t%.3f\t%.3f" %(nimi, enn_yL, enn_y, enn_yvot, enn_yH))
 
 def main():
-    global enn_x, datax0, datay, wetl, painotus
+    global enn_x, datax, datay, wetl, painotus
     njobs=1
     if '-j' in sys.argv:
         njobs = int(sys.argv[sys.argv.index('-j')+1])
-    dt = wldata.tee_data('numpy')
+    dt = wldata.tee_data()
     datax = dt[0]
+    wetl = np.sum(datax, axis=1).reshape([datax.shape[0],1])
+    datax = np.concatenate([datax,wetl], axis=1)
     datay = dt[1]
     nimet = dt[2]
     lat = dt[3]
     
     alat = pintaalat1x1(lat)
     painotus = pintaalan_painotus(lat)
-    wetl = np.array([np.sum(datax, axis=1),]).transpose()
-    datax0 = datax.copy()
 
     enn_x = np.array([1.0,1.0]).reshape([1,2])
     prosessit = np.empty(njobs,object)
-    print("%14s \t%d %%\t avg\t%d %%" %("", 11, 89))
+    print("%14s \t%d %%\t avg\tjoukkio\t%d %%" %("", 10, 90))
 
     for i,nimi in enumerate(nimet):
         if(i<njobs-1):
@@ -48,4 +52,8 @@ def main():
     return 0
 
 if __name__=='__main__':
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print('')
+        sys.exit()

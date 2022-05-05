@@ -77,7 +77,7 @@ def main():
         dt = np.load('./wetlandvuo_voting_data_tmp.npz')
         tmp = True
     else:
-        dt = np.load('./wetlandvuo_voting_data.npz')
+        dt = np.load('./wetlandvuo_voting_kertatulos.npz')
     datax = dt['x']
     datay = dt['y']
     yhat = dt['yhat']
