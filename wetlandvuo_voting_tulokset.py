@@ -38,12 +38,16 @@ def piirra():
     dtyh_vot = yhat_vot[t_ind,...]
     dtyh_raj = yhat_raj[t_ind,...]
     dty = [datay, dtyh, dtyh_vot, dtyh_raj[r_ind0,:], dtyh_raj[r_ind1,:]]
+    #varit = 'gcry'
+    #nimiot = ['arvot','arvio','joukkion avg','10 %','90 %']
     if not piirretty:
         piirros[0], = plot(dtx,wetl,datay,'.', color='b', label='arvot', markersize=7)
         piirros[1], = plot(dtx,wetl,dtyh,'.', color='g', label='arvio')
         piirros[2], = plot(dtx,wetl,dtyh_vot,'.', color='c', label='joukkion avg')
         piirros[3], = plot(dtx,wetl,dtyh_raj[r_ind0,:],'.', color='r', label='%i %%' %(rajat[r_ind0]))
         piirros[4], = plot(dtx,wetl,dtyh_raj[r_ind1,:],'.', color='y', label='%i %%' %(rajat[r_ind1]))
+        #for i in range(4):
+        #    piirros[i+1], = plot(hila[:,0],hila[:,1],tulos[t_ind,i,:],'.',color=varit[i], label=nimiot[i])
         xlabel(nimet[t_ind])
         ylabel('wetland')
         ax.set_zlabel('vuo')
@@ -66,7 +70,7 @@ def piirra():
 
 def main():
     global r_ind0, r_ind1, ax, piirretty, piirros
-    global datax, datay, yhat, yhat_vot, yhat_raj, rajat, t_ind
+    global datax, datay, yhat, yhat_vot, yhat_raj, rajat, t_ind, hila, tulos
     global vntanapit, tyyppinapit    
     rcParams.update({'figure.figsize':(12,7), 'font.size':10})
     piirretty = False
@@ -85,13 +89,19 @@ def main():
     yhat_raj = dt['yhat_raja']
     rajat = dt['rajat']
     dt.close()
+    #hila_dt = np.load('./wetlandvuo_voting_hila.npz')
+    #hila = hila_dt['hila']
+    #tulos = hila_dt['tulos']
+    #hila_dt.close()
+    #tuloslajit = {'yhat':1,'yhat_voting':2,'yhat_L':3,'yhat_H':4}
 
     for i,nimi in enumerate(nimet[:-1]):
         print('\033[32m%s\033[0m' %(nimi))
         print('selitetty varianssi(yksi,joukkio) = %.4f\t%.4f' %(1-np.mean((yhat[i,...]-datay)**2)/np.var(datay),
                                                                  1-np.mean((yhat_vot[i,...]-datay)**2/np.var(datay))))
-        print(rajat[r_ind0], massojen_suhde(yhat_raj[i,r_ind0,:],datay))
-        print(rajat[r_ind1], massojen_suhde(yhat_raj[i,r_ind1,:],datay))
+        maski = datax[:,i] >= 0.03
+        print(rajat[r_ind0], massojen_suhde(yhat_raj[i,r_ind0,:][maski],datay[maski]))
+        print(rajat[r_ind1], massojen_suhde(yhat_raj[i,r_ind1,:][maski],datay[maski]))
 
     vntanapit = CheckButtons(
         ax = axes([0.0, 0.1, 0.1, 0.6]),
