@@ -111,19 +111,17 @@ def main():
         tmp = True
     np.random.seed(12345)
     locale.setlocale(locale.LC_ALL, '')
-    dt = wldata.tee_data('numpy', tmp=tmp)
+    dt = wldata.tee_data(tmp=tmp)
     datax = dt[0]
     datay = dt[1]
     nimet = dt[2]
     lat = dt[3]
 
     alat = pintaalat1x1(lat)
-    wetl = np.sum(datax, axis=1).reshape([datax.shape[0],1])
-    datax = np.concatenate([datax,wetl],axis=1)
     prpist = np.arange(1,100)
 
-    muoto0 = [len(nimet),len(datay)]
-    muoto1 = [len(nimet),len(prpist),len(datay)]
+    muoto0 = [len(nimet)-1,len(datay)]
+    muoto1 = [len(nimet)-1,len(prpist),len(datay)]
     yhat_shm = shm.SharedMemory(create=True, size=np.product(muoto0)*4)
     yhat_voting_shm = shm.SharedMemory(create=True, size=np.product(muoto0)*4)
     yhat_raja_shm = shm.SharedMemory(create=True, size=np.product(muoto1)*4)
@@ -134,7 +132,7 @@ def main():
     
     pohjamalli = linear_model.LinearRegression()
     malli = Voting(pohjamalli, n_estimators=10000)
-    for i,nimi in enumerate(nimet):
+    for i,nimi in enumerate(nimet[:-1]):
         np.random.seed(12345) #lienee turha
         print("\033[92m%s\033[0m" %(nimi))
         x = datax[:,[i,-1]]

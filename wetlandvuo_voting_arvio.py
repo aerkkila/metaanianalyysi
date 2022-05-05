@@ -27,10 +27,8 @@ def main():
         njobs = int(sys.argv[sys.argv.index('-j')+1])
     dt = wldata.tee_data()
     datax = dt[0]
-    wetl = np.sum(datax, axis=1).reshape([datax.shape[0],1])
-    datax = np.concatenate([datax,wetl], axis=1)
     datay = dt[1]
-    nimet = dt[2]
+    nimet = dt[2][:-1]
     lat = dt[3]
     
     alat = pintaalat1x1(lat)

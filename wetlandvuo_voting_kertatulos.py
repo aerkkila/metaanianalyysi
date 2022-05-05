@@ -8,15 +8,13 @@ import wetlandvuo_voting as wv
 
 def main():
     if '-f' in sys.argv:
-        dt = tee_data('numpy', pakota=True)
+        dt = tee_data(pakota=True)
     else:
-        dt = tee_data('numpy')
+        dt = tee_data()
     datax = dt[0]
     datay = dt[1]
     nimet = dt[2]
     lat = dt[3]
-    wetl = np.sum(datax,axis=1).reshape([datax.shape[0],1])
-    datax = np.concatenate([datax,wetl], axis=1)
     rajat = wv.pintaalan_painotus(wv.pintaalat1x1(lat))
 
     prpist = np.arange(1,100)
@@ -28,8 +26,8 @@ def main():
     pohjamalli = lm.LinearRegression()
     malli = Voting(pohjamalli, n_estimators=10000)
     raja_tyyppi = 0.03
-    for i,nimi in enumerate(nimet):
-        print('\r%i/%i' %(i+1,len(nimet)), end='')
+    for i,nimi in enumerate(nimet[:-1]):
+        print('\r%i/%i' %(i+1,len(nimet)-1), end='')
         sys.stdout.flush()
         x = datax[:,[i,-1]]
         maski = x[:,0] >= raja_tyyppi

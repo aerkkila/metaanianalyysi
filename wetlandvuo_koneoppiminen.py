@@ -43,7 +43,10 @@ class Dummy():
 
 def main():
     plt.rcParams.update({'figure.figsize':(14,12)})
-    dt = tee_data('numpy')
+    if '-f' in sys.argv:
+        dt = tee_data(pakota=True)
+    else:
+        dt = tee_data()
     datax = dt[0]
     datay = dt[1]
     nimet = dt[2]
