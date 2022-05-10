@@ -56,7 +56,7 @@ def main():
         Dummy(),
         linear_model.LinearRegression(fit_intercept=True),
         linear_model.Ridge(fit_intercept=True, alpha=1),
-        svm.SVR(kernel='linear',cache_size=4000, **{'C': 2070, 'epsilon': 1.224, 'gamma': 5.5540816326530615})
+        svm.SVR(kernel='linear',cache_size=4000, **{'C': 207, 'epsilon': 1.224, 'gamma': 5.5540816326530615})
     ]
 
     maskit = wpt.tee_maskit(datax,nimet)
@@ -94,9 +94,36 @@ def main():
             taulukko.loc[mnimi,:] = [np.sqrt(nsum_sovit/len(datay)), 1-nsum_sovit/nsum_data, aika]
         print(taulukko)
 
+    #tasokuvaaja: x = luokka, y = wetland, c = vuo
+    for n,nimi in enumerate(nimet[:-1]):
+        x = datax[:,[n,-1]][maskit[n,:]]
+        y = datay[maskit[n,:]]
+        skoko = 512
+        piste = 3
+        tmp = np.arange(skoko)/skoko
+        m1,m2 = np.meshgrid(tmp,tmp)
+        sovit_x = np.concatenate([m2.flatten(),m1.flatten()]).reshape([m1.size,2], order='F')
+        plt.clf()
+        fig,axs = plt.subplots(2,2)
+        for m,mnimi in enumerate(mnimet):
+            plt.sca(axs.flatten()[m])
+            sovit = mallit[m].fit(x,y).predict(sovit_x)
+            cgrid = np.empty([skoko,skoko],np.float32) + np.nan
+            for i in range(len(sovit)):
+                cgrid[int(sovit_x[i,1]*skoko),int(sovit_x[i,0]*skoko)] = sovit[i]
+            for k in range(len(y)):
+                xy = int(x[k,1]*skoko)
+                xx = int(x[k,0]*skoko)
+                cgrid[xy:xy+piste, xx:xx+piste] = y[k]
+            plt.pcolormesh(m1,m2,cgrid, cmap=plt.get_cmap('gnuplot2_r'))
+            plt.gca().set_aspect('equal')
+            plt.colorbar()
+        plt.tight_layout()
+        plt.waitforbuttonpress()
+
     #kuvaaja sovitetuista suorista
     for n,nimi in enumerate(nimet[:-1]):
-        x = datax[maskit[n,:]][:,[nimet.index(nimi)]]
+        x = datax[maskit[n,:]][:,[n]]
         y = datay[maskit[n,:]]
         plt.clf()
         plt.plot(x[:,0], y, '.')
