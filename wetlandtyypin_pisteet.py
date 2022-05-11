@@ -49,7 +49,11 @@ def valitse_painottaen(lat,kerroin):
         indeksit[i] = search_ind(luvut[i], painot)
     return indeksit
 
+axs = None
+on_axs = False
+
 def sovita(t_ind, piirtox, dtx, nimet):
+    global axs, on_axs
     datax1 = dtx[:,[0,t_ind+1]] #sarake 0 on ykkössarake
     datax = dtx[:,[t_ind+1]]
     wetl = dtx[:,[-1]]
@@ -74,6 +78,10 @@ def sovita(t_ind, piirtox, dtx, nimet):
     r = list(malli.estimator_.coef_[0])
     r.extend([resid,kynnysarvo])
     if piirretaan:
+        if not on_axs:
+            fig,axs = subplots(2,3)
+            on_axs = True
+        sca(axs.flatten()[t_ind])
         #Pienen kohinan lisääminen auttaa näkemään kuvaajasta, missä pisteitä on paljon.
         #Muuten monet pisteet ovat täsmälleen päällekkäin, koska valitse_painottaen monistaa niitä.
         rng = np.random.default_rng(12345)
@@ -83,14 +91,13 @@ def sovita(t_ind, piirtox, dtx, nimet):
             satunn     = rng.normal(0, 0.006)
             datax_c[i] += satunn
             wetl_c[i]  += satunn
-        plot(datax_c[maski][maski1],wetl_c[maski][maski1],'.',color='#ff000005')
-        plot(datax_c[maski][~maski1],wetl_c[maski][~maski1],'.',color='#ff000005')
-        plot(datax_c[~maski],wetl_c[~maski],'.',color='#ff000005')
+        plot(datax_c[maski][maski1],wetl_c[maski][maski1],'.',color='#ff000003')
+        plot(datax_c[maski][~maski1],wetl_c[maski][~maski1],'.',color='#ff000003')
+        plot(datax_c[~maski],wetl_c[~maski],'.',color='#ff000003')
         plot(piirtox[:,1],piirtoy+resid,color='b')
         plot(piirtox[:,1],piirtoy-resid,color='b')
         xlabel(nimet[t_ind])
         ylabel('wetland')
-        show()
     return r
 
 def main():
@@ -98,7 +105,7 @@ def main():
     piirretaan = False
     if "-p" in sys.argv:
         piirretaan = True
-    rcParams.update({'figure.figsize':(10,8),'font.size':12})
+    rcParams.update({'figure.figsize':(12,10),'font.size':13})
     dt       = tee_data()
     dtx      = dt[0]
     nimet    = dt[2]
@@ -119,6 +126,11 @@ def main():
         print(param)
         f.write("%s,%.5f,%.5f,%.5f,%.5f\n" %(nimet[t_ind],param[0],param[1],param[2],param[3]))
     f.close()
+    if piirretaan:
+        tight_layout()
+        axs.flatten()[-1].axis('off')
+        savefig("kuvia/%s.png" %(sys.argv[0][:-3]))
+    return
 
 if __name__=='__main__':
     try:
