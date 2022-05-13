@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-import copy
+import copy, sys
 
 def sample(dt, n, rng):
     order = rng.permutation(dt[0].shape[0])
@@ -77,11 +77,12 @@ class RandomSubspace():
         return self.sampfun(*self.samp_args)
 
 class Voting():
-    def __init__(self, model, n_estimators, dtype='numpy'):
+    def __init__(self, model, n_estimators, dtype='numpy', verbose=False):
         self.n_estimators = n_estimators
         self.model = model
         self.dtype = dtype #has to be numpy
         self.yhats = None
+        self.verbose = verbose
     def fit(self,x,y,samp_kwargs={}):
         self.estimators = np.empty(self.n_estimators, object)
         ran = lambda dt: RandomSubspace(dt, self.n_estimators, samp_kwargs=samp_kwargs)
@@ -90,11 +91,18 @@ class Voting():
             rss = ran(dt)
             for i,dt in enumerate(rss):
                 self.estimators[i] = copy.copy(self.model).fit(dt.drop(y.name,axis=1), dt[y.name])
-        elif self.dtype == 'numpy':
-            dt = [x,y]
-            rss = ran(dt)
+            return self
+        dt = [x,y]
+        rss = ran(dt)
+        if self.verbose:
+            print('')
             for i,dt in enumerate(rss):
+                print("\033[F%i/%i\033[K" %(i+1,self.n_estimators))
+                sys.stdout.flush()
                 self.estimators[i] = copy.copy(self.model).fit(dt[0], dt[1])
+            return self
+        for i,dt in enumerate(rss):
+            self.estimators[i] = copy.copy(self.model).fit(dt[0], dt[1])
         return self
     def predict(self, x, palauta=True):
         self.yhats = np.empty([x.shape[0], len(self.estimators)])

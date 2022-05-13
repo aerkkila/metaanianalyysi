@@ -4,6 +4,7 @@ from matplotlib.pyplot import *
 from wetlandvuo_data import tee_data
 from wetlandtyypin_pisteet import valitse_painottaen, pintaalat1x1
 from wetlandtyypin_pisteet_tulos import tee_maskit
+from voting_model import Voting
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -69,15 +70,54 @@ class Summataul():
                  "\ndtx:\n{self.dtx}"
                  "\nmassa:\n{self.massa}")
 
+#a/b, missä a on summa jakajaa pienempien dt:n pisteitten etäisyydestä jakajaan
+#     ja b on summa kaikkien pisteitten absoluuttisista etäisyyksistä jakajaan
+#     jakajan ollessa keskiarvo tämä siis palauttaa 0,5 jne.
+def massojen_suhde(jakaja, dt):
+    maski = dt<jakaja
+    a = np.sum(jakaja[maski] - dt[maski])
+    maski = ~maski
+    b = a + np.sum(dt[maski] - jakaja[maski])
+    return a/b
+
+#käyttäkääni newtonin menetelmää sellaisen vakiotermin löytämiseen, että massojen suhde menee oikein
+#funktio suhde(arvaus) on monotoninen, mutta derivaatta voi oleskella nollassa
+def sijoita_suoran_vakiotermi(x, y, kerr, osuus, max_steps=10000, suhteen_tarkkuus=0.005, arvaus=0, dvihje=0.01):
+    tarkkuus2 = suhteen_tarkkuus**2
+    for i in range(max_steps):
+        yhattu = arvaus + np.sum(x*kerr, axis=1)
+        suhde0 = massojen_suhde(yhattu, y)
+        if (suhde0-osuus)**2 <= tarkkuus2:
+            return arvaus
+        darvaus = dvihje
+        for j in range(max_steps):
+            suhde1 = massojen_suhde(yhattu+darvaus, y)
+            ds_per_da = (suhde1-suhde0) / darvaus
+            if ds_per_da == 0:
+                darvaus *= -1.8 #suunta vaihtelee, jolloin tämä ei jumitu, vaikka arvaus olisi yli tai ali kaikista pisteistä
+                continue
+            arvaus += (osuus-suhde0) / ds_per_da
+            break
+        else:
+            print("Derivaatta pysyy nollassa. Arvaus = %f; Suhde = %f; darvaus = %f" %(arvaus,suhde0,darvaus))
+            return arvaus
+    print("Vakiotermiä ei löytynyt. Arvaus = %f; suhde = %f" %(arvaus, suhde0))
+    return arvaus
+
 def sovitukset(dtx, dty, nimet, maskit, k_ind):
-    global summataul
+    global summataul, summataul_k, summataul_m
     malli = lm.LinearRegression()
+    vmalli = Voting(lm.LinearRegression(), 1000)
     yhats = np.empty(4, object)
     yhdet = np.empty(4, np.float32)
+    yhdet_m = np.empty(4, np.float32)
+    yhdet_k = np.empty(4, np.float32)
     ylis = np.empty(4, object)
     r2taul = R2taul(nimet)
     r2taul_yla = R2taul_yla(nimet, 10)
     x_yksi = [[[1,1]],[[1,1]],[[1]],[[1]]]
+    ijpit = len(nimet)*len(sarakkeet)
+    ijind = 1
     for i in range(len(nimet)):
         pikamaski = dtx[:,i] >= 0.03
         pikamaski0 = pikamaskit0[i]
@@ -98,8 +138,24 @@ def sovitukset(dtx, dty, nimet, maskit, k_ind):
             ylis[j] = y
             kauden_pit = kauden_pituus#[xmaskit0[j],...]
             summataul.laita(k_ind, i, j, yhdet[j], kauden_pit)
+            #korkeaa ja matalaa ei oteta suoraan prosenttipisteinä, vaan tehdään ensin kommervenkkejä
+            print("\r%i/%i" %(ijind,ijpit), end='')
+            sys.stdout.flush()
+            ijind += 1
+            vmalli.fit(x,y,{'n':10})
+            kert = vmalli.get_coefs()
+            pisteet = np.argsort(np.mean(kert, axis=1))
+            kerr_mat = kert[pisteet[len(pisteet)//10],:]
+            kerr_kork = kert[pisteet[len(pisteet)//10*9],:]
+            vakio_mat = sijoita_suoran_vakiotermi(x, y, kerr_mat, 0.1)
+            vakio_kork = sijoita_suoran_vakiotermi(x, y, kerr_kork, 0.9)
+            yhdet_m[j] = vakio_mat + np.sum(x_yksi[j]*kerr_mat)
+            yhdet_k[j] = vakio_kork + np.sum(x_yksi[j]*kerr_kork)
+            summataul_m.laita(k_ind, i, j, yhdet_m[j], kauden_pit)
+            summataul_k.laita(k_ind, i, j, yhdet_k[j], kauden_pit)
         r2taul.laita(i, yhats, ylis)
         r2taul_yla.laita(i, yhats, ylis)
+    print('\033[K')
     print("%sR²%s" %(vari2,vari0))
     print(r2taul)
     print("%sR²_10%%%s" %(vari2,vari0))
@@ -109,7 +165,7 @@ def sovitukset(dtx, dty, nimet, maskit, k_ind):
 #maskit0 mahdollistaisi summan laskemisen vain niistä pisteistä, jotka on sovitettu
 #summa lasketaan kuitenkin kaikista pisteistä, joten maskit0 on turha
 def aja(k_ind):
-    global summataul, maskit0, pikamaskit0, kauden_pituus
+    global summataul, summataul_m, summataul_k, maskit0, pikamaskit0, kauden_pituus
     dt = tee_data(kaudet[k_ind])
     dtx = dt[0]
     dty = dt[1]
@@ -125,10 +181,15 @@ def aja(k_ind):
     pikamaskit0 = np.empty(dtx.shape[1]-1, object)
     for i in range(len(pikamaskit0)):
         pikamaskit0[i] = dtx[:,i] >= 0.03 #kauden pituuksia ei monisteta, joten tarvitsee oman maskin
+    alat = pintaalat1x1(lat)
     if k_ind == 0:
-        summataul = Summataul(dtx, pintaalat1x1(lat))
+        summataul = Summataul(dtx, alat)
+        summataul_m = Summataul(dtx, alat)
+        summataul_k = Summataul(dtx, alat)
     else:
-        summataul.set_data(dtx, pintaalat1x1(lat)) #dropna osuu eri kohtiin eri kausilla, joten tämä päivitetään
+        summataul.set_data(dtx, alat) #dropna osuu eri kohtiin eri kausilla, joten tämä päivitetään
+        summataul_m.set_data(dtx, alat)
+        summataul_k.set_data(dtx, alat)
     indeksit = valitse_painottaen(lat, 10)
     maskit0 = tee_maskit(dtx, nimet)
     dtx = dtx[indeksit,:]
@@ -139,11 +200,15 @@ def aja(k_ind):
     return
 
 def main():
-    global summataul
+    global summataul, summataul_k, summataul_m
     for k_ind in range(len(kaudet)):
         aja(k_ind)
     print('\n%sSummat (Tg)%s' %(vari1,vari0))
     print(summataul.get_taulukko())
+    print('\n%sMatalat summat (Tg)%s' %(vari1,vari0))    
+    print(summataul_m.get_taulukko())
+    print('\n%sKorkeat summat (Tg)%s' %(vari1,vari0))
+    print(summataul_k.get_taulukko())
     return 0
 
 if __name__=='__main__':
