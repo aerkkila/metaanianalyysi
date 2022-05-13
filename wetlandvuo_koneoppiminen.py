@@ -8,6 +8,13 @@ from wetlandvuo_data import tee_data
 import wetlandtyypin_pisteet_tulos as wpt
 import config, time, sys
 
+class Dummy():
+    def fit(self,x,y):
+        self.v = y.mean()
+        return self
+    def predict(self,x):
+        return [self.v]*len(x)
+
 def taita_sarja(lista, n_taitteet, n_sij):
     pit = len(lista[1]) // n_taitteet
     harj = np.empty(len(lista),object)
@@ -26,21 +33,12 @@ def ristivalidoi(datax, datay, malli, n_yht):
     neliosumma = 0
     alku = time.process_time()
     for i in range(n_yht):
-        print('\r%i/%i\033[K' %(i+1,n_yht), end='')
         sys.stdout.flush()
         harj,valid = taita_sarja([datax,datay], n_yht, i)
         malli.fit(harj[0], harj[1])
         yhattu = malli.predict(valid[0])
         neliosumma += np.sum((yhattu-valid[1])**2)
-    print('')
     return neliosumma, time.process_time()-alku
-
-class Dummy():
-    def fit(self,x,y):
-        self.v = y.mean()
-        return self
-    def predict(self,x):
-        return [self.v]*len(x)
 
 def main():
     plt.rcParams.update({'figure.figsize':(14,12)})
@@ -56,7 +54,7 @@ def main():
         Dummy(),
         linear_model.LinearRegression(fit_intercept=True),
         linear_model.Ridge(fit_intercept=True, alpha=1),
-        svm.SVR(kernel='linear',cache_size=4000, **{'C': 207, 'epsilon': 1.224, 'gamma': 5.5540816326530615})
+        svm.SVR(kernel='linear', cache_size=4000, **{'C': 2000, 'epsilon': 0.224, 'gamma': 5.5540816326530615})
     ]
 
     maskit = wpt.tee_maskit(datax,nimet)
@@ -81,45 +79,67 @@ def main():
         for i,nimi in enumerate(nimet[:-1]):
             malli.fit(datax[maskit[i,:]][:,[i,-1]], datay[maskit[i,:]])
             taulukko.iloc[m,i] = malli.predict(x)[0]
+    print("Vuo")
     print(taulukko)
 
     #luotettavuuden ristivalidointi
     if 0:
-        taulukko = pd.DataFrame(0,
-                                index = mnimet,
-                                columns = ['std','R2','aika'])
-        nsum_data = np.sum((datay-np.mean(datay))**2)
-        for mnimi,malli in zip(taulukko.index,mallit):
-            nsum_sovit,aika = ristivalidoi(datax, datay, malli, 16)
-            taulukko.loc[mnimi,:] = [np.sqrt(nsum_sovit/len(datay)), 1-nsum_sovit/nsum_data, aika]
+        print('\nR²\n')
+        for i,nimi in enumerate(nimet[:-1]):
+            y = datay[maskit[i,:]]
+            x = datax[:,[i,-1]][maskit[i,:]]
+            nsum_data = np.sum((y-np.mean(y))**2)
+            print("\033[F\033[K%i/%i" %(i+1,len(nimet)))
+            sys.stdout.flush()
+            for m,mnimi in enumerate(mnimet):
+                nsum_sovit,aika = ristivalidoi(x, y, mallit[m], 16)
+                taulukko.iloc[m,i] = 1-nsum_sovit/nsum_data
+        print('\033[F\033[K', end='')
         print(taulukko)
 
     #tasokuvaaja: x = luokka, y = wetland, c = vuo
+    if 0:
+        vanhat = np.seterr(invalid='ignore')
+        for n,nimi in enumerate(nimet[:-1]):
+            x = datax[:,[n,-1]][maskit[n,:]]
+            y = datay[maskit[n,:]]
+            skoko = 512
+            piste = 3
+            tmp = np.arange(skoko)/skoko
+            m1,m2 = np.meshgrid(tmp,tmp)
+            sovit_x = np.concatenate([m2.flatten(),m1.flatten()]).reshape([m1.size,2], order='F')
+            plt.clf()
+            fig,axs = plt.subplots(2,2)
+            for m,mnimi in enumerate(mnimet):
+                plt.sca(axs.flatten()[m])
+                sovit = mallit[m].fit(x,y).predict(sovit_x)
+                cgrid = np.empty([skoko,skoko],np.float32) + np.nan
+                for i in range(len(sovit)):
+                    cgrid[int(sovit_x[i,1]*skoko),int(sovit_x[i,0]*skoko)] = sovit[i]
+                for k in range(len(y)):
+                    xy = int(x[k,1]*skoko)
+                    xx = int(x[k,0]*skoko)
+                    cgrid[xy:xy+piste, xx:xx+piste] = y[k]
+                plt.pcolormesh(m1,m2,cgrid, cmap=plt.get_cmap('gnuplot2_r'))
+                plt.gca().set_aspect('equal')
+                plt.colorbar()
+            plt.tight_layout()
+            plt.waitforbuttonpress()
+        np.seterr(**vanhat)
+
+    #kuvaaja, jossa on vain luokka
+    fig,axs = plt.subplots(2,3)
     for n,nimi in enumerate(nimet[:-1]):
-        x = datax[:,[n,-1]][maskit[n,:]]
+        plt.sca(axs.flatten()[n])
+        x = datax[:,[n]][maskit[n,:]]
         y = datay[maskit[n,:]]
-        skoko = 512
-        piste = 3
-        tmp = np.arange(skoko)/skoko
-        m1,m2 = np.meshgrid(tmp,tmp)
-        sovit_x = np.concatenate([m2.flatten(),m1.flatten()]).reshape([m1.size,2], order='F')
-        plt.clf()
-        fig,axs = plt.subplots(2,2)
+        sovit_x = np.linspace(0,1,101).reshape([101,1])
+        plt.plot(x,y,'.',color="#000000",markersize=1)
         for m,mnimi in enumerate(mnimet):
-            plt.sca(axs.flatten()[m])
             sovit = mallit[m].fit(x,y).predict(sovit_x)
-            cgrid = np.empty([skoko,skoko],np.float32) + np.nan
-            for i in range(len(sovit)):
-                cgrid[int(sovit_x[i,1]*skoko),int(sovit_x[i,0]*skoko)] = sovit[i]
-            for k in range(len(y)):
-                xy = int(x[k,1]*skoko)
-                xx = int(x[k,0]*skoko)
-                cgrid[xy:xy+piste, xx:xx+piste] = y[k]
-            plt.pcolormesh(m1,m2,cgrid, cmap=plt.get_cmap('gnuplot2_r'))
-            plt.gca().set_aspect('equal')
-            plt.colorbar()
-        plt.tight_layout()
-        plt.waitforbuttonpress()
+            plt.plot(sovit_x,sovit)
+    plt.show()
+    return
 
     #kuvaaja sovitetuista suorista
     for n,nimi in enumerate(nimet[:-1]):
@@ -136,7 +156,8 @@ def main():
             plt.waitforbuttonpress()
 
 if __name__ == '__main__':
-    if 'svr' in sys.argv:
-        exit(main_tutki_svr())
-    else:
-        exit(main())
+    try:
+        main()
+    except KeyboardInterrupt:
+        print('')
+        sys.exit()
