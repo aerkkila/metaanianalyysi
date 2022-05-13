@@ -77,7 +77,7 @@ class RandomSubspace():
         return self.sampfun(*self.samp_args)
 
 class Voting():
-    def __init__(self, model, dtype='numpy', n_estimators=200):
+    def __init__(self, model, n_estimators, dtype='numpy'):
         self.n_estimators = n_estimators
         self.model = model
         self.dtype = dtype #has to be numpy
@@ -105,3 +105,8 @@ class Voting():
         if not x is None:
             self.predict(x, palauta=False)
         return np.percentile(self.yhats, confidence, axis=1)
+    def get_coefs(self):
+        ret = np.empty([self.n_estimators,len(self.estimators[0].coef_)], np.float32)
+        for i in range(self.n_estimators):
+            ret[i,:] = self.estimators[i].coef_
+        return ret

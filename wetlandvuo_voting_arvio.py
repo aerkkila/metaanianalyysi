@@ -10,7 +10,7 @@ import sys
 def yksi_tyyppi(t_ind, nimi):
     global datax, hila, shmname
     pohjamalli = linear_model.LinearRegression()
-    malli = Voting(pohjamalli, 'numpy', n_estimators=10000)
+    malli = Voting(pohjamalli, 10000)
     maski = datax[:,t_ind] >= 0.03
     dtx = datax[:,[t_ind,-1]]
     malli.fit(dtx[maski], datay[maski], samp_kwargs={'n':10, 'limits':painotus[maski]})
