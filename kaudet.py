@@ -4,21 +4,6 @@ import numpy as np
 import pandas as pd
 import sys, config, traceback
 
-def argumentit(argv):
-    global tallenna,verbose,ikir_ind
-    tallenna=False; verbose=False; ikir_ind=0
-    i=1
-    while i < len(argv):
-        a = argv[i]
-        if a == '-s':
-            tallenna = True
-        elif a == '-v':
-            verbose = True
-        else:
-            print("%sVaroitus:%s tuntematon argumentti \"%s\"" %(varoitusvari,vari0,a))
-        i+=1
-    return
-
 #Vuosiin lisätään yksi, koska tiedostojen nimissä vuosi n tarkoittaa talvea n–(n+1) eikä (n-1)–n
 #Tämän voi tarkistaa laskentakoodista calculate_DOY_of_start_of_freezing.py tai tiedostojen attribuuteista
 def nimesta_vuosi(ds):
@@ -29,9 +14,9 @@ def nimesta_vuosi(ds):
 avaa = lambda nimi: xr.open_mfdataset(nimi, engine='h5netcdf', combine='nested', concat_dim=['vuosi'], preprocess=nimesta_vuosi)
 muokkaa_array = lambda darr: darr[1:-1,...].transpose('lat','lon','vuosi') #ensimmäinen ja viimeinen vuosi ovat huonoja
 
-def aja():
-    argumentit(sys.argv[1:])
+def main():
     kausiluvut = [1,2,3] #kesä, jäätyminen, talvi. Nolla on varattu määrittelemättömälle kaudelle.
+    kausinimet = ['summer','freezing','winter']
     kansio = config.tyotiedostot+'FT_implementointi/FT_percents_pixel_ease_flag/DOY/'
     jaatym_alku = avaa(kansio+'freezing_start_doy_*.nc').freezing_start
     talven_alku = avaa(kansio+'winter_start_doy_*.nc').autumn_end
@@ -59,8 +44,11 @@ def aja():
     for i in range(pit_aika):
         ch4ajat[i] = pd.Period(ch4data.time.data[i], freq='D')
 
-    #tehdään dataarray vuodenajoista
+    #tehdään dataarray vuodenajoista ja niitten pituuksista
     dt = np.zeros([ajat.lat.size, ajat.lon.size, pit_aika], np.int8)
+    dtpit = np.empty(len(kausinimet), object)
+    for k in range(len(kausinimet)):
+        dtpit[k] = np.zeros([ajat.lat.size, ajat.lon.size, ajat.vuosi.size], np.int16)
     #ind0 = (pd.Period('%4i-01-01' %ajat.vuosi.data[0], freq='D') - alkuaika).n #ensimmäisen nollakohdan indeksi
     print('')
     for j in range(ajat.lat.size):
@@ -69,7 +57,7 @@ def aja():
             ind = 0
             for v,vuosi in enumerate(ajat.vuosi):
                 nollakohta = pd.Period('%4i-01-01' %vuosi)
-                joko0tai1 = 1 #tällä laitetaan puuttuva data nollaksi
+                joko0tai1 = 1 #Tällä laitetaan puuttuva data nollaksi. Esim. winter_end puuttuu --> talvi ja kesä pois.
                 for kausi,tapahtuma in zip(kausiluvut, tapahtumat):
                     paiva = ajat[tapahtuma].data[j,i,v]
                     if paiva != paiva:
@@ -77,29 +65,39 @@ def aja():
                         continue
                     pit = (nollakohta+int(paiva) - ch4ajat[ind]).n
                     dt[j,i,ind:ind+pit] = kausi*joko0tai1
+                    dtpit[kausi-1][j,i,v] = pit
                     joko0tai1 = 1
                     ind += pit
             dt[j,i,ind:] = kausiluvut[0]*joko0tai1 #loppu on kesää
-    ajat.close()
     darr = xr.DataArray(dt, name='kausi',
                         dims=('lat','lon','time'),
                         coords=({'lat':ajat.lat,
                                  'lon':ajat.lon,
                                  'time':ch4data.time.data})) #.data saa days since -attribuutin muuttumaan
+    darrpit = xr.Dataset()
+    darrpitT = xr.Dataset()
+    for i in range(len(kausinimet)):
+        tmp = xr.DataArray(dtpit[i], dims=('lat','lon','vuosi'),
+                           coords=({'lat':ajat.lat,
+                                    'lon':ajat.lon,
+                                    'vuosi':ajat.vuosi.astype(np.int16)}))
+        darrpit = darrpit.assign({kausinimet[i]: tmp.copy()})
+        darrpitT = darrpitT.assign({kausinimet[i]: tmp.transpose('vuosi','lat','lon').copy()})
+    ajat.close()
     ch4data.close()
     darr.to_netcdf('%s_latlontime.nc' %(sys.argv[0][:-3]))
     darr.transpose('time','lat','lon').to_netcdf('%s.nc' %(sys.argv[0][:-3]))
     darr.close()
+    darrpit.to_netcdf('kausien_pituudet_latlontime.nc')
+    darrpitT.to_netcdf('kausien_pituudet.nc')
+    darrpit.close()
+    darrpitT.close()
     print('\033[92mOhjelman ajo onnistui, vaikka tähän tulleekin virheilmoitus:\033[0m')
-    return 0
-
-def main():
-    try:
-        r = aja()
-    except:
-        print('\033[91mOhjelman ajo epäonnistui.\033[0m %s' %traceback.format_exc())
-        sys.exit(1)
-    sys.exit(r)
+    return
 
 if __name__=='__main__':
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print('')
+        sys.exit()

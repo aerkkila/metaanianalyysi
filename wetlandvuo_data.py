@@ -1,24 +1,30 @@
 #!/usr/bin/python3
 import numpy as np
 import xarray as xr
-from copy import copy
+import copy, sys
 
-nimet = ['bog', 'fen', 'marsh', 'tundra_wetland', 'permafrost_bog', 'wetland']
+nimet = ['bog', 'fen', 'bog+fen', 'marsh', 'tundra_wetland', 'permafrost_bog', 'wetland']
+kaudet = ['whole_year', 'summer', 'freezing', 'winter']
 
-def tee_data(tmp=False, pakota=False):
-    tallennusnimi = 'wetlandvuo_data.npz'
+def tee_data(kausi='whole_year', tmp=False, pakota=False):
+    tama_tied = sys.argv[0][:-3] if __name__=='__main__' else __name__
+    tallennusnimi = '%s_%s.npz' %(tama_tied, kausi)
     if not (tmp or pakota):
         try:
             dt1 = np.load(tallennusnimi)
-            dt = deepcopy(dt1)
+            dt = copy.deepcopy(dt1)
             dt1.close()
-            return [dt['x'], dt['y'], dt['nimet'], dt['lat']]
+            return [dt['x'], dt['y'], dt['nimet'], dt['lat'], dt['kauden_pituus']]
         except:
-            pass
+            pass #Tiedostoa ei ollut, jolloin se luodaan.
     raja_wl = 0.03
     dsbaw = xr.open_dataset('./BAWLD1x1.nc')[nimet]
     dsbaw = xr.where(dsbaw.wetland>=raja_wl, dsbaw, np.nan)
-    dsvuo = xr.open_dataarray('./flux1x1_whole_year.nc').mean(dim='time')
+    dsvuo = xr.open_dataarray('./flux1x1_%s.nc' %(kausi)).mean(dim='time')
+    if kausi != 'whole_year':
+        kausien_pituudet = xr.open_dataset('kausien_pituudet.nc')[kausi].mean(dim='vuosi').data.flatten()
+    else:
+        kausien_pituudet = [365.25]*55*360
     dsvuo *= 1e9
     pit = dsvuo.lon.data.size
     lat = dsvuo.lat.data
@@ -38,16 +44,19 @@ def tee_data(tmp=False, pakota=False):
     uusix = np.empty([lasku, dt.shape[1]])
     uusiy = np.empty(lasku)
     uusilat = np.empty(lasku)
+    uusikausi = np.empty(lasku, np.float32)
     ind = 0
     for i in range(dt.shape[0]):
         if all(dt[i,:] == dt[i,:]) and dty[i] == dty[i]:
             uusix[ind,:] = dt[i,:]
             uusiy[ind] = dty[i]
             uusilat[ind] = lat[i]
+            uusikausi[ind] = kausien_pituudet[i]
             ind += 1
     if not tmp:
-        np.savez(tallennusnimi, x=uusix, y=uusiy, nimet=list(ds.keys()), uusilat=lat)
-    return [uusix, uusiy, list(ds.keys()), uusilat]
+        np.savez(tallennusnimi, x=uusix, y=uusiy, nimet=list(ds.keys()), uusilat=lat, kauden_pituus=uusikausi)
+    return [uusix, uusiy, list(ds.keys()), uusilat, uusikausi]
 
 if __name__=='__main__':
-    tee_data(pakota=True)
+    for kausi in kaudet:
+        tee_data(kausi, pakota=True)

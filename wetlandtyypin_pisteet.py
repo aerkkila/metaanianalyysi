@@ -51,6 +51,7 @@ def valitse_painottaen(lat,kerroin):
 
 axs = None
 on_axs = False
+resids = [0.15, 0.12, 0.055, 0.3, 0.2, 0.15]
 
 def sovita(t_ind, piirtox, dtx, nimet):
     global axs, on_axs
@@ -59,8 +60,8 @@ def sovita(t_ind, piirtox, dtx, nimet):
     wetl = dtx[:,[-1]]
 
     pohjamalli = lm.LinearRegression(fit_intercept=False)
-    resid = 0.15
     kynnysarvo = 0.03
+    resid = resids[t_ind]
     malli = lm.RANSACRegressor(pohjamalli,
                                random_state=12345,
                                min_samples=15,
@@ -88,14 +89,15 @@ def sovita(t_ind, piirtox, dtx, nimet):
         datax_c = datax.flatten().copy()
         wetl_c = wetl.flatten().copy()
         for i in range(len(datax_c)):
-            satunn     = rng.normal(0, 0.006)
+            satunn     = rng.normal(0, 0.004)
             datax_c[i] += satunn
             wetl_c[i]  += satunn
-        plot(datax_c[maski][maski1],wetl_c[maski][maski1],'.',color='#ff000003')
+        plot(datax_c[maski][maski1],wetl_c[maski][maski1],'.',color='#33cc0003') #valitut pisteet
         plot(datax_c[maski][~maski1],wetl_c[maski][~maski1],'.',color='#ff000003')
         plot(datax_c[~maski],wetl_c[~maski],'.',color='#ff000003')
         plot(piirtox[:,1],piirtoy+resid,color='b')
         plot(piirtox[:,1],piirtoy-resid,color='b')
+        gca().set_ylim([0,1])
         xlabel(nimet[t_ind])
         ylabel('wetland')
     return r
@@ -113,22 +115,21 @@ def main():
     indeksit = valitse_painottaen(lat,12)
     dtx      = dtx[indeksit]
     num      = 20
-    piirtox  = np.linspace(0,1,num).reshape([num,1])
+    piirtox  = np.linspace(0.03,1,num).reshape([num,1])
     yhdet    = np.zeros([num,1])+1
     piirtox  = np.concatenate([yhdet,piirtox], axis=1)
     yhdet    = np.zeros([dtx.shape[0],1]) + 1
-    dtx      = np.concatenate([yhdet,dtx], axis=1)    
+    dtx      = np.concatenate([yhdet,dtx], axis=1)
 
     f = open("%s.csv" %(sys.argv[0][:-3]), 'w')
     f.write("tyyppi,a0,a1,resid,kynnysarvo\n")
-    for t_ind in range(5):
+    for t_ind in range(len(nimet)-1):
         param = sovita(t_ind, piirtox, dtx, nimet)
         print(param)
         f.write("%s,%.5f,%.5f,%.5f,%.5f\n" %(nimet[t_ind],param[0],param[1],param[2],param[3]))
     f.close()
     if piirretaan:
         tight_layout()
-        axs.flatten()[-1].axis('off')
         savefig("kuvia/%s.png" %(sys.argv[0][:-3]))
     return
 
