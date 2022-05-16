@@ -18,31 +18,27 @@ vari0 = "\033[0m"
 
 class R2taul():
     def __init__(self, nimet):
-        self.taulukko = pd.DataFrame(index=nimet, columns=sarakkeet, dtype=np.float32)
-    def laita(self, nimi_ind, yhats, ylis):
-        rivi = np.empty(4, np.float32)
-        for i in range(len(sarakkeet)):
-            rivi[i]= 1 - np.mean((yhats[i]-ylis[i])**2) / np.var(ylis[i])
-        self.taulukko.iloc[nimi_ind,:] = rivi
+        self.taulukko = np.empty([len(nimet),len(sarakkeet)], np.float32)
+    def laita(self, i, j, yhattu, y):
+        self.taulukko[i,j] = 1 - np.mean((yhattu-y)**2) / np.var(y)
+    def get_taulukko(self):
+        return pd.DataFrame(self.taulukko*1e-12, index=nimet, columns=sarakkeet, dtype=np.float32)
     def __str__(self):
-        return self.taulukko.to_string()
+        return self.get_taulukko().to_string()
 
 class R2taul_yla():
     def __init__(self, nimet, osuus):
         self.taulukko = pd.DataFrame(index=nimet, columns=sarakkeet, dtype=np.float32)
         self.osuus = osuus
-    def laita(self, nimi_ind, yhats, ylis):
-        rivi = np.empty(4, np.float32)
-        for i in range(len(sarakkeet)):
-            pit = len(yhats[i]) // self.osuus
-            #if(pit < 300): #eriäviä pisteitä on reilusti alle tämä johtuen valitse_painottaen-funktiosta
-            #    print("Varoitus (R2taul_yla, %s): lyhyt testidatan pituus (%i)" %(self.taulukko.index[nimi_ind],pit))
-            yh = np.sort(yhats[i])[-pit:]
-            yl = np.sort(ylis[i])[-pit:]
-            rivi[i]= 1 - np.mean((yh-yl)**2) / np.var(yl)
-        self.taulukko.iloc[nimi_ind,:] = rivi
+    def laita(self, i, j, yhattu, y):
+        pit = len(yhattu) // self.osuus
+        yhs = np.sort(yhattu)[-pit:]
+        ys = np.sort(y)[-pit:]
+        self.taulukko[i,j] = 1 - np.mean((yhs-ys)**2) / np.var(ys)
+    def get_taulukko(self):
+        return pd.DataFrame(self.taulukko*1e-12, index=nimet, columns=sarakkeet, dtype=np.float32)
     def __str__(self):
-        return self.taulukko.to_string()
+        return self.get_taulukko().to_string()
 
 class Summataul():
     def __init__(self, dtx, alat):
@@ -64,6 +60,9 @@ class Summataul():
         self.dtx = dtx
         self.alat= alat
         self.maskit = dtx >= 0.03
+        return self
+    def to_csv(self, nimi, **kwargs):
+        self.get_taulukko().to_csv(nimi, **kwargs)
     def __str__(self):
         return f("taulukko:\n{self.taulukko}"
                  "\nalat:\n{self.alat}"
@@ -81,19 +80,21 @@ def massojen_suhde(jakaja, dt):
     return a/b
 
 #käyttäkääni newtonin menetelmää sellaisen vakiotermin löytämiseen, että massojen suhde menee oikein
-#funktio suhde(arvaus) on monotoninen, mutta derivaatta voi oleskella nollassa
-def sijoita_suoran_vakiotermi(x, y, kerr, osuus, max_steps=10000, suhteen_tarkkuus=0.005, arvaus=0, dvihje=0.01):
+#Funktio suhde(arvaus) on aidosti monotoninen.
+#Derivaatta on luullakseni vakio muuten, mutta ei-derivoituva jonkin datapisteen siirtyessä suoran toiselle puolelle
+def sijoita_suoran_vakiotermi(x, y, kerr, osuus, max_steps=10000, suhteen_tarkkuus=0.001, arvaus=0, daskel=0.01):
     tarkkuus2 = suhteen_tarkkuus**2
     for i in range(max_steps):
         yhattu = arvaus + np.sum(x*kerr, axis=1)
         suhde0 = massojen_suhde(yhattu, y)
         if (suhde0-osuus)**2 <= tarkkuus2:
             return arvaus
-        darvaus = dvihje
+        darvaus = daskel
         for j in range(max_steps):
             suhde1 = massojen_suhde(yhattu+darvaus, y)
             ds_per_da = (suhde1-suhde0) / darvaus
             if ds_per_da == 0:
+                print("Derivaatta oli yllättäen nolla")
                 darvaus *= -1.8 #suunta vaihtelee, jolloin tämä ei jumitu, vaikka arvaus olisi yli tai ali kaikista pisteistä
                 continue
             arvaus += (osuus-suhde0) / ds_per_da
@@ -107,12 +108,10 @@ def sijoita_suoran_vakiotermi(x, y, kerr, osuus, max_steps=10000, suhteen_tarkku
 def sovitukset(dtx, dty, nimet, maskit, k_ind):
     global summataul, summataul_k, summataul_m
     malli = lm.LinearRegression()
-    vmalli = Voting(lm.LinearRegression(), 1000)
-    yhats = np.empty(4, object)
-    yhdet = np.empty(4, np.float32)
-    yhdet_m = np.empty(4, np.float32)
-    yhdet_k = np.empty(4, np.float32)
-    ylis = np.empty(4, object)
+    vmalli = Voting(lm.LinearRegression(), 100)
+    yhdet = np.empty([len(nimet),len(sarakkeet)], np.float32)
+    yhdet_m = np.empty([len(nimet),len(sarakkeet)], np.float32)
+    yhdet_k = np.empty([len(nimet),len(sarakkeet)], np.float32)
     r2taul = R2taul(nimet)
     r2taul_yla = R2taul_yla(nimet, 10)
     x_yksi = [[[1,1]],[[1,1]],[[1]],[[1]]]
@@ -125,6 +124,7 @@ def sovitukset(dtx, dty, nimet, maskit, k_ind):
         maski0 = maskit0[i,:]
         xmaskit = [pikamaski,maski,pikamaski,maski]
         xmaskit0 = [pikamaski0,maski0,pikamaski0,maski0]
+        #Tässä on jokainen eri x ja y, jotka sovitetaan.
         for j in range(len(sarakkeet)):
             if j<2:
                 x = dtx[:,[i,-1]][xmaskit[j],...] # 2 selittävää
@@ -133,11 +133,13 @@ def sovitukset(dtx, dty, nimet, maskit, k_ind):
                 x = (dtx[:,[i]] / dtx[:,[-1]])[xmaskit[j],...] # 1 selittävä jaetaan wetland-osuudella
                 y = (dty / dtx[:,-1])[xmaskit[j],...]
             malli.fit(x,y)
-            yhats[j] = malli.predict(x)
-            yhdet[j] = malli.predict(x_yksi[j])
-            ylis[j] = y
-            kauden_pit = kauden_pituus#[xmaskit0[j],...]
-            summataul.laita(k_ind, i, j, yhdet[j], kauden_pit)
+            yhattu = malli.predict(x)
+            yksi = malli.predict(x_yksi[j])
+            kauden_pit = kauden_pituus
+            summataul.laita(k_ind, i, j, yksi, kauden_pit)
+            r2taul.laita(i, j, yhattu, y)
+            r2taul_yla.laita(i, j, yhattu, y)
+            yhdet[i,j] = yksi
             #korkeaa ja matalaa ei oteta suoraan prosenttipisteinä, vaan tehdään ensin kommervenkkejä
             print("\r%i/%i" %(ijind,ijpit), end='')
             sys.stdout.flush()
@@ -149,23 +151,30 @@ def sovitukset(dtx, dty, nimet, maskit, k_ind):
             kerr_kork = kert[pisteet[len(pisteet)//10*9],:]
             vakio_mat = sijoita_suoran_vakiotermi(x, y, kerr_mat, 0.1)
             vakio_kork = sijoita_suoran_vakiotermi(x, y, kerr_kork, 0.9)
-            yhdet_m[j] = vakio_mat + np.sum(x_yksi[j]*kerr_mat)
-            yhdet_k[j] = vakio_kork + np.sum(x_yksi[j]*kerr_kork)
-            summataul_m.laita(k_ind, i, j, yhdet_m[j], kauden_pit)
-            summataul_k.laita(k_ind, i, j, yhdet_k[j], kauden_pit)
-        r2taul.laita(i, yhats, ylis)
-        r2taul_yla.laita(i, yhats, ylis)
+            yksi_m = vakio_mat + np.sum(x_yksi[j]*kerr_mat)
+            yksi_k = vakio_kork + np.sum(x_yksi[j]*kerr_kork)
+            summataul_m.laita(k_ind, i, j, yksi_m, kauden_pit)
+            summataul_k.laita(k_ind, i, j, yksi_k, kauden_pit)
+            yhdet_m[i,j] = yksi_m
+            yhdet_k[i,j] = yksi_k
     print('\033[K')
     print("%sR²%s" %(vari2,vari0))
     print(r2taul)
+    r2taul.get_taulukko().to_csv("./wetlandvuo_tulos/r2taul_%s.csv" %(kaudet[k_ind]))
     print("%sR²_10%%%s" %(vari2,vari0))
     print(r2taul_yla)
+    r2taul.get_taulukko().to_csv("./wetlandvuo_tulos/r2taul_%s.csv" %(kaudet[k_ind]))
+    r2taul_yla.get_taulukko().to_csv("./wetlandvuo_tulos/r2taul_yla_%s.csv" %(kaudet[k_ind]))
+    pd.DataFrame(yhdet, index=nimet, columns=sarakkeet, dtype=np.float32).\
+        to_csv("./wetlandvuo_tulos/täysvuo_%s.csv" %(kaudet[k_ind]))
+    pd.DataFrame(yhdet_m, index=nimet, columns=sarakkeet, dtype=np.float32).\
+        to_csv("./wetlandvuo_tulos/täysvuo10_%s.csv" %(kaudet[k_ind]))
+    pd.DataFrame(yhdet_k, index=nimet, columns=sarakkeet, dtype=np.float32).\
+        to_csv("./wetlandvuo_tulos/täysvuo90_%s.csv" %(kaudet[k_ind]))
     return
 
-#maskit0 mahdollistaisi summan laskemisen vain niistä pisteistä, jotka on sovitettu
-#summa lasketaan kuitenkin kaikista pisteistä, joten maskit0 on turha
 def aja(k_ind):
-    global summataul, summataul_m, summataul_k, maskit0, pikamaskit0, kauden_pituus
+    global summataul, summataul_m, summataul_k, kauden_pituus
     dt = tee_data(kaudet[k_ind])
     dtx = dt[0]
     dty = dt[1]
@@ -178,9 +187,6 @@ def aja(k_ind):
     dty = dty[maski]
     lat = lat[maski]
     kauden_pituus = kauden_pituus[maski]
-    pikamaskit0 = np.empty(dtx.shape[1]-1, object)
-    for i in range(len(pikamaskit0)):
-        pikamaskit0[i] = dtx[:,i] >= 0.03 #kauden pituuksia ei monisteta, joten tarvitsee oman maskin
     alat = pintaalat1x1(lat)
     if k_ind == 0:
         summataul = Summataul(dtx, alat)
@@ -191,7 +197,6 @@ def aja(k_ind):
         summataul_m.set_data(dtx, alat)
         summataul_k.set_data(dtx, alat)
     indeksit = valitse_painottaen(lat, 10)
-    maskit0 = tee_maskit(dtx, nimet)
     dtx = dtx[indeksit,:]
     dty = dty[indeksit]
     maskit = tee_maskit(dtx,nimet)
@@ -209,6 +214,9 @@ def main():
     print(summataul_m.get_taulukko())
     print('\n%sKorkeat summat (Tg)%s' %(vari1,vari0))
     print(summataul_k.get_taulukko())
+    summataul.to_csv("./wetlandvuo_tulos/summataul.csv")
+    summataul_m.to_csv("./wetlandvuo_tulos/summataul_m.csv")
+    summataul_k.to_csv("./wetlandvuo_tulos/summataul_k.csv")
     return 0
 
 if __name__=='__main__':
