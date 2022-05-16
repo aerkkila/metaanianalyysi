@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 from sklearn import linear_model as lm
-from matplotlib.pyplot import *
 from wetlandvuo_data import tee_data
 from wetlandtyypin_pisteet import valitse_painottaen, pintaalat1x1
 from wetlandtyypin_pisteet_tulos import tee_maskit
