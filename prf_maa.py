@@ -10,7 +10,7 @@ def main():
     prf_maa = np.full(len(prfdata.keys()), {}, object)
     for i, ikirl in enumerate(prfdata.keys()):
         for m, maalaji in enumerate(maadata.keys()):
-            prf_maa[i].update({maalaji: maadata[maalaji].where(prfdata[ikirl],0)})
+            prf_maa[i].update({maalaji: maadata[maalaji].where(prfdata[ikirl],0).astype(np.float32)})
         prf_maa[i] = xr.Dataset(prf_maa[i])
     ds = xr.concat(prf_maa, 'prf')
     ds = ds.transpose('prf','time','lat','lon')

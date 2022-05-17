@@ -95,8 +95,8 @@ def sovita(t_ind, piirtox, dtx, nimet):
         plot(datax_c[maski][maski1],wetl_c[maski][maski1],'.',color='#33cc0003') #valitut pisteet
         plot(datax_c[maski][~maski1],wetl_c[maski][~maski1],'.',color='#ff000003')
         plot(datax_c[~maski],wetl_c[~maski],'.',color='#ff000003')
-        plot(piirtox[:,1],piirtoy+resid,color='b')
-        plot(piirtox[:,1],piirtoy-resid,color='b')
+        #plot(piirtox[:,1],piirtoy+resid,color='b')
+        #plot(piirtox[:,1],piirtoy-resid,color='b')
         gca().set_ylim([0,1])
         xlabel(nimet[t_ind])
         ylabel('wetland')
