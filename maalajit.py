@@ -33,7 +33,7 @@ tunnisteet = {
     'lake'           : 'LAK',
     # 'river'          : 'RIV',
 }
-    
+
 def maalajien_yhdistamiset(setti, pudota=False):
     lista = []
     for lajit in [ ['bog','fen'], ['tundra_wetland','permafrost_bog'] ]:
@@ -83,7 +83,7 @@ class Muuntaja1x1:
     def __exit__(self,a,b,c):
         self.uusi.close()
 
-def lue_maalajit(maalajit, alkup=True, muunnos=True): #xr.dataset
+def lue_maalajit(maalajit, alkup=True, muunnos=True): -> xr.Dataset:
     alkup_data = None
     muunn_data = None
     with Muuntaja1x1() as muuntaja:
