@@ -76,6 +76,16 @@ class RandomSubspace():
         self.n += 1
         return self.sampfun(*self.samp_args)
 
+#a/b, missä a on summa jakajaa pienempien y:n pisteitten etäisyydestä jakajaan
+#     ja b on summa kaikkien pisteitten absoluuttisista etäisyyksistä jakajaan
+#     jakajan ollessa keskiarvo tämä siis palauttaa 0,5 jne.
+def massojen_suhde(jakaja, y):
+    maski = y<jakaja
+    a = np.sum(jakaja[maski] - y[maski])
+    maski = ~maski
+    b = a + np.sum(y[maski] - jakaja[maski])
+    return a/b
+
 class Voting():
     def __init__(self, model, n_estimators, dtype='numpy', verbose=False):
         self.n_estimators = n_estimators
@@ -83,6 +93,8 @@ class Voting():
         self.dtype = dtype #has to be numpy
         self.yhats = None
         self.verbose = verbose
+        self.mass_relations = None
+        self.estimators = None
     def fit(self,x,y,samp_kwargs={}):
         self.estimators = np.empty(self.n_estimators, object)
         ran = lambda dt: RandomSubspace(dt, self.n_estimators, samp_kwargs=samp_kwargs)
@@ -109,10 +121,20 @@ class Voting():
         for i,estimator in enumerate(self.estimators):
             self.yhats[:,i] = estimator.predict(x)
         return np.mean(self.yhats, axis=1) if palauta else None
+    def make_mass_relations(self, y):
+        self.mass_relations = np.empty(self.n_estimators, dtype=np.float32)
+        for i in range(self.n_estimators):
+            self.mass_relations[i] = massojen_suhde(self.yhats[:,i], y)
+        return self.mass_relations
     def prediction(self, confidence, x=None):
         if not x is None:
             self.predict(x, palauta=False)
         return np.percentile(self.yhats, confidence, axis=1)
+    def get_model(self, confidence):
+        order = np.argsort(self.mass_relations)
+        inorder = self.mass_relations[order]
+        ind = search_ind(confidence/100, inorder)
+        return self.estimators[order[ind]], ind, order[ind]
     def get_coefs(self):
         ret = np.empty([self.n_estimators,len(self.estimators[0].coef_)], np.float32)
         for i in range(self.n_estimators):
