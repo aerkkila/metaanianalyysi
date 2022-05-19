@@ -83,10 +83,18 @@ class Muuntaja1x1:
     def __exit__(self,a,b,c):
         self.uusi.close()
 
-def lue_maalajit(maalajit, alkup=True, muunnos=True): -> xr.Dataset:
+class Epamuuntaja:
+    def __init__(self):
+        pass
+    def __enter__(self):
+        return self
+    def __exit__(self,a,b,c):
+        pass
+
+def lue_maalajit(maalajit, alkup=True, muunnos=True) -> xr.Dataset:
     alkup_data = None
     muunn_data = None
-    with Muuntaja1x1() as muuntaja:
+    with (Muuntaja1x1() if muunnos else Epamuuntaja()) as muuntaja:
         for maalaji in maalajit:
             maadata = xr.open_dataset( tyotiedostot + 'MethEOWP730/BAWLD/' + hae_tiednimi(maalaji) ).Band1.fillna(0)
             if(alkup):
