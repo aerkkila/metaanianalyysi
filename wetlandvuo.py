@@ -116,14 +116,20 @@ def sovitukset(dtx, dty, nimet, maskit, k_ind):
     malli = lm.LinearRegression()
     vmalli = Voting(lm.LinearRegression(), 10000)
     yhdet = np.empty([len(nimet),3], np.float32)
-    x_yksi = [[1,1]]
+    x_yksi = [[1,1,1]] if onkoprf else [[1,1]]
     ijpit = len(nimet)*1
     ijind = 1
-    paramtied = open("./wetlandvuo_tulos/parametrit_%s.csv" %(kaudet[k_ind]), 'w')
-    paramtied.write(",a0,a1,a2\n")
+    paramtied = open(uloskansio+"parametrit_%s.csv" %(kaudet[k_ind]), 'w')
+    if onkoprf:
+        paramtied.write(",a0,a1,a2,a3\n")
+    else:
+        paramtied.write(",a0,a1,a2\n")
     for w in range(len(nimet)):
-        maski = dtx[:,w] >= 0.03
-        x = dtx[:,[w,-1]][maski,...] # 2 selittävää
+        maski = dtx[:,w] >= (0.03 if not '+' in nimet[w] else 0.06)
+        if onkoprf:
+            x = dtx[:,[w,-2,-1]][maski,...]
+        else:
+            x = dtx[:,[w,-1]][maski,...]
         y = dty[maski,...]
         if k_ind == 0:
             print("\r%i/%i" %(ijind,ijpit), end='')
@@ -184,15 +190,20 @@ def sovitukset(dtx, dty, nimet, maskit, k_ind):
         summataul.laita(k_ind, w, 2, yksi_k, kauden_pit)
         yhdet[w,1] = yksi_m
         yhdet[w,2] = yksi_k
-        paramtied.write("%s,%f,%f,%f\n" %(nimet[w], malli.intercept_, malli.coef_[0], malli.coef_[1]))
-        paramtied.write("%s_m,%f,%f,%f\n" %(nimet[w], vakio_mat, kerr_mat[0], kerr_mat[1]))
-        paramtied.write("%s_k,%f,%f,%f\n" %(nimet[w], vakio_kork, kerr_kork[0], kerr_kork[1]))
+        if onkoprf:
+            paramtied.write("%s,%f,%f,%f,%f\n" %(nimet[w], malli.intercept_, malli.coef_[0], malli.coef_[1], malli.coef_[2]))
+            paramtied.write("%s_m,%f,%f,%f,%f\n" %(nimet[w], vakio_mat, kerr_mat[0], kerr_mat[1], kerr_mat[2]))
+            paramtied.write("%s_k,%f,%f,%f,%f\n" %(nimet[w], vakio_kork, kerr_kork[0], kerr_kork[1], kerr_kork[2]))
+        else:
+            paramtied.write("%s,%f,%f,%f\n" %(nimet[w], malli.intercept_, malli.coef_[0], malli.coef_[1]))
+            paramtied.write("%s_m,%f,%f,%f\n" %(nimet[w], vakio_mat, kerr_mat[0], kerr_mat[1]))
+            paramtied.write("%s_k,%f,%f,%f\n" %(nimet[w], vakio_kork, kerr_kork[0], kerr_kork[1]))
     paramtied.close()
     if k_ind == 0:
         print('\033[K', end='')
         sys.stdout.flush()
     pd.DataFrame(yhdet, index=nimet, columns=('avg','low','high'), dtype=np.float32).\
-        to_csv("./wetlandvuo_tulos/vuo_%s.csv" %(kaudet[k_ind]))
+        to_csv(uloskansio+"vuo_%s.csv" %(kaudet[k_ind]))
     return
 
 def aja(k_ind):
@@ -205,9 +216,13 @@ def aja(k_ind):
     nimet = dt[2][:-1]
     lat = dt[3]
     kauden_pituus = dt[4]
+    dropmaski = dt[5]
     #otetaan vain northern high latitudes eli lat >= 50 °N
     maski = lat >= 50
     dtx = dtx[maski,:]
+    if onkoprf:
+        prf = xr.open_dataarray('./prfdata_avg.nc').sel({"lat":slice(29.5,83.5)}).data
+        dtx = np.insert(dtx, -1, prf.flatten()[dropmaski][maski], axis=1)
     dty = dty[maski]
     lat = lat[maski]
     kauden_pituus = kauden_pituus[maski]
@@ -223,7 +238,11 @@ def aja(k_ind):
     return
 
 def main():
-    global summataul, r2taul
+    global summataul, r2taul, onkoprf, uloskansio
+    onkoprf = ('-prf' in sys.argv)
+    uloskansio = "wetlandvuo_tulos/"
+    if onkoprf:
+        uloskansio += "_prf"
     summataul = Summataul()
     r2taul = R2taul(wld.nimet[:-1])
     prosessit = np.empty(len(kaudet), object)
@@ -236,9 +255,9 @@ def main():
     r2taul.liity()
     print('\n%sSummat (Tg)%s' %(vari1,vari0))
     print(summataul.get_taulukko())
-    summataul.to_csv("./wetlandvuo_tulos/summataul.csv")
+    summataul.to_csv(uloskansio+"summataul.csv")
     summataul.vapauta()
-    r2taul.get_taulukko().to_csv("./wetlandvuo_tulos/r2taul.csv")
+    r2taul.get_taulukko().to_csv(uloskansio+"r2taul.csv")
     r2taul.vapauta()
     return 0
 

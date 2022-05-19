@@ -17,7 +17,7 @@ if __name__ == '__main__':
     ax = axes(projection=projektio)
     ax.coastlines()
     ax.set_extent(kattavuus,platecarree)
-    ikirouta = prf.Prf('1x1',muoto='xarray').data.mean(dim='time')
+    ikirouta = prf.Prf().data.mean(dim='time')
     ikirouta.where(ikirouta>0,np.nan).plot.pcolormesh(transform=platecarree,cmap=get_cmap('rainbow'))
     if not tallenna:
         show()

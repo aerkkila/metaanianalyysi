@@ -13,7 +13,7 @@ def valmista_data(startend):
     doy = taj.lue_avgdoy(startend)
     koppdf = koppdf.mul(doy.data.flatten(), axis=0)
     #ikiroutadata
-    ikirouta = prf.Prf('1x1','xarray').rajaa( (doy.lat.min(), doy.lat.max()+1) ).data.mean(dim='time')
+    ikirouta = prf.Prf().rajaa( (doy.lat.min(), doy.lat.max()+1) ).data.mean(dim='time')
     ikirstr = prf.luokittelu_str_xr(ikirouta).data.flatten()
     #rajataan tarkemmin määrittelyalueeseen
     doy = doy.data.flatten()

@@ -44,10 +44,8 @@ def rajaa1x1( dataarr, lat01 ):
     exit()
 
 class Prf():
-    def __init__(self,hila='1x1',muoto='xarray'):
-        a = lue_numpy(hila) if muoto=='numpy' else lue_xarray(hila)
-        if muoto=='numpy':
-            print('\033[1;33mVaroitus:\033[0m Prf-numpy ei välttämättä toimi halutusti. Muoto olkoon xarray.')
+    def __init__(self,hila='1x1'):
+        a = lue_xarray(hila)
         self.vuodet = a['vuodet']
         self.data   = a['data'  ]
         self.hila = hila
@@ -73,13 +71,13 @@ def luokittelu_str_xr(data:xr.DataArray) -> xr.DataArray:
     uusi[ (10<=dt) & (dt<50) ] = luokat[1]
     uusi[ (50<=dt) & (dt<90) ] = luokat[2]
     uusi[ (90<=dt)           ] = luokat[3]
-    return xr.DataArray( data=uusi.reshape(data.data.shape), coords=data.coords, dims=data.dims )
+    return xr.DataArray(data=uusi.reshape(data.data.shape), coords=data.coords, dims=data.dims)
 
 def luokittelu_num_xr(data:xr.DataArray) -> xr.DataArray:
     dt = data.data.flatten()
-    uusi = np.empty(dt.shape,object)
+    uusi = np.empty(dt.shape,np.int8)
     uusi[  (dt<10)           ] = 0
     uusi[ (10<=dt) & (dt<50) ] = 1
     uusi[ (50<=dt) & (dt<90) ] = 2
     uusi[ (90<=dt)           ] = 3
-    return xr.DataArray( data=uusi.reshape(data.data.shape), coords=data.coords, dims=data.dims )
+    return xr.DataArray(data=uusi.reshape(data.data.shape), coords=data.coords, dims=data.dims)

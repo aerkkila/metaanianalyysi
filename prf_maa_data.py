@@ -34,7 +34,7 @@ def valmista_data(startend):
     #tehdään maa_DOY-data
     ikirluokat = prf.luokat
     doy = taj.lue_avgdoy(startend)
-    ikirouta = prf.Prf('1x1','xarray').rajaa((doy.lat.min(), doy.lat.max()+1)).data.mean(dim='time')
+    ikirouta = prf.Prf('1x1').rajaa((doy.lat.min(), doy.lat.max()+1)).data.mean(dim='time')
     ikirstr = prf.luokittelu_str_xr(ikirouta)
     maadf_DOY = maadf.where(maadf!=maadf, 1).mul(doy.data.flatten(), axis='index')
 

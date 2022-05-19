@@ -45,7 +45,7 @@ def tee_data(kausi='whole_year', tmp=False, pakota=False):
     uusiy = np.empty(lasku)
     uusilat = np.empty(lasku)
     uusikausi = np.empty(lasku, np.float32)
-    maski = np.zeros(dt.shape, bool)
+    maski = np.zeros(dt.shape[0], bool)
     ind = 0
     for i in range(dt.shape[0]):
         if all(dt[i,:] == dt[i,:]) and dty[i] == dty[i]:
