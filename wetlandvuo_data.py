@@ -14,7 +14,7 @@ def tee_data(kausi='whole_year', tmp=False, pakota=False):
             dt1 = np.load(tallennusnimi)
             dt = copy.deepcopy(dt1)
             dt1.close()
-            return [dt['x'], dt['y'], dt['nimet'], dt['lat'], dt['kauden_pituus']]
+            return [dt['x'], dt['y'], dt['nimet'], dt['lat'], dt['kauden_pituus'], dt['maski']]
         except:
             pass #Tiedostoa ei ollut, jolloin se luodaan.
     raja_wl = 0.03
@@ -45,6 +45,7 @@ def tee_data(kausi='whole_year', tmp=False, pakota=False):
     uusiy = np.empty(lasku)
     uusilat = np.empty(lasku)
     uusikausi = np.empty(lasku, np.float32)
+    maski = np.zeros(dt.shape, bool)
     ind = 0
     for i in range(dt.shape[0]):
         if all(dt[i,:] == dt[i,:]) and dty[i] == dty[i]:
@@ -52,10 +53,11 @@ def tee_data(kausi='whole_year', tmp=False, pakota=False):
             uusiy[ind] = dty[i]
             uusilat[ind] = lat[i]
             uusikausi[ind] = kausien_pituudet[i]
+            maski[ind] = True
             ind += 1
     if not tmp:
-        np.savez(tallennusnimi, x=uusix, y=uusiy, nimet=list(ds.keys()), uusilat=lat, kauden_pituus=uusikausi)
-    return [uusix, uusiy, list(ds.keys()), uusilat, uusikausi]
+        np.savez(tallennusnimi, x=uusix, y=uusiy, nimet=list(ds.keys()), uusilat=lat, kauden_pituus=uusikausi, maski=maski)
+    return [uusix, uusiy, list(ds.keys()), uusilat, uusikausi, maski]
 
 if __name__=='__main__':
     for kausi in kaudet:

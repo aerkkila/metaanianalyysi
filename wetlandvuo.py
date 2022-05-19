@@ -11,9 +11,7 @@ import pandas as pd
 import xarray as xr
 import sys, time
 
-sarakkeet = ['kaikki_2sel.', 'rajattu_2sel.', 'kaikki_1sel.', 'rajattu_1sel.']
 kaudet = ['whole_year', 'summer', 'freezing', 'winter']
-staulkot = ['', '_m', '_k']
 vari1 = "\033[92m"
 vari2 = "\033[94m"
 vari0 = "\033[0m"
