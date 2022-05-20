@@ -22,7 +22,7 @@ if __name__ == '__main__':
     argumentit()
     rcParams.update({'font.size':13,'figure.figsize':(10,8)})
     doy = taj.lue_avgdoy(startend)
-    ikirluok = xr.open_dataarray('prfdata_avg.nc').sel({'lat':slice(doy.lat.min(),doy.lat.max())})
+    ikirluok = xr.open_dataset('prfdata_avg.nc')['luokka'].sel({'lat':slice(doy.lat.min(),doy.lat.max())})
 
     df = pd.DataFrame(columns=ikirluokat.dt)
     for i,laji in enumerate(ikirluokat.dt):
