@@ -119,11 +119,6 @@ def sovitukset(dtx, dty, nimet, maskit, k_ind):
     x_yksi = [[1,1,1]] if onkoprf else [[1,1]]
     ijpit = len(nimet)*1
     ijind = 1
-    paramtied = open(uloskansio+"parametrit_%s.csv" %(kaudet[k_ind]), 'w')
-    if onkoprf:
-        paramtied.write(",vakio,tyyppi,prf,wtl\n")
-    else:
-        paramtied.write(",vakio,tyyppi,wtl\n")
     for w in range(len(nimet)):
         maski = dtx[:,w] >= (0.03 if not '+' in nimet[w] else 0.06)
         if onkoprf:
@@ -190,15 +185,9 @@ def sovitukset(dtx, dty, nimet, maskit, k_ind):
         summataul.laita(k_ind, w, 2, yksi_k, kauden_pit)
         yhdet[w,1] = yksi_m
         yhdet[w,2] = yksi_k
-        if onkoprf:
-            paramtied.write("%s,%f,%f,%f,%f\n" %(nimet[w], malli.intercept_, malli.coef_[0], malli.coef_[1], malli.coef_[2]))
-            paramtied.write("%s_m,%f,%f,%f,%f\n" %(nimet[w], vakio_mat, kerr_mat[0], kerr_mat[1], kerr_mat[2]))
-            paramtied.write("%s_k,%f,%f,%f,%f\n" %(nimet[w], vakio_kork, kerr_kork[0], kerr_kork[1], kerr_kork[2]))
-        else:
-            paramtied.write("%s,%f,%f,%f\n" %(nimet[w], malli.intercept_, malli.coef_[0], malli.coef_[1]))
-            paramtied.write("%s_m,%f,%f,%f\n" %(nimet[w], vakio_mat, kerr_mat[0], kerr_mat[1]))
-            paramtied.write("%s_k,%f,%f,%f\n" %(nimet[w], vakio_kork, kerr_kork[0], kerr_kork[1]))
-    paramtied.close()
+        paramtaul[k_ind, 0*(len(wld.nimet)-1)+w, :] = np.insert(malli.coef_, 0, malli.intercept_)
+        paramtaul[k_ind, 1*(len(wld.nimet)-1)+w, :] = np.insert(kerr_mat, 0, vakio_mat)
+        paramtaul[k_ind, 2*(len(wld.nimet)-1)+w, :] = np.insert(kerr_kork, 0, vakio_kork)
     if k_ind == 0:
         print('\033[K', end='')
         sys.stdout.flush()
@@ -207,9 +196,11 @@ def sovitukset(dtx, dty, nimet, maskit, k_ind):
     return
 
 def aja(k_ind):
-    global summataul, r2taul, kauden_pituus
+    global summataul, r2taul, kauden_pituus, paramtaul
     summataul.liity()
     r2taul.liity()
+    paramtaul_shm = shm.SharedMemory(name=paramtaul_shm0.name)
+    paramtaul = np.ndarray([len(kaudet),(len(wld.nimet)-1)*3,3+onkoprf], np.float32, buffer=paramtaul_shm.buf)
     dt = wld.tee_data(kaudet[k_ind])
     dtx = dt[0]
     dty = dt[1]
@@ -235,16 +226,18 @@ def aja(k_ind):
     sovitukset(dtx, dty, nimet, maskit, k_ind)
     summataul.poistu()
     r2taul.poistu()
+    paramtaul_shm.close()
     return
 
 def main():
-    global summataul, r2taul, onkoprf, uloskansio
+    global summataul, r2taul, onkoprf, uloskansio, paramtaul_shm0
     onkoprf = ('-prf' in sys.argv)
     uloskansio = "wetlandvuo_tulos/"
     if onkoprf:
         uloskansio += "prf_"
     summataul = Summataul()
     r2taul = R2taul(wld.nimet[:-1])
+    paramtaul_shm0 = shm.SharedMemory(create=True, size=len(kaudet)*(len(wld.nimet)-1)*(3+onkoprf)*3*4)
     if '--debug' in sys.argv:
         aja(0)
         r2taul.vapauta()
@@ -263,6 +256,22 @@ def main():
     summataul.vapauta()
     r2taul.get_taulukko().to_csv(uloskansio+"r2taul.csv")
     r2taul.vapauta()
+    paramtaul = np.ndarray([len(kaudet),(len(wld.nimet)-1)*3,3+onkoprf], np.float32, buffer=paramtaul_shm0.buf)
+    indeksit = np.empty(paramtaul.shape[1], object)
+    pit = paramtaul.shape[1]//3
+    for i in range(3):
+        paate = ['','_m','_k'][i]
+        for j in range(pit):
+            indeksit[pit*i+j] = wld.nimet[j] + paate
+    if onkoprf:
+        sarakkeet = ['vakio','tyyppi','prf','wtl']
+    else:
+        sarakkeet = ['vakio','tyyppi','wtl']
+    for k in range(len(kaudet)):
+        df = pd.DataFrame(paramtaul[k,...], index=indeksit, columns=sarakkeet)
+        df.to_csv(uloskansio + 'parametrit_%s.csv' %(kaudet[k]))
+    paramtaul_shm0.close()
+    paramtaul_shm0.unlink()
     return 0
 
 if __name__=='__main__':

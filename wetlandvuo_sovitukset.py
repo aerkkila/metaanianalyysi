@@ -12,7 +12,7 @@ class Yhtalo():
         self.x1_ind = x1_ind
         self.onkoprf = onkoprf
     def __call__(self, pmk=0):
-        ind = self.i*3 + pmk #pmk: (perus, matala, korkea)
+        ind = len(self.df.index)//3 * pmk + self.i
         if not self.onkoprf:
             return lambda x: self.df.iloc[ind,0] + self.df.iloc[ind,1]*x[:,self.x1_ind] + self.df.iloc[ind,2]*x[:,-1]
         return lambda x: (self.df.iloc[ind,0] + self.df.iloc[ind,1]*x[:,self.x1_ind] + self.df.iloc[ind,2]*x[:,-2] +
