@@ -6,20 +6,27 @@ from matplotlib.pyplot import *
 import sys
  
 class Yhtalo():
-    def __init__(self, df, w_ind, x1_ind):
+    def __init__(self, df, w_ind, x1_ind, onkoprf):
         self.df = df
         self.i = w_ind
         self.x1_ind = x1_ind
+        self.onkoprf = onkoprf
     def __call__(self, pmk=0):
         ind = self.i*3 + pmk #pmk: (perus, matala, korkea)
-        return lambda x: self.df.iloc[ind,0] + self.df.iloc[ind,1]*x[:,self.x1_ind] + self.df.iloc[ind,2]*x[:,-1]
+        if not self.onkoprf:
+            return lambda x: self.df.iloc[ind,0] + self.df.iloc[ind,1]*x[:,self.x1_ind] + self.df.iloc[ind,2]*x[:,-1]
+        return lambda x: (self.df.iloc[ind,0] + self.df.iloc[ind,1]*x[:,self.x1_ind] + self.df.iloc[ind,2]*x[:,-2] +
+                          self.df.iloc[ind,3]*x[:,-1])
 
 def aja(k_ind):
     dt = tee_data(kaudet[k_ind])
     dtx = dt[0]
     dty = dt[1]
     wnimet = dt[2][:-1]
-    yht = Yhtalo(pd.read_csv("./wetlandvuo_tulos/parametrit_%s.csv" %(kaudet[k_ind]), index_col=0), 0, 0)
+    if onkoprf:
+        yht = Yhtalo(pd.read_csv("./wetlandvuo_tulos/prf_parametrit_%s.csv" %(kaudet[k_ind]), index_col=0), 0, 0, onkoprf)
+    else:
+        yht = Yhtalo(pd.read_csv("./wetlandvuo_tulos/parametrit_%s.csv" %(kaudet[k_ind]), index_col=0), 0, 0, onkoprf)
     for w in range(len(wnimet)):
         yht.x1_ind = w
         yht.i = w
@@ -68,10 +75,12 @@ def tasokuvaajat(k_ind):
     np.seterr(**vanhat)
 
 def main():
+    global onkoprf
     rcParams.update({'figure.figsize':(13,10)})
+    onkoprf = '-prf' in sys.argv
     for i in range(len(kaudet)):
-        #aja(i)
-        tasokuvaajat(i)
+        aja(i)
+        #tasokuvaajat(i)
     return 
 
 if __name__ == '__main__':

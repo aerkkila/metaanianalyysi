@@ -121,9 +121,9 @@ def sovitukset(dtx, dty, nimet, maskit, k_ind):
     ijind = 1
     paramtied = open(uloskansio+"parametrit_%s.csv" %(kaudet[k_ind]), 'w')
     if onkoprf:
-        paramtied.write(",a0,a1,a2,a3\n")
+        paramtied.write(",vakio,tyyppi,prf,wtl\n")
     else:
-        paramtied.write(",a0,a1,a2\n")
+        paramtied.write(",vakio,tyyppi,wtl\n")
     for w in range(len(nimet)):
         maski = dtx[:,w] >= (0.03 if not '+' in nimet[w] else 0.06)
         if onkoprf:
@@ -221,7 +221,7 @@ def aja(k_ind):
     maski = lat >= 50
     dtx = dtx[maski,:]
     if onkoprf:
-        prf = xr.open_dataarray('./prfdata_avg.nc').sel({"lat":slice(29.5,83.5)}).data
+        prf = xr.open_dataset('./prfdata_avg.nc')['osuus'].sel({"lat":slice(29.5,83.5)}).data
         dtx = np.insert(dtx, -1, prf.flatten()[dropmaski][maski], axis=1)
     dty = dty[maski]
     lat = lat[maski]
@@ -242,9 +242,13 @@ def main():
     onkoprf = ('-prf' in sys.argv)
     uloskansio = "wetlandvuo_tulos/"
     if onkoprf:
-        uloskansio += "_prf"
+        uloskansio += "prf_"
     summataul = Summataul()
     r2taul = R2taul(wld.nimet[:-1])
+    if '--debug' in sys.argv:
+        aja(0)
+        r2taul.vapauta()
+        return 0
     prosessit = np.empty(len(kaudet), object)
     for k_ind in range(len(kaudet)):
         prosessit[k_ind] = Process(target=aja, args=[k_ind])
