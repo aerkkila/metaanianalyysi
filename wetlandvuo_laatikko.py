@@ -24,8 +24,6 @@ def aja(dt, laji='wetland'):
     xlis = np.empty(len(luokat), np.float32)
     yerr_a = np.zeros([2,len(luokat)], np.float32)
     yerr_y = np.zeros([2,len(luokat)], np.float32)
-    xalue = 1/len(luokat)
-    lev = 0.5 * xalue
     for i in range(len(luokat)):
         if len(luokat[i]):
             listat[i,:] = np.percentile(luokat[i], [5,25,75,95])
@@ -33,6 +31,8 @@ def aja(dt, laji='wetland'):
         else:
             listat[i,:] = np.nan
             avgs[i] = np.nan
+        xalue = rajat[i+1]-rajat[i]
+        lev = xalue/2
         x = xalue*i-lev/2
         y = listat[i,1]
         w = lev
@@ -56,6 +56,7 @@ def aja(dt, laji='wetland'):
     ax.set_xlim(rajat[0]-lev/2-0.02, rajat[-2]+lev/2+0.02)
     ylabel('vuo')
     xlabel(laji)
+    xticks(rajat)
 
 if __name__=='__main__':
     import wetlandvuo_data as wld
