@@ -12,13 +12,15 @@ def interpoloi(ds,ch4,alku,loppu,patka,rivi):
     kohde_shm = shm.SharedMemory(name=jaettu.name)
     kohde = np.ndarray(ch4.shape, np.float32, buffer=kohde_shm.buf)
     t=alku
+    i = 1
+    patkia = (loppu-alku)//patka
     while t<loppu-patka:
         muoto_mjon = '\033[%iF%%i/%%i\033[%iE' %(rivi,rivi)
-        print(muoto_mjon %(t+1,loppu), end='')
+        print(muoto_mjon %(i,patkia), end='')
+        i += 1
         sys.stdout.flush()
         kohde[t:t+patka, ...] = ds.interp(time=ch4.time.data[t:t+patka], lat=ch4.lat.data, lon=ch4.lon.data, method='nearest')
         t += patka
-    print(muoto_mjon %(loppu,loppu), end='')
     sys.stdout.flush()
     kohde[t:loppu, ...] = ds.interp(time=ch4.time.data[t:loppu], lat=ch4.lat.data, lon=ch4.lon.data)
     kohde_shm.close()
