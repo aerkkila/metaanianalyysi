@@ -8,8 +8,8 @@ kaudet = {'freezing':2, 'winter':3, 'summer':1, 'whole_year':4}
 def main():
     kausidata = xr.open_dataarray('./kaudet.nc')
     vuotied = config.edgartno_dir + 'flux1x1_1d.nc'
-    vuo = xr.open_dataarray(vuotied).sel({'lat':slice(kausidata.lat.min(),kausidata.lat.max()),
-                                          'time':slice(kausidata.time.min(),kausidata.time.max())})
+    vuo = xr.open_dataset(vuotied).sel({'lat':slice(kausidata.lat.min(),kausidata.lat.max()),
+                                        'time':slice(kausidata.time.min(),kausidata.time.max())})
     print('')
     for i,kausi in enumerate(kaudet.keys()):
         print('\033[F%i/%i\033[K' %(i+1,len(kaudet.keys())))
@@ -17,7 +17,7 @@ def main():
             uusi = xr.where(kausidata!=0, vuo, np.nan)
         else:
             uusi = xr.where(kausidata==kaudet[kausi], vuo, np.nan)
-        uusi.rename('vuo').to_netcdf('%s_%s.nc' %(sys.argv[0][:-3],kausi))
+        uusi.to_netcdf('%s_%s.nc' %(sys.argv[0][:-3],kausi))
         uusi.close()
     vuo.close()
     kausidata.close()

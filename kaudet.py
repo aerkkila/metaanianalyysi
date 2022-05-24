@@ -31,18 +31,20 @@ def main():
     talven_loppu.close()
 
     #rajataan ch4data
-    ch4data = xr.open_dataarray('../edgartno_lpx/flux1x1_1d.nc').sel({'lat':slice(ajat.lat.min(),ajat.lat.max())})
-    ch4alku = pd.Period(ch4data.time.data[0], freq='D')
-    ch4loppu = pd.Period(ch4data.time.data[-1], freq='D')
+    #sieltä luettaneen vain ajat eli sitä ilmankin pärjättäneisiin
+    #ch4data = xr.open_dataset('../edgartno_lpx/flux1x1_1d.nc').sel({'lat':slice(ajat.lat.min(),ajat.lat.max())})
+    #ch4alku = pd.Period(ch4data.time.data[0], freq='D')
+    #ch4loppu = pd.Period(ch4data.time.data[-1], freq='D')
     alkuaika = pd.Period('%4i-08-01' %(int(ajat.vuosi[0])-1), freq='D')
     loppuaika = pd.Period('%4i-08-01' %(int(ajat.vuosi[-1])), freq='D')
-    ch4data = ch4data[(alkuaika-ch4alku).n:(loppuaika-ch4alku).n,...]
+    #ch4data = ch4data[(alkuaika-ch4alku).n:(loppuaika-ch4alku).n,...]
 
     #muunnetaan pd.Timestamp -> pd.Period
-    pit_aika = ch4data.time.size
-    ch4ajat = np.empty(pit_aika,pd.Period)
-    for i in range(pit_aika):
-        ch4ajat[i] = pd.Period(ch4data.time.data[i], freq='D')
+    #pit_aika = ch4data.time.size
+    #paivamaarat = np.empty(pit_aika, object)
+    paivamaarat = pd.period_range(alkuaika, loppuaika-1)
+    #for i in range(pit_aika):
+    #    paivamaarat[i] = pd.Period(ch4data.time.data[i], freq='D')
 
     #tehdään dataarray vuodenajoista ja niitten pituuksista
     dt = np.zeros([ajat.lat.size, ajat.lon.size, pit_aika], np.int8)
@@ -63,7 +65,7 @@ def main():
                     if paiva != paiva:
                         joko0tai1 = 0
                         continue
-                    pit = (nollakohta+int(paiva) - ch4ajat[ind]).n
+                    pit = (nollakohta+int(paiva) - paivamaarat[ind]).n
                     dt[j,i,ind:ind+pit] = kausi*joko0tai1
                     dtpit[kausi-1][j,i,v] = pit
                     joko0tai1 = 1
@@ -73,7 +75,8 @@ def main():
                         dims=('lat','lon','time'),
                         coords=({'lat':ajat.lat,
                                  'lon':ajat.lon,
-                                 'time':ch4data.time.data})) #.data saa days since -attribuutin muuttumaan
+                                 'time':paivamaarat})) #.data saa days since -attribuutin muuttumaan
+    darr.kausi.attrs.update({'luvut':'1:kesä; 2:jäätyminen; 3:talvi'})
     darrpit = xr.Dataset()
     darrpitT = xr.Dataset()
     for i in range(len(kausinimet)):
@@ -84,7 +87,6 @@ def main():
         darrpit = darrpit.assign({kausinimet[i]: tmp.copy()})
         darrpitT = darrpitT.assign({kausinimet[i]: tmp.transpose('vuosi','lat','lon').copy()})
     ajat.close()
-    ch4data.close()
     darr.to_netcdf('%s_latlontime.nc' %(sys.argv[0][:-3]))
     darr.transpose('time','lat','lon').to_netcdf('%s.nc' %(sys.argv[0][:-3]))
     darr.close()

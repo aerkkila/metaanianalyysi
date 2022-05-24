@@ -90,7 +90,7 @@ def nappainfunk(tapaht):
     elif tapaht.key == 'left' or tapaht.key == 'g' or tapaht.key == 'a':
         vaihda_luokka(-1)
 
-def main(tiedosto):
+def main(tiedosto,muuttuja):
     global projektio,platecarree,kattavuus,ch4data,ikirluokat,vkartta
     rcParams.update({'font.size':18,'figure.figsize':(12,10),'text.usetex':True})
     argumentit(sys.argv[1:])
@@ -101,7 +101,7 @@ def main(tiedosto):
     ikirouta = ikiroutaolio.data.mean(dim='time')
     ikirluokat = prf.luokittelu_str_xr(ikirouta)
 
-    ch4data = xr.open_dataarray(tiedosto).loc[:,ajat.lat.min():ajat.lat.max(),:].\
+    ch4data = xr.open_dataset(tiedosto)[muuttuja].loc[:,ajat.lat.min():ajat.lat.max(),:].\
         where(ajat.data==ajat.data,np.nan)
     ch4data = ch4data.mean(dim='time')
     ajat.close()

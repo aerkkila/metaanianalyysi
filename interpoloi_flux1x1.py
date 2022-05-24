@@ -6,7 +6,7 @@ import numpy as np
 def main():
     muuttuja = 'flux_bio_prior_mean'
     kerroin = 'flux_multiplier_m_bio'
-    uusi_muuttuja = 'flux_bio_posterior'
+    uudet_muuttujat = ['flux_bio_prior', 'flux_bio_posterior']
     ds = xr.open_dataset('flux1x1.nc')
     haku = 'yhdistettävät/flux1x1_'
     historia = ds.attrs['history']
@@ -25,20 +25,24 @@ def main():
         paikka+=2
         ajat0[i] = pd.Timestamp('%s-%s-%s' %(vuosi,kk,pp))
 
+    prior = ds[muuttuja]
     posterior = ds[muuttuja]*ds[kerroin].astype(np.float32)
     ds.close()
     ajat1 = []
-    data = []
+    data_pri = []
+    data_post = []
     for i in range(len(ajat0)-1):
         paivia = (ajat0[i+1]-ajat0[i]).days
         ajat1.extend(pd.date_range(ajat0[i], periods=paivia, freq='D'))
-        data.extend(posterior.interp(time=np.linspace(i, i+1, num=paivia, endpoint=False),
-                                     assume_sorted=True, kwargs={'copy':False}).astype(np.float32))
+        aika = np.linspace(i, i+1, num=paivia, endpoint=False)
+        data_pri.extend(prior.interp(time=aika, assume_sorted=True, kwargs={'copy':False}).astype(np.float32))
+        data_post.extend(posterior.interp(time=aika, assume_sorted=True, kwargs={'copy':False}).astype(np.float32))
         print('\r%i/%i' %(i+1,len(ajat0)-1), end='')
-    data = xr.concat(data,dim='time').transpose('time','lat','lon').\
-        assign_coords({'time':ajat1}).rename(uusi_muuttuja)
+    data_pri = xr.concat(data_pri,dim='time').transpose('time','lat','lon').assign_coords({'time':ajat1})
+    data_post = xr.concat(data_post,dim='time').transpose('time','lat','lon').assign_coords({'time':ajat1})
     print('')
-    data.to_netcdf('flux1x1_1d.nc')
+    ds = xr.Dataset({uudet_muuttujat[0]:data_pri, uudet_muuttujat[1]:data_post})
+    ds.to_netcdf('flux1x1_1d.nc')
     return
 
 if __name__ == '__main__':
