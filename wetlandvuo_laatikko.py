@@ -83,28 +83,25 @@ if __name__=='__main__':
             title(['non permafrost', 'some permafrost'][prflaji])
         show()
         exit()
-    dt = wld.tee_data('freezing')
+    dt = wld.tee_data('whole_year')
     for j in range(2):
         alue = (dt[6] >= 0) if j else (dt[6] < 0) #erikseen itäinen ja läntinen alue
         aluenimi = ['west','east'][j]
         for i,hyppy in enumerate([0.1, 0.2]):
             subplot(2,2,j*2+i+1)
             data = aja(dt, 'wetland', hyppy=hyppy, alue=alue)
-            malli = LinearRegression()
-            funktio = lambda x: x**2
-            xplot = np.linspace(0,1,101).reshape([101,1])
-            xplot = np.concatenate([xplot,funktio(xplot)], axis=1)
-            wetl = dt[0][:,[-1]]
-            vuo = dt[1]
-            yt = data['listat'].transpose()[[1,2],:]
-            yt = np.insert(yt, 1, data['avgs'], axis=0)
             if hyppy<0.1:
                 xticks(rotation=45)
             continue
 
             #sovittaa käyrät laatikkodiagrammeihin
+            funktio = lambda x: x**2
+            xplot = np.linspace(0,1,101).reshape([101,1])
+            xplot = np.concatenate([xplot,funktio(xplot)], axis=1)
+            yt = data['listat'].transpose()[[1,2],:]
+            yt = np.insert(yt, 1, data['avgs'], axis=0)
+            malli = LinearRegression()
             for y in yt:
-                break
                 x = np.array(data['rajat']).reshape([len(data['rajat']),1])[:-1]
                 x = np.concatenate([x,funktio(x)],axis=1)
                 maski = y==y
@@ -113,8 +110,13 @@ if __name__=='__main__':
                 malli.fit(x,y)
                 plot(xplot[:,0], malli.predict(xplot), color='y')
                 print("%.4f\t" %(malli.predict(xplot[[-1],:])), end='')
-            #malli.fit(np.concatenate([wetl,funktio(wetl)],axis=1),vuo)
-            #plot(xplot[:,0], malli.predict(xplot), color='g')
-            #print(malli.predict(xplot[[-1],:]))
+
+            #käyrä alkuperäisen datan keskiarvosta
+            wetl = dt[0][:,[-1]]
+            vuo = dt[1]
+            malli.fit(np.concatenate([wetl,funktio(wetl)],axis=1),vuo)
+            plot(xplot[:,0], malli.predict(xplot), color='g')
+            print("%.4f" %(malli.predict(xplot[[-1],:])[0]), end='')
+
             print("\b\n", end='')
     show()

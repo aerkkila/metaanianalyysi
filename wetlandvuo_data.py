@@ -7,16 +7,6 @@ nimet = ['bog', 'fen', 'bog+fen', 'marsh', 'tundra_wetland', 'permafrost_bog', '
 kaudet = ['whole_year', 'summer', 'freezing', 'winter']
 
 def tee_data(kausi='whole_year', tmp=False, pakota=False):
-    tama_tied = sys.argv[0][:-3] if __name__=='__main__' else __name__
-    tallennusnimi = '%s_%s.npz' %(tama_tied, kausi)
-    if not (tmp or pakota):
-        try:
-            dt1 = np.load(tallennusnimi)
-            dt = copy.deepcopy(dt1)
-            dt1.close()
-            return [dt['x'], dt['y'], dt['nimet'], dt['lat'], dt['kauden_pituus'], dt['maski'], dt['lon']]
-        except:
-            pass #Tiedostoa ei ollut, jolloin se luodaan.
     raja_wl = 0.03
     dsbaw = xr.open_dataset('./BAWLD1x1.nc')[nimet]
     dsbaw = xr.where(dsbaw.wetland>=raja_wl, dsbaw, np.nan)
@@ -26,12 +16,9 @@ def tee_data(kausi='whole_year', tmp=False, pakota=False):
     else:
         kausien_pituudet = [365.25]*55*360
     dsvuo *= 1e9
-    pit = dsvuo.lon.data.size
-    lat = dsvuo.lat.data
-    lat = np.repeat(lat,pit) #meshgrid lat-koordinaatista
-    pit = dsvuo.lat.data.size
-    lon = dsvuo.lon.data
-    lon = np.repeat(lon.reshape([len(lon),1]),pit,axis=1).transpose().flatten() #meshgrid lon-koordinaatista
+    lon,lat = np.meshgrid(dsvuo.lon.data, dsvuo.lat.data)
+    lon = lon.flatten()
+    lat = lat.flatten()
 
     ds = dsbaw
     dt = np.empty([len(ds.keys()), ds[list(ds.keys())[0]].data.size])
@@ -60,10 +47,8 @@ def tee_data(kausi='whole_year', tmp=False, pakota=False):
             uusikausi[ind] = kausien_pituudet[i]
             maski[ind] = True
             ind += 1
-    if not tmp:
-        np.savez(tallennusnimi, x=uusix, y=uusiy, nimet=list(ds.keys()), lat=uusilat, kauden_pituus=uusikausi, maski=maski, lon=uusilon)
     return [uusix, uusiy, list(ds.keys()), uusilat, uusikausi, maski, uusilon]
 
 if __name__=='__main__':
     for kausi in kaudet:
-        tee_data(kausi, pakota=True)
+        tee_data(kausi)
