@@ -17,28 +17,32 @@ int main(int argc, char** argv) {
   nct_vset* baw = nct_read_ncfile("./BAWLD1x1.nc");
   nct_vset* vuo = nct_read_ncfile("./flux1x1_whole_year.nc");
   nct_var* vuovar = vuo->vars + nct_get_varid(vuo, "flux_bio_posterior");
-  nct_varmean0(vuovar);
+  nct_varnanmean0(vuovar);
   nct_var* wetl = baw->vars + nct_get_varid(baw, "wetland");
-  char* tmpc[] = {"lat", "lon"};
   FILE* ulos = fopen("wetlandvuosumma.csv", "w");
+  fprintf(ulos, ",mol/s,Tg,nmol/s/m²\n");
   for(int k=0; k<ARRPIT(vars); k++) {
     nct_var* wlaji = baw->vars + nct_get_varid(baw, vars[k]);
     int xpit = wlaji->dimlens[1];
-    double vuosumma = 0;
     double* lat = baw->vars[nct_get_varid(baw, "lat")].data;
-    int count = 0;
+    double vuosumma = 0;
+    double pintaala = 0;
+    int    lasku    = 0;
     for(int j=0; j<wlaji->dimlens[0]; j++) {
       double ala = PINTAALA(ASTE*lat[j], ASTE);
       for(int i=0; i<xpit; i++) {
 	int ind = j*xpit+i;
-	double lisa = ((double*)wlaji->data)[ind] / ((double*)wetl->data)[ind] * ((float*)vuovar->data)[ind] * ala;
-	//if(((double*)wetl->data)[ind] < 0.03) continue;
-	count++;
-	if(lisa==lisa)
-	  vuosumma += lisa;
+	if(((double*)wetl->data)[ind] < 0.03) continue;
+	double ala1 = ((double*)wlaji->data)[ind] * ala;
+	double vuo1 = ((float*)vuovar->data)[ind] * ala1 / ((double*)wetl->data)[ind];
+	if(vuo1 == vuo1) {
+	  vuosumma += vuo1;
+	  pintaala += ala1;
+	  lasku++;
+	}
       }
     }
-    fprintf(ulos, "%s,%.4lf mol/s,%.4lf Tg,%i\n", vars[k], vuosumma, vuosumma*1e-12*31536000*16.0416, count);
+    fprintf(ulos, "%s,%.4lf,%.4lf,%.5lf\n", vars[k], vuosumma, vuosumma*1e-12*31536000*16.0416, vuosumma/pintaala*1e9);
   }
   fclose(ulos);
   nct_free_vset(baw);
