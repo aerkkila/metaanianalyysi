@@ -9,11 +9,11 @@ class Residmalli(LinearRegression):
         super().__init__(**kwargs)
     def muunna(self, x):
         resid = x[:,0] - self.korr_malli.predict(x[:,[1]])
-        return np.concatenate([x[:,[1]],resid.reshape([len(resid),1])], axis=1)
+        return np.concatenate([resid.reshape([len(resid),1]), x[:,[1]]], axis=1)
     def fit(self, x, y, **kwargs):
         return super().fit(self.muunna(x), y, **kwargs)
     def predict(self, x, **kwargs):
-        return super().predict(self.muunna(x), **kwargs)
+        return super().predict(self.muunna(np.array(x)), **kwargs)
 
 def main():
     rcParams.update({'figure.figsize':(13,12)})
@@ -32,11 +32,13 @@ def main():
         dtx = dtx[:,[w,-1]]
         ax = subplot(2,3,i+1)
         y = dty0[maski]
-        malli = Residmalli(dtx)
+        #malli = Residmalli(dtx)
+        malli = LinearRegression()
         malli.fit(dtx,y)
+        print(malli.coef_)
         plot(dtx[:,0],y, '.')
         plot(dtx[:,0],malli.predict(dtx), '.')
-        print("%s: %.4f" %(wnimet[w], malli.predict(np.array([[1,1]]))))
+        print("%s: %.4f" %(wnimet[w], malli.predict([[1,1]])))
         title(wnimet[w])
     show()
     return
