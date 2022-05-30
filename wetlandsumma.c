@@ -4,6 +4,7 @@
 #include <math.h>
 
 // gcc wetlandsumma.c -lnctietue -lSDL2 -lpng -lnetcdf -lm -O3
+// nctietue-kirjaston saa githubista https://github.com/aerkkila/nctietue.git
 
 const double r2 = 40592558970441; //(6371229 m)^2;
 #define PINTAALA(lat, hila) ((hila)*r2*(sin((lat)+(hila))-sin(lat))*1.0e-6)
@@ -24,7 +25,7 @@ int main(int argc, char** argv) {
       for(int i=0; i<xpit; i++)
 	pintaala += ((float*)var->data)[j*xpit+i]*ala;
     }
-    printf("%s\t%.0lf km²\t\n", vars[k], pintaala);
+    printf("%s\t%.4lf Mkm²\t\n", vars[k], pintaala*1e-6);
   }
   nct_write_ncfile(baw, "testi.nc");
   nct_free_vset(baw);

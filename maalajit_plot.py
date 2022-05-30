@@ -82,13 +82,16 @@ def laatikko(args):
         show()
 
 def korrelaatiot(args):
-    alkup,muunn = ml.lue_maalajit(args.maalajit,True,True)
-    alkup_map = alkup.to_dataframe().corr()
+    mlajit = ['wetland', 'bog', 'fen', 'marsh', 'permafrost_bog', 'tundra_wetland']#, 'boreal_forest', 'tundra_dry']
+    alkup,muunn = ml.lue_maalajit(mlajit,True,True)
     muunn_map = muunn.to_dataframe().corr()
-    for j in range(len(alkup_map)):
-        for i in range(len(alkup_map)):
+    '''
+    alkup_map = alkup.to_dataframe().corr()
+    for j in range(len(muunn_map)):
+        for i in range(len(muunn_map)):
             if i > j:
                 muunn_map.iloc[j,i] = alkup_map.iloc[j,i]
+    '''
     sns.heatmap( muunn_map, center=0, cmap='seismic', square=True, annot=True, annot_kws={'fontsize':10} )
     xticks(rotation=30, ha='right')
     tight_layout()

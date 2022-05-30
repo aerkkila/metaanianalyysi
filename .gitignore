@@ -9,3 +9,4 @@ köppen_shp
 *.npy
 *.cmp/
 muunna_shapefile
+*.out
