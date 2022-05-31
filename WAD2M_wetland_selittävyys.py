@@ -20,7 +20,7 @@ def poista_epaluvut(lista):
 #Tässä ei ole vähimmäismäärää wetlandille, minkä vuoksi selittävyys voi erota wetlandvuo-tiedostoista
 wad2m = xr.open_dataarray(config.WAD2M+'wad2m.nc').mean(dim='time').data.flatten()
 wetl = xr.open_dataset('./BAWLD1x1.nc').wetland.data.flatten()
-vuo = xr.open_dataarray('./flux1x1_whole_year.nc').mean(dim='time').data.flatten()*1e9
+vuo = xr.open_dataset('./flux1x1_winter.nc')['flux_bio_posterior'].mean(dim='time').data.flatten()*1e9
 wad2m, wetl, vuo = poista_epaluvut([wad2m, wetl, vuo])
 
 wad2m_h = np.array([wad2m,]).transpose()
@@ -46,11 +46,13 @@ sca(ax[0])
 plot(wad2m, vuo, '.')
 arv = arvio(wad2m_h)
 plot(wad2m, arvio(wad2m_h), '.')
+xlabel('WAD2M')
 
 sca(ax[1])
 plot(wetl, vuo, '.')
 arv = arvio(wetl_h)
 plot(wetl, arv, '.')
+xlabel('wetland')
 
 sca(ax[2])
 plot(wad2m, vuo, '.')

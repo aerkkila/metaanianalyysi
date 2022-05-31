@@ -4,12 +4,13 @@ import pandas as pd
 from numpy import sin
 import numpy as np
 from matplotlib.pyplot import *
-import prf as prf
+import prf
 import sys, warnings
+from wetlandtyypin_pisteet import valitse_painottaen
 
 def argumentit(argv):
     global tarkk,verbose,tallenna
-    tarkk = 10; verbose = False; tallenna = False
+    tarkk = 25; verbose = False; tallenna = False
     i=1
     while i<len(argv):
         a = argv[i]
@@ -25,22 +26,10 @@ def argumentit(argv):
         i += 1
     return
 
-_viimelat1x1 = np.nan
-def pintaala1x1(lat):
-    global _viimelat1x1, _viimeala1x1
-    if lat == _viimelat1x1:
-        return _viimeala1x1
-    _viimelat1x1 = lat
-    aste = 0.0174532925199
-    R2 = 40592558970441
-    _viimeala1x1 = aste*R2*( sin((lat+1)*aste) - sin(lat*aste) )
-    return _viimeala1x1
-
 class Vuo():
-    def __init__(self,osdet,vuot,alat):
+    def __init__(self,osdet,vuot):
         self.osdet = osdet
         self.vuot = vuot
-        self.alat = alat
         self.vari0 = '\033[0m'
         self.vari1 = '\033[1;32m'
         self.vari2 = '\033[1;33m'
@@ -48,41 +37,45 @@ class Vuo():
     def __str__(self):
         return ('%sVuo ja ikirouta:%s\n' %(self.vari1,self.vari0) +
                 f'%sosuudet:%s\n{self.osdet}\n' %(self.vari2,self.vari0) +
-                f'%svuot:%s\n{self.vuot}\n' %(self.vari2,self.vari0) +
-                f'%salat:%s\n{self.alat}\n' %(self.vari2,self.vari0))
+                f'%svuot:%s\n{self.vuot}\n' %(self.vari2,self.vari0))
 
-def laske_vuot(vuodata):
+def laske_vuot(vuodata, monistus):
     alku = int(ikirouta.min())
     loppu = int(ikirouta.max())
     osuudet = np.arange(alku,loppu+tarkk,tarkk)
     #luettava data
-    ikirflat = ikirouta.data.flatten()
     latflat = np.meshgrid( ikirouta.lon.data, ikirouta.lat.data )[1].flatten()
-    vuoflat = vuodata.data.flatten()
+    indeksit = valitse_painottaen(latflat[wetlmaski], 8)
+    latflat = latflat[wetlmaski][indeksit]
+    ikirflat = ikirouta.data.flatten()[wetlmaski][indeksit]
+    vuoflat = vuodata.data.flatten()[wetlmaski][indeksit]
     #kirjoitettava data
     vuot = []
     [ vuot.append([]) for i in range(len(osuudet)) ]
-    #alat = vuot.copy()
     for i in range(len(ikirflat)):
-        ala = pintaala1x1(latflat[i])
         #pyöristettäköön indeksi ylöspäin, jotta 0 % on oma luokkansa ja 100 % sisältyy 100-ε %:in
         ind = int(np.ceil( (ikirflat[i]-alku) / tarkk ))
-        #alat[ind].append(ala)
         vuot[ind].append(vuoflat[i])
     vuonp = np.empty([len(vuot), max(len(v) for v in vuot)]) + np.nan
     for i in range(len(vuot)):
         for j in range(len(vuot[i])):
             vuonp[i,j] = vuot[i][j]
     vuodf = pd.DataFrame(vuonp.T,columns=osuudet)
-    return Vuo(osuudet,vuodf,None)
+    return Vuo(osuudet,vuodf)
 
 if __name__ == '__main__':
     rcParams.update({'font.size':13,'figure.figsize':(10,8)})
     argumentit(sys.argv)
-    vuodata = xr.open_dataarray('./flux1x1_whole_year.nc').mean(dim='time')
-    ikiroutaolio = prf.Prf('1x1').rajaa([vuodata.lat.min(),vuodata.lat.max()])
+    vuodata = xr.open_dataset('./flux1x1_summer.nc')['flux_bio_posterior'].mean(dim='time')
+    bawdata = xr.open_dataset('./BAWLD1x1.nc')['wetland']
+    ikiroutaolio = prf.Prf('1x1').rajaa([vuodata.lat.min(),vuodata.lat.max()+0.01])
     ikirouta = ikiroutaolio.data.mean(dim='time')
-    vuoolio = laske_vuot(vuodata.where(vuodata==vuodata,np.nan))
+    bawdata = bawdata.sel({'lat':slice(vuodata.lat.min(),vuodata.lat.max()+0.01)})
+    wetlmaski = bawdata.data.flatten() >= 0.05
+    vuodata = vuodata.where(vuodata==vuodata, np.nan)
+    maksimi = vuodata.max()
+    vuodata = vuodata.where(vuodata.lon<0,np.nan)
+    vuoolio = laske_vuot(vuodata, 8)
     vuodata.close()
     if verbose:
         print(vuoolio)
@@ -92,7 +85,10 @@ if __name__ == '__main__':
          vuoolio.vuot.boxplot(whis=(5,95))
     xlabel('% permafrost')
     ylabel('CH$_4$ flux (mol/m$^2$/s)')
+    ylim(top=maksimi)
     if tallenna:
         savefig('kuvia/%s.png' %sys.argv[0][:-3])
     else:
         show()
+    bawdata.close()
+    vuodata.close()
