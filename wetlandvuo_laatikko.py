@@ -4,7 +4,7 @@ from matplotlib.pyplot import *
 import matplotlib as mpl
 import sys
 
-def aja(dt, laji='wetland', hyppy=0.1, alue=None):
+def aja(dt, laji='wetland', hyppy=0.1, alue=None, xnimio=''):
     monistus = 8
     wnimet = dt[2]
     wl = dt[0][:,wnimet.index(laji)]
@@ -13,7 +13,10 @@ def aja(dt, laji='wetland', hyppy=0.1, alue=None):
         wl = wl[alue]
         vuo = vuo[alue]
         lat = dt[3][alue]
-    indeksit = valitse_painottaen(lat, monistus)
+    if monistus != 1:
+        indeksit = valitse_painottaen(lat, monistus)
+    else:
+        indeksit = np.arange(len(vuo))
     wl = wl[indeksit]
     vuo = vuo[indeksit]
     rajat = np.arange(0, 1+hyppy, hyppy)
@@ -55,8 +58,8 @@ def aja(dt, laji='wetland', hyppy=0.1, alue=None):
     for i in range(len(luokat)):
         text(rajat[i], y, "%i" %(int(len(luokat[i])/monistus)))
     ax.set_xlim(rajat[0]-lev/2-0.02, rajat[-2]+lev/2+0.02)
-    ylabel('vuo')
-    xlabel(laji)
+    ylabel('CH$_4$ flux')
+    xlabel(laji + (' (%s)' %(xnimio)) if len(xnimio) else '')
     xticks(rajat)
     return {'rajat':rajat, 'listat':listat, 'avgs':avgs}
 
@@ -65,31 +68,13 @@ if __name__=='__main__':
     import xarray as xr
     from sklearn.linear_model import LinearRegression
     rcParams.update({'figure.figsize':(12,12)})
-    if '-prf' in sys.argv:
-        from copy import deepcopy
-        dt = wld.tee_data('whole_year')
-        prf = xr.open_dataset('prfdata_avg.nc')['luokka'].sel({'lat':slice(29.5, 83.5)})
-        prf = prf.data.flatten()[dt[5]]
-        for prflaji in range(2):
-            dt1 = deepcopy(dt)
-            if not prflaji:
-                maski = prf==0
-            else:
-                maski = prf!=0
-            for j in [0,1,3,4]:
-                dt1[j] = dt[j][maski]
-            ax = subplot(1,2,prflaji+1)
-            data = aja(dt1, 'wetland')
-            title(['non permafrost', 'some permafrost'][prflaji])
-        show()
-        exit()
     dt = wld.tee_data('whole_year')
     for j in range(2):
         alue = (dt[6] >= 0) if j else (dt[6] < 0) #erikseen itäinen ja läntinen alue
         aluenimi = ['west','east'][j]
         for i,hyppy in enumerate([0.1, 0.2]):
             subplot(2,2,j*2+i+1)
-            data = aja(dt, 'wetland', hyppy=hyppy, alue=alue)
+            data = aja(dt, 'wetland', hyppy=hyppy, alue=alue, xnimio=aluenimi)
             if hyppy<0.1:
                 xticks(rotation=45)
             continue
@@ -119,4 +104,7 @@ if __name__=='__main__':
             print("%.4f" %(malli.predict(xplot[[-1],:])[0]), end='')
 
             print("\b\n", end='')
-    show()
+    if '-s' in sys.argv:
+        savefig('kuvia/%s.png' %(sys.argv[0][:-3]))
+    else:
+        show()
