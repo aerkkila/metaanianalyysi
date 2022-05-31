@@ -7,5 +7,5 @@ wetlandvuosumma.out: wetlandvuosumma.c
 wetlandvuosumma.csv: wetlandvuosumma.out
 	./wetlandvuosumma.out
 
-näytä: wetlandvuosumma.csv
+wetlandvuosumma: wetlandvuosumma.csv
 	emacs -nw wetlandvuosumma.csv

@@ -15,7 +15,7 @@ char* vars[] = {"wetland", "bog", "fen", "marsh", "tundra_wetland", "permafrost_
 
 int main(int argc, char** argv) {
   nct_vset* baw = nct_read_ncfile("./BAWLD1x1.nc");
-  nct_vset* vuo = nct_read_ncfile("./flux1x1_whole_year.nc");
+  nct_vset* vuo = nct_read_ncfile("./flux1x1_%s.nc", argc>1? argv[1]: "whole_year");
   nct_var* vuovar = vuo->vars + nct_get_varid(vuo, "flux_bio_posterior");
   nct_varnanmean0(vuovar);
   nct_var* wetl = baw->vars + nct_get_varid(baw, "wetland");
@@ -29,6 +29,8 @@ int main(int argc, char** argv) {
     double pintaala = 0;
     int    lasku    = 0;
     for(int j=0; j<wlaji->dimlens[0]; j++) {
+      if(lat[j]<49.5)
+	continue;
       double ala = PINTAALA(ASTE*lat[j], ASTE);
       for(int i=0; i<xpit; i++) {
 	int ind = j*xpit+i;
