@@ -12,10 +12,11 @@ import config
 
 varoitusvari = '\033[1;33m'
 vari0 = '\033[0m'
+ikir_ind = 0
 
 def argumentit(argv):
-    global tallenna,verbose,ikir_ind
-    tallenna=False; verbose=False; ikir_ind=0
+    global tallenna,verbose
+    tallenna=False; verbose=False
     i=0
     while i < len(argv):
         a = argv[i]
@@ -47,52 +48,57 @@ def luo_varikartta(ch4data):
         varit[i] = cmap(cmaplis[i-N//2])
     return lcmap(varit)
 
+
+ulkovari = '#d0e0c0'
+harmaavari = '#c0c0c0'
+    
 def piirra():
-    clf()
-    ax = axes([0.01,0.01,1,0.95],projection=projektio)
+    ax = gca()
     ax.set_extent(kattavuus,platecarree)
     ax.coastlines()
-    ulkovari = '#d0e0c0'
-    harmaavari = '#c0c0c0'
     #Tämä asettaa maskin ulkopuolisen alueen eri väriseksi
     harmaa = lcmap(ulkovari)
     muu = xr.DataArray(data=np.zeros([kattavuus[3]-kattavuus[2],kattavuus[1]-kattavuus[0]]),
                        coords={ 'lat':np.arange(kattavuus[2]+0.5,kattavuus[3],1),
                                 'lon':np.arange(kattavuus[0]+0.5,kattavuus[1],1), },
                        dims=['lat','lon'])
-    muu.plot.pcolormesh( transform=platecarree, ax=gca(), cmap=harmaa, add_colorbar=False )
-#                         cbar_kwargs={'label':'no permafrost data','ticks':[]} )
+    muu.plot.pcolormesh(transform=platecarree, ax=gca(), cmap=harmaa, add_colorbar=False)
     #Varsinainen data
-    cbar_nimio = r'CH$_4$ flux ($\frac{\mathrm{mol}}{\mathrm{m}^2\mathrm{s}}$)'
     ch4data.where(ikirouta==ikir_ind,np.nan).plot.\
-        pcolormesh( transform=platecarree, cmap=vkartta, norm=mcolors.DivergingNorm(0,max(pienin*6,-suurin),suurin),
-                    cbar_kwargs={'label':cbar_nimio} )
+        pcolormesh(transform=platecarree, cmap=vkartta, norm=mcolors.DivergingNorm(0,max(pienin*6,-suurin),suurin),
+                   add_colorbar=False)
     #Tämä asettaa muut ikiroutaluokka-alueet harmaaksi.
     harmaa = lcmap(harmaavari)
     ch4data.where(~(ikirouta==ikir_ind),np.nan).plot.\
         pcolormesh( transform=platecarree, ax=gca(), add_colorbar=False, cmap=harmaa )
     title(prf.luokat[ikir_ind])
+
+def varipalkki():
+    cbar_nimio = r'CH$_4$ flux ($\frac{\mathrm{mol}}{\mathrm{m}^2\mathrm{s}}$)'
+    norm = mcolors.DivergingNorm(0,max(pienin*6,-suurin),suurin)
+    ax = axes((0.91,0.031,0.03,0.92))
+    cbar = gcf().colorbar(matplotlib.cm.ScalarMappable(cmap=vkartta,norm=norm), label=cbar_nimio, cax=ax)
     #väripalkki ulkoalueista
     harmaa = lcmap([ulkovari,harmaavari])
     norm = matplotlib.colors.Normalize(vmin=-2, vmax=2)
-    cbar = gcf().colorbar(matplotlib.cm.ScalarMappable(cmap=harmaa,norm=norm),ticks=[-1,1])
+    ax = axes((0.78,0.031,0.03,0.92))
+    cbar = gcf().colorbar(matplotlib.cm.ScalarMappable(cmap=harmaa,norm=norm),ticks=[-1,1], cax=ax)
     cbar.set_ticklabels(['undefined', 'other\ncategories'])
 
-def vaihda_luokka(hyppy):
-    global ikir_ind
-    ikir_ind = ( ikir_ind + len(prf.luokat) + hyppy ) % len(prf.luokat)
-    piirra()
-    draw()
-
-def nappainfunk(tapaht):
-    if tapaht.key == 'right' or tapaht.key == 'o' or tapaht.key == 'i':
-        vaihda_luokka(1)
-    elif tapaht.key == 'left' or tapaht.key == 'g' or tapaht.key == 'a':
-        vaihda_luokka(-1)
+def tee_alikuva(subplmuoto, subpl, **axes_kwargs):
+    subpl_y = subplmuoto[0]-1 - subpl // subplmuoto[1]
+    subpl_x = subpl % subplmuoto[1]
+    xkoko = 0.77/subplmuoto[1]
+    ykoko = 0.97/subplmuoto[0]
+    ax = axes([0.02 + subpl_x*xkoko,
+               0.03 + subpl_y*ykoko,
+               xkoko-0.03, ykoko-0.05],
+              **axes_kwargs)
+    return ax
 
 def main(tiedosto,muuttuja):
-    global projektio,platecarree,kattavuus,ch4data,ikirouta,vkartta
-    rcParams.update({'font.size':18,'figure.figsize':(12,10),'text.usetex':True})
+    global projektio,platecarree,kattavuus,ch4data,ikirouta,vkartta,ikir_ind
+    rcParams.update({'font.size':18,'figure.figsize':(14,6),'text.usetex':True})
     argumentit(sys.argv[1:])
     kansio = config.tyotiedostot+'FT_implementointi/FT_percents_pixel_ease_flag/DOY/'
 
@@ -111,19 +117,18 @@ def main(tiedosto,muuttuja):
 
     vkartta = luo_varikartta(ch4data)
 
+    sca(tee_alikuva([1,2], 0, projection=projektio))
     piirra()
+    ikir_ind=3
+    sca(tee_alikuva([1,2], 1, projection=projektio))
+    piirra()
+    varipalkki()
     if not tallenna:
-        fig.canvas.mpl_connect('key_press_event',nappainfunk)
         show()
-        ch4data.close()
-        exit()
-    while True:
-        if verbose:
-            print(prf.luokat[ikir_ind])
-        savefig("kuvia/%s%i.png" %(sys.argv[0][:-3],ikir_ind))
-        if ikir_ind==len(prf.luokat)-1:
-            exit()
-        vaihda_luokka(1)
+        return
+    if verbose:
+        print(prf.luokat[ikir_ind])
+    savefig("kuvia/%s.png" %(sys.argv[0][:-3]))
 
 if __name__ == '__main__':
     main('./flux1x1_whole_year.nc', 'flux_bio_posterior')
