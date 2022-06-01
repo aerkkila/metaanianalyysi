@@ -7,8 +7,8 @@ import cartopy.crs as ccrs
 from matplotlib.pyplot import *
 import matplotlib.colors as mcolors
 from matplotlib.colors import ListedColormap as lcmap
-import matplotlib, sys
-import config, prf
+import matplotlib, sys, prf
+import config
 
 varoitusvari = '\033[1;33m'
 vari0 = '\033[0m'
@@ -64,12 +64,12 @@ def piirra():
 #                         cbar_kwargs={'label':'no permafrost data','ticks':[]} )
     #Varsinainen data
     cbar_nimio = r'CH$_4$ flux ($\frac{\mathrm{mol}}{\mathrm{m}^2\mathrm{s}}$)'
-    ch4data.where(ikirluokat==prf.luokat[ikir_ind],np.nan).plot.\
+    ch4data.where(ikirouta==ikir_ind,np.nan).plot.\
         pcolormesh( transform=platecarree, cmap=vkartta, norm=mcolors.DivergingNorm(0,max(pienin*6,-suurin),suurin),
                     cbar_kwargs={'label':cbar_nimio} )
     #Tämä asettaa muut ikiroutaluokka-alueet harmaaksi.
     harmaa = lcmap(harmaavari)
-    ch4data.where(~(ikirluokat==prf.luokat[ikir_ind]),np.nan).plot.\
+    ch4data.where(~(ikirouta==ikir_ind),np.nan).plot.\
         pcolormesh( transform=platecarree, ax=gca(), add_colorbar=False, cmap=harmaa )
     title(prf.luokat[ikir_ind])
     #väripalkki ulkoalueista
@@ -91,20 +91,18 @@ def nappainfunk(tapaht):
         vaihda_luokka(-1)
 
 def main(tiedosto,muuttuja):
-    global projektio,platecarree,kattavuus,ch4data,ikirluokat,vkartta
+    global projektio,platecarree,kattavuus,ch4data,ikirouta,vkartta
     rcParams.update({'font.size':18,'figure.figsize':(12,10),'text.usetex':True})
     argumentit(sys.argv[1:])
     kansio = config.tyotiedostot+'FT_implementointi/FT_percents_pixel_ease_flag/DOY/'
-    ajat = xr.open_dataarray(kansio+'winter_start_doy_2014.nc')
-    
-    ikiroutaolio = prf.Prf('1x1').rajaa([ajat.lat.min(),ajat.lat.max()+0.01])
-    ikirouta = ikiroutaolio.data.mean(dim='time')
-    ikirluokat = prf.luokittelu_str_xr(ikirouta)
 
-    ch4data = xr.open_dataset(tiedosto)[muuttuja].loc[:,ajat.lat.min():ajat.lat.max(),:].\
-        where(ajat.data==ajat.data,np.nan)
+    ikirouta = xr.open_dataset('./prfdata.nc')['luokka']
+
+    ch4data = xr.open_dataset(tiedosto)[muuttuja]
     ch4data = ch4data.mean(dim='time')
-    ajat.close()
+    
+    ikirouta = ikirouta.sel({'time':range(2011,2019)}).mean(dim='time')
+    ikirouta = ikirouta.sel({'lat':slice(ch4data.lat.min(),ch4data.lat.max())})
 
     platecarree = ccrs.PlateCarree()
     projektio   = ccrs.LambertAzimuthalEqualArea(central_latitude=90)
@@ -128,4 +126,4 @@ def main(tiedosto,muuttuja):
         vaihda_luokka(1)
 
 if __name__ == '__main__':
-    main('../edgartno_lpx/flux1x1_1d.nc')
+    main('./flux1x1_whole_year.nc', 'flux_bio_posterior')
