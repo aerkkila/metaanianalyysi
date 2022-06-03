@@ -49,8 +49,8 @@ def hilan_korjaus(x, y, lat, monistus):
     indeksit = valitse_painottaen(lat, monistus)
     return x[indeksit], y[indeksit]
 
-def lpx():
-    da = xr.open_dataarray(config.lpx_dir + 'LPX_area_peat.nc').mean(dim='time')
+def lpx(laji):
+    da = xr.open_dataarray(config.lpx_dir + 'LPX_area_%s.nc' %laji).mean(dim='time')
     return da.data.flatten() #tämä ja vuo pitäisi yhdistää ennen keskiarvoa
 
 def main():
@@ -65,8 +65,8 @@ def main():
     monistus = 8
     if laji=='wetland':
         x0 = dt['x'][:,dt['wlnimet'].index(laji)]
-    elif laji=='peat':
-        x0 = lpx()
+    elif laji=='peat' or laji=='wetsoil' or laji=='inund':
+        x0 = lpx(laji)
         x0 = x0[dt['maski']]
     else:
         exit()
