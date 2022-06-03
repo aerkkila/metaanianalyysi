@@ -14,8 +14,10 @@ char* vars[] = {"wetland", "bog", "fen", "marsh", "tundra_wetland", "permafrost_
 #define ARRPIT(a) sizeof(a)/sizeof(*(a))
 
 int main(int argc, char** argv) {
+  char apu[256];
   nct_vset* baw = nct_read_ncfile("./BAWLD1x1.nc");
-  nct_vset* vuo = nct_read_ncfile("./flux1x1_%s.nc", argc>1? argv[1]: "whole_year");
+  sprintf(apu, "./flux1x1_%s.nc", argc>1? argv[1]: "whole_year");
+  nct_vset* vuo = nct_read_ncfile(apu);
   nct_var* vuovar = vuo->vars + nct_get_varid(vuo, "flux_bio_posterior");
   nct_varnanmean0(vuovar);
   nct_var* wetl = baw->vars + nct_get_varid(baw, "wetland");
