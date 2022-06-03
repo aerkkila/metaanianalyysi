@@ -45,9 +45,13 @@ def tee_data(kausi='whole_year', tmp=False, pakota=False):
             uusilat[ind] = lat[i]
             uusilon[ind] = lon[i]
             uusikausi[ind] = kausien_pituudet[i]
-            maski[ind] = True
+            maski[i] = True
             ind += 1
     return [uusix, uusiy, list(ds.keys()), uusilat, uusikausi, maski, uusilon]
+
+def tee_data2(*args, **kwargs):
+    dt = tee_data(*args, **kwargs)
+    return {'x':dt[0], 'y':dt[1], 'wlnimet':dt[2], 'lat':dt[3], 'lon':dt[6], 'kausi':dt[4], 'maski':dt[5]}
 
 if __name__=='__main__':
     for kausi in kaudet:
