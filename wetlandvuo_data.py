@@ -1,7 +1,5 @@
-#!/usr/bin/python3
 import numpy as np
 import xarray as xr
-import copy, sys
 
 nimet = ['bog', 'fen', 'bog+fen', 'marsh', 'tundra_wetland', 'permafrost_bog', 'wetland']
 kaudet = ['whole_year', 'summer', 'freezing', 'winter']
@@ -52,7 +50,3 @@ def tee_data(kausi='whole_year', tmp=False, pakota=False):
 def tee_data2(*args, **kwargs):
     dt = tee_data(*args, **kwargs)
     return {'x':dt[0], 'y':dt[1], 'wlnimet':dt[2], 'lat':dt[3], 'lon':dt[6], 'kausi':dt[4], 'maski':dt[5]}
-
-if __name__=='__main__':
-    for kausi in kaudet:
-        tee_data(kausi)
