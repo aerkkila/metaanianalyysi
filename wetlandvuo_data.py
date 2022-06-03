@@ -4,11 +4,12 @@ import xarray as xr
 nimet = ['bog', 'fen', 'bog+fen', 'marsh', 'tundra_wetland', 'permafrost_bog', 'wetland']
 kaudet = ['whole_year', 'summer', 'freezing', 'winter']
 
-def tee_data(kausi='whole_year', tmp=False, pakota=False):
-    raja_wl = 0.03
+def tee_data(kausi='whole_year', priori=False):
+    raja_wl = 0.0
     dsbaw = xr.open_dataset('./BAWLD1x1.nc')[nimet]
     dsbaw = xr.where(dsbaw.wetland>=raja_wl, dsbaw, np.nan)
-    dsvuo = xr.open_dataset('./flux1x1_%s.nc' %(kausi))['flux_bio_posterior'].mean(dim='time')
+    muuttuja = 'flux_bio_prior' if priori else 'flux_bio_posterior'
+    dsvuo = xr.open_dataset('./flux1x1_%s.nc' %(kausi))[muuttuja].mean(dim='time')
     if kausi != 'whole_year':
         kausien_pituudet = xr.open_dataset('kausien_pituudet.nc')[kausi].mean(dim='vuosi').data.flatten()
     else:

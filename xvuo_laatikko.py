@@ -43,7 +43,6 @@ def aja(x0, y0, hyppy, xnimio=''):
     xticks(rajat)
     ax.set_xlim(rajat[0]-lev/2-0.02, rajat[-2]+lev/2+0.02)
     ylabel('CH$_4$ flux')
-    xlabel(laji)
     return {'rajat':rajat, 'laatikot':laatikot, 'luokat':luokat, 'avgs':avgs}
 
 def hilan_korjaus(x, y, lat, monistus):
@@ -54,14 +53,14 @@ def lpx():
     da = xr.open_dataarray(config.lpx_dir + 'LPX_area_peat.nc').mean(dim='time')
     return da.data.flatten() #tämä ja vuo pitäisi yhdistää ennen keskiarvoa
 
-if __name__=='__main__':
-    import wetlandvuo_data as wld
-    import xarray as xr
-    from sklearn.linear_model import LinearRegression
-    from copy import copy
-    import config
+def main():
     rcParams.update({'figure.figsize':(12,10), 'font.size':15})
-    dt = wld.tee_data2('whole_year')
+    if '--priori' in sys.argv:
+        dt = wld.tee_data2('whole_year', priori=True)
+        nimipaate = '_prior'
+    else:
+        dt = wld.tee_data2('whole_year')
+        nimipaate = ''
     laji = sys.argv[1]
     monistus = 8
     if laji=='wetland':
@@ -93,6 +92,14 @@ if __name__=='__main__':
             continue
     tight_layout()
     if '-s' in sys.argv:
-        savefig('kuvia/%s_%s.png' %(sys.argv[0][:-3], sys.argv[1]))
+        savefig('kuvia/%s_%s%s.png' %(sys.argv[0][:-3], laji, nimipaate))
     else:
         show()
+
+if __name__=='__main__':
+    import wetlandvuo_data as wld
+    import xarray as xr
+    from sklearn.linear_model import LinearRegression
+    from copy import copy
+    import config
+    main()
