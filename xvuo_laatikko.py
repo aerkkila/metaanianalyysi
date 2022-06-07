@@ -55,11 +55,12 @@ def lpx(laji):
 
 def main():
     rcParams.update({'figure.figsize':(12,10), 'font.size':15})
+    kausi = 'whole_year'
     if '--priori' in sys.argv:
-        dt = wld.tee_data2('whole_year', priori=True)
+        dt = wld.tee_data2(kausi, priori=True)
         nimipaate = '_prior'
     else:
-        dt = wld.tee_data2('whole_year')
+        dt = wld.tee_data2(kausi)
         nimipaate = ''
     laji = sys.argv[1]
     monistus = 8
