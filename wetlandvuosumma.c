@@ -1,10 +1,11 @@
 #include <nctietue/nctietue.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <math.h>
 
 // gcc wetlandvuosumma.c -lnctietue -lSDL2 -lpng -lnetcdf -lm
-// nctietue-kirjaston saa gittinä osoitteesta https://github.com/aerkkila/nctietue.git
+// nctietue-kirjasto on osoitteessa https://github.com/aerkkila/nctietue.git
 
 const double r2 = 40592558970441; //(6371229 m)^2;
 #define PINTAALA(lat, hila) ((hila)*r2*(sin((lat)+(hila))-sin(lat)))//*1.0e-6)
@@ -12,12 +13,27 @@ const double r2 = 40592558970441; //(6371229 m)^2;
 
 char* vars[] = {"wetland", "bog", "fen", "marsh", "tundra_wetland", "permafrost_bog"};
 #define ARRPIT(a) sizeof(a)/sizeof(*(a))
+char* kaudet[] = {"whole_year", "summer", "freezing", "winter"};
+enum {whole_year_e, summer_e, freezing_e, winter_e,};
+
+int kausi(char* str) {
+  for(int i=0; i<sizeof(kaudet)/sizeof(*kaudet); i++)
+    if(!strcmp(kaudet[i], str))
+      return i;
+  return -1;
+}
 
 int main(int argc, char** argv) {
   char apu[256];
   nct_vset* baw = nct_read_ncfile("./BAWLD1x1.nc");
-  sprintf(apu, "./flux1x1_%s.nc", argc>1? argv[1]: "whole_year");
+  int kausinum = argc>1? kausi(argv[1]): 0;
+  if(kausinum<0) {
+    printf("Tuntematon kausi: %s\n", argv[1]);
+    return 1;
+  }
+  sprintf(apu, "./flux1x1_%s.nc", kaudet[kausinum]);
   nct_vset* vuo = nct_read_ncfile(apu);
+  nct_vset* pitdet = nct_read_ncfile("./kausien_pituudet.nc");
   nct_var* vuovar = vuo->vars + nct_get_varid(vuo, "flux_bio_posterior");
   nct_varnanmean0(vuovar);
   nct_var* wetl = baw->vars + nct_get_varid(baw, "wetland");
@@ -53,5 +69,7 @@ int main(int argc, char** argv) {
   free(baw);
   nct_free_vset(vuo);
   free(vuo);
+  nct_free_vset(pitdet);
+  free(pitdet);
   return 0;
 }
