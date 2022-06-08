@@ -9,3 +9,14 @@ wetlandvuosumma.csv: wetlandvuosumma.out
 
 wetlandvuosumma: wetlandvuosumma.csv
 	emacs -nw wetlandvuosumma.csv
+
+FT2kaudet.out: FT2kaudet.c
+	gcc -g -Og -o $@ FT2kaudet.c -lnctietue -lnetcdf -lpng -lSDL2
+
+kaudet1.nc: FT2kaudet.out
+	./FT2kaudet.out ../FT1x1_1.nc $@
+
+kaudet2.nc: FT2kaudet.out
+	./FT2kaudet.out ../FT1x1_2.nc $@
+
+kaudet_uusi: kaudet1.nc kaudet2.nc
