@@ -2,24 +2,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <time.h>
 
 int resol;
 #define KESA 1
 #define TALVI 3
-
-time_t unixaika(int vuosi, int kuukausi, int paiva) {
-  struct tm aikatm = {.tm_year=vuosi, .tm_mon=kuukausi-1, .tm_mday=paiva};
-  return mktime(&aikatm);
-}
-
-char edellinen_eri(char* ptr, int ind) {
-  char luku = ptr[ind];
-  while(ind >= resol)
-    if(ptr[ind-=resol] != luku)
-      return ptr[ind];
-  return -1;
-}
 
 int paivia_tata(char* ptr, int ind, int maxind) {
   int paivia = 1;
@@ -44,7 +30,6 @@ int hae_vuosi(int vuosi0, int paivia) {
 
 int main(int argc, char** argv) {
   nct_vset vset;
-  time_t alkuaika, loppuaika;
   int paivia_yht, varid, vuosi, kk, paiva;
   if(argc < 2) {
     puts("Ei luettavan nimeä");
@@ -65,9 +50,7 @@ int main(int argc, char** argv) {
   str += strlen("days since ");
   if(sscanf(str, "%d-%d-%d", &vuosi, &kk, &paiva)!=3)
     return 3;
-  alkuaika = unixaika(vuosi, kk, paiva);
   paivia_yht = NCTDIM(vset,"time").len;
-  //loppuaika = alkuaika + paivaaika*paivia_yht;
   int pituuspituus = resol*(paivia_yht/365+1);
   short* pituudet1[3];
   for(int i=0; i<3; i++)
@@ -95,17 +78,17 @@ int main(int argc, char** argv) {
       if(paivia > 365)
 	paivia = 365; // Jos kausi kestää monta vuotta, laitetaan joka vuodelle 365.
       vuosi = hae_vuosi(vuosi0, ind/resol);
-      pituudet1[kausi-1][(vuosi-vuosi0)*resol+i] = paivia;
+      pituudet1[kausi-1][(vuosi-vuosi0-1)*resol+i] = paivia; //alkuvuosi ohitettiin
     SEURAAVA:
       ind += paivia*resol; // seuraavan kauden alkuun
     }
   }
   nct_vset tallenn = {0};
-  nct_add_coord(&tallenn, nct_range_NC_INT(vuosi0,vuosi+1,1), vuosi-vuosi0+1, NC_INT, "vuosi");
+  nct_add_coord(&tallenn, nct_range_NC_INT(vuosi0+1,vuosi+1,1), vuosi-vuosi0, NC_INT, "vuosi");
   nct_add_coord(&tallenn, NCTVAR(vset,"lat").data, NCTDIM(vset,"lat").len, NCTVAR(vset,"lat").xtype, "lat");
-  NCTVAR(vset,"lat").data = NULL,
   nct_add_coord(&tallenn, NCTVAR(vset,"lon").data, NCTDIM(vset,"lon").len, NCTVAR(vset,"lon").xtype, "lon");
-  NCTVAR(vset,"lon").data = NULL,
+  NCTVAR(vset,"lat").data = NULL; // nämä               muuten           molemmista             
+  NCTVAR(vset,"lon").data = NULL; //      yritettäisiin        vapauttaa            dataseteistä
   
   tallenn.vars = realloc(tallenn.vars, (tallenn.nvars+3)*sizeof(nct_var));
   int dimids[] = {0,1,2};
