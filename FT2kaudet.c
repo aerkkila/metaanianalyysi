@@ -7,7 +7,7 @@
 const int resol = 19800;
 const int paivaaika = 86400;
 #define KESA 1
-#define SYKSY 2
+#define TAITE 2
 #define TALVI 3
 
 /* jäässä -> talvi: 3 -> 3
@@ -16,16 +16,43 @@ const int paivaaika = 86400;
  */
 
 time_t unixaika(int vuosi, int kuukausi, int paiva) {
-  struct tm aikatm = {.tm_year=vuosi, .tm_mon=kuukausi-1, .tm_mday=paiva};
+  struct tm aikatm = {.tm_year=vuosi-1900, .tm_mon=kuukausi-1, .tm_mday=paiva};
   return mktime(&aikatm);
 }
 
-char edellinen_eri(char* ptr, int ind) {
-  char luku = ptr[ind];
-  while(ind >= resol)
-    if(ptr[ind-=resol] != luku)
-      return ptr[ind];
-  return -1;
+int talvetonta_elokuuhun_asti(char* ptr, int ind, time_t hetki) {
+  struct tm *aikatm = gmtime(&hetki);
+  aikatm->tm_year += aikatm->tm_mon >= 7;
+  aikatm->tm_mon = 7;
+  aikatm->tm_mday = 1;
+  int paivia = (mktime(aikatm) - hetki) / paivaaika;
+  for(int i=0; i<paivia; i++)
+    if(ptr[ind+=resol] == TALVI)
+      return 0;
+  return 1;
+}
+
+/*Kesästä vaihtuu seuraavaan kauteen, kun kesä katkeaa.
+ *Taitteesta talveen, kun tulee ensimmäinen talvipäivä.
+ *Talvesta (tai talvettomana vuonna taitteesta) kesään, kun tulee kesä, josta on talvetonta aikaa elokuuhun.
+ *Funktio olettaa edellisen päivän olevan oikein ja saatavilla.
+ */
+int tama_kausi(char* ptr, int ind, time_t hetki) {
+  if(ptr[ind] == ptr[ind-resol])
+    return ptr[ind];
+  switch(ptr[ind]) {
+  case KESA:
+    return talvetonta_elokuuhun_asti(ptr, ind, hetki)? KESA: ptr[ind-resol];
+  case TAITE:
+    if(ptr[ind-resol] == KESA) {
+      if(talvetonta_elokuuhun_asti(ptr, ind, hetki)) //tällöin on kevätkausi
+	return KESA;
+      return TAITE; //tällöin on syyskausi
+    } // edellinen on talvi
+    return TALVI; //tätä voisi säätää myös vaihtumaan jo kesäksi jos on talvetonta elokuuhun
+  default:
+    return ptr[ind];
+  }
 }
 
 int main(int argc, char** argv) {
@@ -67,21 +94,17 @@ int main(int argc, char** argv) {
 
   paivia = (aika1 - aika0) / paivaaika;
 
-  for(varid=0; varid<vset.nvars; varid++)
-    if(!(vset.vars[varid].iscoordinate))
-      break;
+  varid = nct_get_noncoord_varid(&vset);
   char* ptr = vset.vars[varid].data + tyhjaa_alussa * resol;
-  for(int i=0; i<resol; i++)
-    for(int t=0; t<paivia; t++) {
-      int ind = i + t*resol;
-      if(ptr[ind] == 2) {
-	char ee = edellinen_eri(ptr, ind);
-	if(ee < 0)
-	  return 5;
-	if(ee == TALVI)
-	  ptr[ind] = KESA;
-      }
+#define AIKANYT alkuaika+t*paivaaika
+  for(int i=0; i<resol; i++) {
+    for(int t=1; t<paivia; t++) {
+      int ind = t*resol+i;
+      ptr[ind] = tama_kausi(ptr, ind, AIKANYT);
     }
+  }
+#undef AIKANYT
+  nct_add_att_text(&vset, varid, "numerointi", "1=kesä; 2=jäätyminen; 3=talvi", 0);
   varid = nct_get_dimid(&vset, "time");
   nct_vset_isel(&vset, varid, tyhjaa_alussa, vset.dims[varid].len-tyhjaa_lopussa);
   nct_write_ncfile(&vset, argv[2]);

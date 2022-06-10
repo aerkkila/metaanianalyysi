@@ -11,7 +11,7 @@ wetlandvuosumma: wetlandvuosumma.csv
 	emacs -nw wetlandvuosumma.csv
 
 FT2kaudet.out: FT2kaudet.c
-	gcc -g -Og -o $@ FT2kaudet.c -lnctietue -lnetcdf -lpng -lSDL2
+	gcc -O3 -o $@ FT2kaudet.c -lnctietue -lnetcdf -lpng -lSDL2
 
 kaudet1.nc: FT2kaudet.out
 	./FT2kaudet.out ../FT1x1_1.nc $@
@@ -19,7 +19,7 @@ kaudet1.nc: FT2kaudet.out
 kaudet2.nc: FT2kaudet.out
 	./FT2kaudet.out ../FT1x1_2.nc $@
 
-kaudet_uusi: kaudet1.nc kaudet2.nc
+kaudet12: kaudet1.nc kaudet2.nc
 
 kausista_pituudet.out: kausista_pituudet.c
 	gcc -g -Og -o $@ kausista_pituudet.c -lnctietue -lnetcdf -lpng -lSDL2
