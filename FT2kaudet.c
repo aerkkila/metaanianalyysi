@@ -82,6 +82,7 @@ int main(int argc, char** argv) {
   aika0 = unixaika(vuosi, 8, 1);
   if((tyhjaa_alussa = (aika0-alkuaika)/paivaaika) < 0)
     return 3;
+  int vuosi0 = vuosi;
 
   loppuaika = alkuaika + nct_getlen(&vset,nct_get_varid(&vset,"time")) * paivaaika;
   vuosi += NCTVAR(vset,"time").len / 365; //loppuvuosi
@@ -91,9 +92,7 @@ int main(int argc, char** argv) {
     if((tyhjaa_lopussa = (loppuaika-aika1)/paivaaika) < 0)
       return 4;
   }
-
-  paivia = (aika1 - aika0) / paivaaika;
-
+  
   varid = nct_get_noncoord_varid(&vset);
   char* ptr = vset.vars[varid].data + tyhjaa_alussa * resol;
 #define AIKANYT alkuaika+t*paivaaika
