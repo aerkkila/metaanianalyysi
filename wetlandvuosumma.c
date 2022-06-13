@@ -1,4 +1,4 @@
-#include <nctietue/nctietue.h>
+#include <nctietue.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
