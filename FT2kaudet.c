@@ -84,9 +84,9 @@ int main(int argc, char** argv) {
     return 3;
   int vuosi0 = vuosi;
 
-  loppuaika = alkuaika + nct_getlen(&vset,nct_get_varid(&vset,"time")) * paivaaika;
+  loppuaika = alkuaika + NCTDIM(vset,"time").len * paivaaika;
   vuosi += NCTVAR(vset,"time").len / 365; //loppuvuosi
-  aika1 = unixaika(vuosi, 8, 1);
+  aika1 = unixaika(vuosi+1, 1, 1);
   if((tyhjaa_lopussa = (loppuaika-aika1)/paivaaika) < 0) {
     aika1 = unixaika(vuosi-1, 8, 1);
     if((tyhjaa_lopussa = (loppuaika-aika1)/paivaaika) < 0)
@@ -95,14 +95,12 @@ int main(int argc, char** argv) {
   
   varid = nct_get_noncoord_varid(&vset);
   char* ptr = vset.vars[varid].data + tyhjaa_alussa * resol;
-#define AIKANYT alkuaika+t*paivaaika
   for(int i=0; i<resol; i++) {
     for(int t=1; t<paivia; t++) {
       int ind = t*resol+i;
-      ptr[ind] = tama_kausi(ptr, ind, AIKANYT);
+      ptr[ind] = tama_kausi(ptr, ind, alkuaika+t*paivaaika);
     }
   }
-#undef AIKANYT
   nct_add_att_text(&vset, varid, "numerointi", "1=kesä; 2=jäätyminen; 3=talvi", 0);
   varid = nct_get_dimid(&vset, "time");
   nct_vset_isel(&vset, varid, tyhjaa_alussa, vset.dims[varid].len-tyhjaa_lopussa);

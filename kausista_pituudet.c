@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#include <math.h>
 
 int resol;
 time_t hetki0;
@@ -28,6 +29,12 @@ int paivia_tata(char* ptr, int ind, int maxind) {
   return -1;
 }
 
+int laske_alkupaiva() {
+  struct tm tma = {.tm_year=2011-1900, .tm_mon=7, .tm_mday=1};
+  time_t hetki = mktime(&tma);
+  return (hetki-hetki0)/paivan_pituus;
+}
+
 int vuoden_paiva(int paiva) {
   time_t hetki = hetki0 + paiva*paivan_pituus;
   struct tm *tma = gmtime(&hetki);
@@ -41,13 +48,13 @@ int vuoden_paiva(int paiva) {
 /* Vuosi vaihtuu elokuun alussa seuraavaan, koska syksy luetaan seuraavaan vuoteen,
  * koska jäätyminen voi myös alkaa vasta vuoden vaihduttua.
  */
-int hae_vuosi(int vuosi0, int paivia) {
-  return vuosi0 + paivia/365 + 1; //Karkausvuosia on riittävän vähän.
+int hae_vuosi(int vuosi0_sis, int paivia) {
+  return vuosi0_sis + paivia/365 + 1; //Karkausvuosia on riittävän vähän.
 }
 
 int main(int argc, char** argv) {
   nct_vset vset;
-  int paivia_yht, varid, vuosi, vuosi0, kk0, paiva0, maxind;
+  int paivia_yht, varid, vuosi, vuosi0_ulos, vuosi0_sis, kk0, paiva0, maxind;
   if(argc < 2) {
     puts("Ei luettavan nimeä");
     return 1;
@@ -71,14 +78,16 @@ int main(int argc, char** argv) {
 
   paivia_yht = NCTDIM(vset,"time").len;
   int pit = resol*(paivia_yht/365+1);
-  short* pituudet1[3];
-  for(int i=0; i<3; i++)
-    pituudet1[i] = calloc(pit,2);
+  float* pituudet1[3];
+  for(int i=0; i<3; i++) {
+    pituudet1[i] = malloc(pit*4);
+    for(int j=0; j<pit; j++)
+      pituudet1[i][j] = NAN;
+  }
   for(varid=0; varid<vset.nvars; varid++)
     if(!(vset.vars[varid].iscoordinate))
       break;
   
-  vuosi0 = vuosi;
   maxind = paivia_yht*resol;
   if(maxind != nct_getlen(&vset, varid)) {
     printf("saatiin maxind = %i, mutta pitäisi olla %li\n", maxind, nct_getlen(&vset, varid));
@@ -86,24 +95,30 @@ int main(int argc, char** argv) {
   }
 
   /*talven alku- ja loppupäivät*/
-  short *talven_alku  = malloc(pit*2 * 2);
-  short *talven_loppu = talven_alku + pit;
-  memset(talven_alku, 0x80, pit*2*2); //täyttöarvo, koska kaikkina vuosina ja kaikissa pisteissä talvi ei ala tai pääty
+  float *talven_alku  = malloc(pit*2 * 4);
+  float *talven_loppu = talven_alku + pit;
+  for(int i=0; i<pit*2; i++)
+    talven_alku[i] = NAN;
+
+  int alkupaiva = laske_alkupaiva();
+  vuosi0_sis = vuosi;
+  vuosi0_ulos = vuosi + alkupaiva/365 + 1; //vuosi vaihtuu heti päivän ylityttyä
+  int pituusind_alku = alkupaiva/365, pituusind;
 
   for(int i=0; i<resol; i++) {
     char* ptr = vset.vars[varid].data;
-    int ind=i, paivia;
+    int ind=i+alkupaiva*resol, paivia;
     while(ptr[ind+=resol] == KESA); // Siirrytään seuraavan kauden alkuun.
     while((paivia = paivia_tata(ptr, ind, maxind)) >= 0) { // montako päivää on tätä kautta
       int kausi = ptr[ind]; // mikä on tämä kausi
       if(!kausi)
 	goto SEURAAVA;
-      if(kausi>TALVI || kausi < 0)
+      if(kausi>3 || kausi < 0)
 	return 4;
       if(paivia > 365)
 	paivia = 365; // Jos kausi kestää monta vuotta, laitetaan joka vuodelle 365.
-      vuosi = hae_vuosi(vuosi0, ind/resol);
-      int pituusind = (vuosi-vuosi0-1)*resol+i; // alkuvuosi ohitettiin
+      vuosi = hae_vuosi(vuosi0_sis, ind/resol);
+      pituusind = (vuosi-vuosi0_ulos)*resol+i - pituusind_alku;
       pituudet1[kausi-1][pituusind] = paivia;
       if(ptr[ind] == TALVI && ptr[ind-resol] != TALVI)
 	talven_alku[pituusind] = vuoden_paiva(ind/resol);
@@ -114,7 +129,8 @@ int main(int argc, char** argv) {
     }
   }
   nct_vset tallenn = {0};
-  nct_add_coord(&tallenn, nct_range_NC_INT(vuosi0+1,vuosi+1,1), vuosi-vuosi0, NC_INT, "vuosi");
+  int vuosi1 = paivia_yht/365 + vuosi0_sis;
+  nct_add_coord(&tallenn, nct_range_NC_INT(vuosi0_ulos,vuosi1+1,1), vuosi1-vuosi0_ulos+1, NC_INT, "vuosi");
   nct_add_coord(&tallenn, NCTVAR(vset,"lat").data, NCTDIM(vset,"lat").len, NCTVAR(vset,"lat").xtype, "lat");
   nct_add_coord(&tallenn, NCTVAR(vset,"lon").data, NCTDIM(vset,"lon").len, NCTVAR(vset,"lon").xtype, "lon");
   NCTVAR(vset,"lat").data = NULL; // nämä               muuten           molemmista             
@@ -124,9 +140,9 @@ int main(int argc, char** argv) {
   int dimids[] = {0,1,2};
   char* nimet[] = {"summer","freezing","winter"};
   for(int i=0; i<3; i++)
-    nct_simply_add_var(&tallenn, pituudet1[i], NC_SHORT, 3, dimids, nimet[i]);
-  nct_simply_add_var(&tallenn, talven_alku, NC_SHORT, 3, dimids, "talven_alku");
-  nct_simply_add_var(&tallenn, talven_loppu, NC_SHORT, 3, dimids, "talven_loppu");
+    nct_simply_add_var(&tallenn, pituudet1[i], NC_FLOAT, 3, dimids, nimet[i]);
+  nct_simply_add_var(&tallenn, talven_alku, NC_FLOAT, 3, dimids, "talven_alku");
+  nct_simply_add_var(&tallenn, talven_loppu, NC_FLOAT, 3, dimids, "talven_loppu");
   nct_add_att_text(&tallenn, tallenn.nvars-2, "numerointi", "vuosi n on talvi vuosina n-1 – n", 0);
   nct_write_ncfile(&tallenn, argv[2]);
   tallenn.vars[tallenn.nvars-1].data = NULL; //yhteinen malloc edellisen muuttujan kanssa

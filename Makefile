@@ -22,7 +22,7 @@ kaudet2.nc: FT2kaudet.out
 kaudet12: kaudet1.nc kaudet2.nc
 
 kausista_pituudet.out: kausista_pituudet.c
-	gcc -g -Og -o $@ kausista_pituudet.c `pkg-config --libs nctietue`
+	gcc -g -Og -o $@ kausista_pituudet.c `pkg-config --libs nctietue` -lm
 
 kausien_pituudet1.nc: kausista_pituudet.out kaudet1.nc
 	./kausista_pituudet.out kaudet1.nc $@
