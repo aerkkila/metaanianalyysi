@@ -38,18 +38,17 @@ int laske_alkupaiva() {
 int vuoden_paiva(int paiva) {
   time_t hetki = hetki0 + paiva*paivan_pituus;
   struct tm *tma = gmtime(&hetki);
-  tma->tm_year += tma->tm_mon>=7; //elokuusta alkaen lasketaan seuraavaan vuoteen
+  tma->tm_year += tma->tm_yday>=220; // 8.8. tai karkausvuonna 7.8.
   tma->tm_mday = 1;
   tma->tm_mon = 0;
   time_t nollahetki = mktime(tma);
-  return (hetki - nollahetki) / 86400;
+  return (hetki - nollahetki) / paivan_pituus;
 }
 
 /* Vuosi vaihtuu elokuun alussa seuraavaan, koska syksy luetaan seuraavaan vuoteen,
- * koska jäätyminen voi myös alkaa vasta vuoden vaihduttua.
- */
+ * koska jäätyminen voi myös alkaa vasta vuoden vaihduttua. */
 int hae_vuosi(int vuosi0_sis, int paivia) {
-  return vuosi0_sis + paivia/365 + 1; //Karkausvuosia on riittävän vähän.
+  return vuosi0_sis + paivia/365 + 1; // Karkausvuosia on riittävän vähän.
 }
 
 int main(int argc, char** argv) {
@@ -74,7 +73,9 @@ int main(int argc, char** argv) {
   str += strlen("days since ");
   if(sscanf(str, "%d-%d-%d", &vuosi, &kk0, &paiva0)!=3)
     return 3;
-  alusta_hetki0(vuosi, kk0, paiva0);
+  int aloituspaiva = *(int*)(NCTVAR(vset,"time").data);
+  
+  alusta_hetki0(vuosi, kk0, paiva0+aloituspaiva);
 
   paivia_yht = NCTDIM(vset,"time").len;
   int pit = resol*(paivia_yht/365+1);
