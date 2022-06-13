@@ -4,6 +4,7 @@ import xarray as xr
 import numpy as np
 from matplotlib.pyplot import *
 import sys, warnings
+from valitse_painottaen import valitse_painottaen
 
 bawlajit = ['boreal_forest', 'lake', 'bog+fen', #'tundra_wetland',
             'permafrost_bog', 'tundra_dry', 'wetland']
@@ -14,6 +15,7 @@ ftdataind = 0
 
 def kuva(baw):
     pitdet = xr.open_dataset("kausien_pituudet%i.nc" %ftdataind)
+    indeksit = valitse_painottaen(pitdet.lat.data, pitdet.lon.data, 8)
     df = pd.DataFrame(columns=bawlajit)
     for i,laji in enumerate(bawlajit):
         flat_maa = baw[laji].data.flatten()
@@ -23,7 +25,7 @@ def kuva(baw):
             data1 = pitdet[al[alind]].data[v,...].flatten()
             data1[maski] = np.nan
             data[ v*len(flat_maa) : (v+1)*len(flat_maa) ] = data1
-        df[laji] = data
+        df[laji] = data[np.repeat(indeksit,len(pitdet.vuosi))]
     pitdet.close()
     jarj = df.median().to_numpy().argsort() #järjestetään bawld-lajit mediaanin mukaan
     if alind:
