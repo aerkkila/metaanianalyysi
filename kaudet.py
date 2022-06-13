@@ -39,7 +39,7 @@ def main():
     dt = np.zeros([ajat.lat.size, ajat.lon.size, (loppuaika-alkuaika).n], np.int8)
     dtpit = np.empty(len(kausinimet), object)
     for k in range(len(kausinimet)):
-        dtpit[k] = np.zeros([ajat.lat.size, ajat.lon.size, ajat.vuosi.size], np.int16)
+        dtpit[k] = np.empty([ajat.lat.size, ajat.lon.size, ajat.vuosi.size], np.float32) + np.nan
     print('')
     for j in range(ajat.lat.size):
         print('\033[F%i/%i\033[K' %(j+1,ajat.lat.size))
@@ -48,18 +48,18 @@ def main():
             for v,vuosi in enumerate(ajat.vuosi):
                 vuoden_paivat = 366 if (vuosi % 4 and not (vuosi % 100)) or (vuosi % 400) else 365
                 nollakohta = pd.Period('%4i-01-01' %vuosi)
-                joko0tai1 = 1 #Tällä laitetaan puuttuva data nollaksi. Esim. winter_end puuttuu --> talvi ja kesä pois.
+                jokoNaNtai1 = 1 #Tällä laitetaan puuttuva data epäluvuksi. Esim. winter_end puuttuu --> talvi ja kesä pois.
                 for kausi,tapahtuma in zip(kausiluvut, tapahtumat):
                     paiva = ajat[tapahtuma].data[j,i,v]
                     if paiva != paiva:
-                        joko0tai1 = 0
+                        jokoNaNtai1 = np.nan
                         continue
                     pit = (nollakohta+int(paiva) - paivamaarat[ind]).n
-                    dt[j,i,ind:ind+pit] = kausi*joko0tai1
-                    dtpit[kausi-1][j,i,v] = pit*joko0tai1 if pit*joko0tai1 <= vuoden_paivat else vuoden_paivat
-                    joko0tai1 = 1
+                    dt[j,i,ind:ind+pit] = kausi*jokoNaNtai1
+                    dtpit[kausi-1][j,i,v] = pit*jokoNaNtai1 if pit*jokoNaNtai1 <= vuoden_paivat else vuoden_paivat
+                    jokoNaNtai1 = 1
                     ind += pit
-            dt[j,i,ind:] = kausiluvut[0]*joko0tai1 #loppu on kesää
+            dt[j,i,ind:] = kausiluvut[0] if jokoNaNtai1==1 else 0 #loppu on kesää
     darr = xr.DataArray(dt, name='kausi',
                         dims=('lat','lon','time'),
                         coords=({'lat':ajat.lat,
@@ -69,11 +69,19 @@ def main():
     darr.time.attrs.update({'units':'days since {}'.format((alkuaika))})
     darrpitT = xr.Dataset()
     for i in range(len(kausinimet)):
-        tmp = xr.DataArray(dtpit[i], dims=('lat','lon','vuosi'),
-                           coords=({'lat':ajat.lat,
-                                    'lon':ajat.lon,
-                                    'vuosi':ajat.vuosi.astype(np.int16)}))
-        darrpitT = darrpitT.assign({kausinimet[i]: tmp.transpose('vuosi','lat','lon').copy()})
+        tmp = xr.DataArray(dtpit[i].transpose(2,0,1),
+                           dims=('vuosi','lat','lon'),
+                           coords=({'vuosi':ajat.vuosi.data.astype(np.int16),
+                                    'lat':ajat.lat.data,
+                                    'lon':ajat.lon.data,}))
+        darrpitT = darrpitT.assign({kausinimet[i]: tmp.copy()})
+    for t in tapahtumat:
+        tmp = xr.DataArray(ajat[t].transpose('vuosi','lat','lon').data.astype(np.float32),
+                           dims=('vuosi','lat','lon'),
+                           coords=({'vuosi':ajat.vuosi.data.astype(np.int16),
+                                    'lat':ajat.lat.data,
+                                    'lon':ajat.lon.data,}))
+        darrpitT = darrpitT.assign({t: tmp.copy()})
     ajat.close()
     darr.transpose('time','lat','lon').to_netcdf('%s.nc' %(sys.argv[0][:-3]))
     darr.close()
