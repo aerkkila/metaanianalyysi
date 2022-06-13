@@ -14,7 +14,7 @@ from talven_ajankohta import lue_doyt
 def argumentit():
     pars = ArgumentParser()
     pars.add_argument( 'startend', nargs='?', default='end' )
-    pars.add_argument( '-t', '--toiminto', default='laatikko', help='Jokin tässä määritellyistä funktioista.' )
+    pars.add_argument( '-t', '--toiminto', default='pisteet', help='Jokin tässä määritellyistä funktioista.' )
     pars.add_argument( '-m', '--maalaji', default='', help='Ota vain kyseinen maalaji. Kumoaa argumentin -A/--kaikki.' )
     pars.add_argument( '-A', '--kaikki', nargs='?', type=int, const=1, default=0, help='Ilman tätä otetaan vain osa maalajeista.' )
     pars.add_argument( '-s', '--tallenna', nargs='?', type=int, const=1, default=0 )
@@ -27,7 +27,7 @@ def argumentit():
     else:
         args.maalajit = list(ml.tunnisteet_kaikki.keys()) #kaikki
     return args
-    
+
 def pisteet(args):
     doy = lue_doyt(args.startend)
     turha,maa = ml.lue_maalajit(args.maalajit,False,True)
@@ -49,37 +49,6 @@ def pisteet(args):
         else:
             show()
     sys.stdout.write('\r\033[0K')
-
-def laatikko(args):
-    doy = lue_doyt(args.startend)
-    turha,maa = ml.lue_maalajit(args.maalajit,False,True)
-    maa = ml.maalajien_yhdistamiset(maa, pudota=True)
-    df = pd.DataFrame(columns=maa.keys())
-    for i,laji in enumerate(maa.keys()):
-        flat_maa = maa[laji].data.flatten()
-        maski = flat_maa < args.osuusraja
-        data = np.empty( len(flat_maa)*len(doy.time) )
-        for v in range(len(doy.time)):
-            data1 = doy[v,:,:].data.flatten()
-            data1[maski] = np.nan
-            with np.errstate(invalid='ignore'):
-                data1[data1<-300] = np.nan
-            data[ v*len(flat_maa) : (v+1)*len(flat_maa) ] = data1
-        df[laji] = data
-    ml.nimen_jako(df)
-    jarj = df.median().to_numpy().argsort() #järjestetään maalajit mediaanin mukaan
-    if args.startend == 'end':
-        jarj = jarj[::-1]
-    df = df.iloc[ :,jarj ]
-    df.boxplot(whis=(5,95))
-    xticks(rotation=0)
-    ylabel(f'winter {args.startend} doy')
-    tight_layout()
-    if(args.tallenna):
-        savefig(f'BAWLD_laatikko_{args.startend}.png')
-        clf()
-    else:
-        show()
 
 def korrelaatiot(args):
     mlajit = ['wetland', 'bog', 'fen', 'marsh', 'permafrost_bog', 'tundra_wetland']#, 'boreal_forest', 'tundra_dry']
