@@ -36,7 +36,11 @@ def search_ind(ran, limits):
 #Eteläisimmät hilaruudut ovat noin 8 kertaa niin suuria kuin pohjoisimmat.
 #Tällä valitaan datasta hilaruutuja painottaen todennäköisyyksiä leveyspiirin mukaan.
 #Mieluiten kerroin > 8, jotta eteläisimpiäkin hilaruutuja tulee keskimäärin vähintään 1.
-def valitse_painottaen(lat,lon,kerroin):
+def valitse_painottaen(lat, lon, kerroin, tehdaanko_mitaan=True):
+    if not tehdaanko_mitaan:
+        if lon is None:
+            return np.arange(0,len(lat))
+        return np.arange(0,len(lat)*len(lon))
     if not lon is None:
         lon,lat = np.meshgrid(lon,lat)
         lat = lat.flatten()

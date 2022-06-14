@@ -10,7 +10,7 @@ bawlajit = ['boreal_forest', 'lake', 'bog+fen', #'tundra_wetland',
             'permafrost_bog', 'tundra_dry', 'wetland']
 al = ['talven_alku', 'talven_loppu']
 osuusraja = 0.3
-alind=0
+alind = 0
 ftdataind = 0
 
 def kuva(baw):
