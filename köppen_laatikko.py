@@ -82,7 +82,7 @@ def aja(ftnum):
             ylim([-10,220])
         tight_layout()
         if '-s' in sys.argv:
-            nimi = 'kuvia/yksittäiset/köppen_laat_%s_ft%i.png' %(s_e, ftnum)
+            nimi = 'kuvia/yksittäiset/köppen_laatikko_w%s_ft%i.png' %(s_e, ftnum)
             print(nimi)
             savefig(nimi)
             clf()

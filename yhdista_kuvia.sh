@@ -12,19 +12,25 @@ ikir_ft_histog() {
     done
 }
 
+yleinen_vierekkain() {
+    for al in 'start' 'end'; do
+	gm convert kuvia/yksittäiset/$1_w${al}_ft[012].png +append kuvia/$1_w${al}.png
+    done
+}
+
 bawld_laatikko() {
     #./BAWLD_laatikko.py -s
-    for al in 'start' 'end'; do
-	gm convert kuvia/yksittäiset/BAWLD_laatikko_w${al}_ft[012].png +append kuvia/BAWLD_laatikko_w${al}.png
-    done
+    yleinen_vierekkain $@
+}
+
+bawld_laatikko_os() {
+    #./BAWLD_laatikko_painotettu.py -s
+    yleinen_vierekkain $@
 }
 
 koppen_laatikko() {
     #./köppen_laatikko.py -s
-    for al in 'start' 'end'; do
-	gm convert +append kuvia/yksittäiset/köppen_laat_${al}_ft[012].png \
-	   kuvia/köppen_laat_${al}.png
-    done
+    yleinen_vierekkain $@
 }
 
-eval `echo $1 |tr -s ö o`
+eval `echo $1 |tr -s ö o` $@
