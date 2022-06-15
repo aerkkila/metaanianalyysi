@@ -5,7 +5,6 @@ from numpy import sin
 from matplotlib.pyplot import *
 import ikirluokat
 from multiprocessing import Process
-from valitse_painottaen import valitse_painottaen
 
 def argumentit():
     global tallenna, tarkk, verbose
@@ -78,7 +77,7 @@ def pintaalat1x1(kokodata,darr,tarkk):
 al_muuttuja = ['talven_alku','talven_loppu']
 al_nimi = ['start','end']
 
-def aja(doy,indeksit,ftnum):
+def aja(doy,ftnum):
     global ikir_ind, xarrlis, yarrlis, paivat, palkit, aln
     ikir_ind=0
     for alm, aln in zip(al_muuttuja, al_nimi):
@@ -126,8 +125,7 @@ def main():
         doy = xr.open_dataset("kausien_pituudet%i.nc" %l)[al_muuttuja].mean(dim='vuosi')
         if(i==0):
             ikirdat = xr.open_dataset("prfdata_avg.nc")['luokka'].sel({'lat':slice(doy.lat.min(),doy.lat.max())})
-            indeksit = valitse_painottaen(doy.lat.data, doy.lon.data, 8)
-        pros[i] = Process(target=aja, args=[doy,indeksit,l])
+        pros[i] = Process(target=aja, args=[doy,l])
         pros[i].start()
     for p in pros:
         p.join()
