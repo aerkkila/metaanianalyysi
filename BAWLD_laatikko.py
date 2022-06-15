@@ -12,21 +12,24 @@ bawlajit = ['boreal_forest', 'lake', 'bog+fen', #'tundra_wetland',
 alm = ['talven_alku', 'talven_loppu']
 aln = ['start', 'end']
 osuusraja = 0.3
+kerroin = 8
 
 def kuva(alind,ftnum):
-    pitdet = xr.open_dataset("kausien_pituudet%i.nc" %ftnum)
-    indeksit = valitse_painottaen(pitdet.lat.data, pitdet.lon.data, 8)
+    kausidata = xr.open_dataset("kausien_pituudet%i.nc" %ftnum)
+    indeksit = valitse_painottaen(kausidata.lat.data, kausidata.lon.data, kerroin)
     df = pd.DataFrame(columns=bawlajit)
+    resol = baw.bog.data.flatten().size
+    vuosia = len(kausidata.vuosi)
     for i,laji in enumerate(bawlajit):
         flat_maa = baw[laji].data.flatten()
         maski = flat_maa < osuusraja
-        data = np.empty(len(flat_maa)*len(pitdet.vuosi))
-        for v in range(len(pitdet.vuosi)):
-            data1 = pitdet[alm[alind]].data[v,...].flatten()
-            data1[maski] = np.nan
-            data[ v*len(flat_maa) : (v+1)*len(flat_maa) ] = data1
-        df[laji] = data[np.repeat(indeksit,len(pitdet.vuosi))]
-    pitdet.close()
+        data = np.empty(resol*vuosia*kerroin)
+        for v in range(vuosia):
+            paivat = kausidata[alm[alind]].data[v,...].flatten()
+            paivat[maski] = np.nan
+            data[v*resol*kerroin: (v+1)*resol*kerroin] = paivat[indeksit]
+        df[laji] = data
+    kausidata.close()
     jarj = df.median().to_numpy().argsort() #järjestetään bawld-lajit mediaanin mukaan
     if alind:
         jarj = jarj[::-1]

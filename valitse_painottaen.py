@@ -17,20 +17,20 @@ def pintaalan_painotus(alat):
         painot[i] /= painot[-1]
     return painot
 
-def search_ind(ran, limits):
-    length = len(limits)
-    lower = 0
-    upper = length-1
+def hae_indeksi(ran, rajat):
+    pituus = len(rajat)
+    alempi = 0
+    ylempi = pituus-1
     while True:
-        ind = (lower+upper)//2
-        if ran < limits[ind]:
-            if ind==0 or limits[ind-1] <= ran:
+        ind = (alempi+ylempi)//2
+        if ran < rajat[ind]:
+            if ind==0 or rajat[ind-1] <= ran:
                 return ind
-            upper = ind
+            ylempi = ind
             continue
-        lower = ind
-        if lower == upper-1:
-            return upper
+        alempi = ind
+        if alempi == ylempi-1:
+            return ylempi
     return
 
 #Eteläisimmät hilaruudut ovat noin 8 kertaa niin suuria kuin pohjoisimmat.
@@ -49,5 +49,5 @@ def valitse_painottaen(lat, lon, kerroin, tehdaanko_mitaan=True):
     indeksit = np.empty(n_samp,int)
     luvut = np.random.default_rng(12345).random(n_samp)
     for i in range(n_samp):
-        indeksit[i] = search_ind(luvut[i], painot)
+        indeksit[i] = hae_indeksi(luvut[i], painot)
     return indeksit
