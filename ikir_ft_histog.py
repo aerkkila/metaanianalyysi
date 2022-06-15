@@ -108,7 +108,7 @@ def aja(doy,indeksit,ftnum):
             show()
             continue
         while True:
-            savefig("kuvia/ikirft/ikir%i_w%s_ft%i.png" %(ikir_ind,aln,ftnum))
+            savefig("kuvia/yksittäiset/ikir%i_w%s_ft%i.png" %(ikir_ind,aln,ftnum))
             if ikir_ind+1 == len(ikirluokat.dt):
                 ikir_ind = 0
                 break
@@ -116,10 +116,10 @@ def aja(doy,indeksit,ftnum):
 
 def main():
     global ikirdat
+    rcParams.update({'font.size':19,'figure.figsize':(12,10)})
     argumentit()
     ikir_ind = 0
     kerroin = 8
-    rcParams.update({'font.size':13,'figure.figsize':(12,10)})
     ftluvut = [0,1,2]
     pros = np.empty(len(ftluvut),object)
     for i,l in enumerate(ftluvut):

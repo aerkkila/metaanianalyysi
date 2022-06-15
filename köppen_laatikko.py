@@ -73,24 +73,25 @@ def aja(ftnum):
         fig = figure()
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
-            df.boxplot(whis=(5,95))
-        ylabel('winter %s day' %s_e)
+            df.boxplot(whis=(5,95), widths=0.75)
+        ylabel('winter %s, data %i' %(s_e,ftnum))
         gca().tick_params(axis='y', which='both', left=True)
         if s_e[0] == 's':
-            ylim([-140,160])
+            ylim([-140,100])
         else:
-            ylim([-100,220])
+            ylim([-10,220])
         tight_layout()
-        print('köppen_laatikko_%s%i.png' %(s_e, ftnum))
         if '-s' in sys.argv:
-            savefig('kuvia/köppen_laatikko_%s%i.png' %(s_e, ftnum))
+            nimi = 'kuvia/yksittäiset/köppen_laat_%s_ft%i.png' %(s_e, ftnum)
+            print(nimi)
+            savefig(nimi)
             clf()
         else:
             show()
 
 def main():
     rcParams.update({ 'font.size': 18,
-                      'figure.figsize': (12,10) })
+                      'figure.figsize': (5,10) })
     luvut = [0,1,2]
     pros = np.empty(len(luvut), object)
     for i,l in enumerate(luvut):
