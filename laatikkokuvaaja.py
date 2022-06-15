@@ -13,8 +13,8 @@ def laatikkokuvaaja(lista, xsij=None, fliers='.'):
     yerr_y = np.zeros([2,laatikoita], np.float32)
     for i in range(laatikoita):
         if len(lista[i]):
-            laatikot[i,:] = np.nanpercentile(lista[i], [5,25,75,95])
-            avgs[i] = np.nanmean(lista[i])
+            laatikot[i,:] = np.percentile(lista[i], [5,25,75,95])
+            avgs[i] = np.mean(lista[i])
         else:
             laatikot[i,:] = np.nan
             avgs[i] = np.nan

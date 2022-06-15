@@ -12,13 +12,22 @@ alm = ['talven_alku', 'talven_loppu']
 aln = ['start', 'end']
 kerroin = 8
 
-def kuva(alind,ftnum):
-    kausidata = xr.open_dataset("kausien_pituudet%i.nc" %ftnum)
-    kausimuuttuja = alm[alind]
-    indeksit = valitse_painottaen(kausidata.lat.data, kausidata.lon.data, kerroin)
+def tee_luokat(kausidata, indeksit, alind, ftnum):
     resol = baw.bog.data.flatten().size
     vuosia = len(kausidata.vuosi)
     lista = np.empty(len(bawlajit),object)
+    tiednimi = 'bawlaatikkodata/alind%i_ftnum%i.npz' %(alind,ftnum)
+    for nolla in [0]: # Mahdollistaa break-komennon käytön goto:n tapaan. Oispa goto.
+        if ei_muistista:
+            break
+        try:
+            tmp = np.load(tiednimi)
+        except OSError:
+            break
+        lista[:] = [tmp[_nimio] for _nimio in tmp]
+        tmp.close()
+        return lista
+    kausimuuttuja = alm[alind]
     for i,laji in enumerate(bawlajit):
         painot = (baw[laji].data.flatten()*100).astype(np.int8)[indeksit]
         keskiosuus = np.mean(painot)
@@ -32,12 +41,20 @@ def kuva(alind,ftnum):
                 dind1 = dind + painot[p]
                 data[dind:dind1] = paivat[p] # kyseistä päivää toistetaan baw-luokan prosenttien verran
                 dind = dind1
-        lista[i] = data
+        lista[i] = data[~np.isnan(data)].astype(np.int16)
+    np.savez(tiednimi, *lista)
+    return lista
+
+def kuva(alind,ftnum):
+    kausidata = xr.open_dataset("kausien_pituudet%i.nc" %ftnum).sel({'vuosi':slice(2012,2018)})
+    indeksit = valitse_painottaen(kausidata.lat.data, kausidata.lon.data, kerroin)
+    lista = tee_luokat(kausidata, indeksit, alind, ftnum)
     kausidata.close()
-    jarj = np.array([np.nanmedian(lis) for lis in lista]).argsort() # järjestetään laatikot mediaanin mukaan
+    jarj = np.array([np.median(lis) for lis in lista]).argsort() # järjestetään laatikot mediaanin mukaan
     if alind:
         jarj = jarj[::-1]
     lista = lista[jarj]
+    grid(True, axis='y')
     laatikkokuvaaja(lista, fliers=' ')
     xnimet = np.array(bawlajit)[jarj]
     #joka toinen sarake alemmalle riville
@@ -47,12 +64,12 @@ def kuva(alind,ftnum):
     gca().set_xticklabels(xnimet)
     ylabel('winter %s, data %i' %(aln[alind],ftnum))
     if(alind==0): #talven alku
-        ylim([-135,50])
+        ylim([-110,50])
     else: # talven loppu
-        ylim([25,220])
+        ylim([25,175])
     tight_layout()
     if('-s' in sys.argv):
-        savefig('kuvia/yksittäiset/BAWLD_laatikko_w%s_ft%i.png' %(aln[alind],ftnum))
+        savefig('kuvia/yksittäiset/bawld_laatikko_os_w%s_ft%i.png' %(aln[alind],ftnum))
         clf()
     else:
         show()
@@ -62,7 +79,8 @@ def aja(ftnum):
         kuva(alind,ftnum)
 
 def main():
-    global baw
+    global baw, ei_muistista
+    ei_muistista = True if '-e' in sys.argv else False
     rcParams.update({'figure.figsize':(8,11), 'font.size':16})
     baw = xr.open_dataset("BAWLD1x1.nc")
     pros = np.empty(3,object)
