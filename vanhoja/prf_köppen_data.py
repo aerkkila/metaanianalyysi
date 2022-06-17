@@ -1,11 +1,10 @@
 #!/usr/bin/python3
-import pandas as pd
-import numpy as np
-import sys
-import talven_ajankohta as taj
-import prf,köppen
+#import numpy as np
+#import sys
+#import xarray as xr
+#import pandas as pd
 
-def valmista_data(startend):
+def _vanha_valmista_data(startend):
     #köppen-data
     koppdf = köppen.lue_oletusluokkamaskit_dataset('köppen1x1maski.nc').to_dataframe()
     koppdf.where(koppdf, np.nan, inplace=True)
@@ -28,5 +27,4 @@ def valmista_data(startend):
         df.to_csv('prf_köppen_%s%i.csv' %(startend,i))
 
 if __name__ == '__main__':
-    valmista_data('start')
-    valmista_data('end')
+    print("Tämä on vanhentunut. Lataa data erillisinä paloina.")
