@@ -41,12 +41,12 @@ int main(int argc, char** argv) {
   fprintf(ulos, ",mol/s,Tg,nmol/s/m²\n");
   for(int k=0; k<ARRPIT(vars); k++) {
     nct_var* wlaji = baw->vars + nct_get_varid(baw, vars[k]);
-    int xpit = wlaji->dimlens[1];
+    int xpit = NCTVARDIM(*wlaji,1).len;
     double* lat = baw->vars[nct_get_varid(baw, "lat")].data;
     double vuosumma = 0;
     double pintaala = 0;
     int    lasku    = 0;
-    for(int j=0; j<wlaji->dimlens[0]; j++) {
+    for(int j=0; j<NCTVARDIM(*wlaji,0).len; j++) {
       if(lat[j]<49.5)
 	continue;
       double ala = PINTAALA(ASTE*lat[j], ASTE);
