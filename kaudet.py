@@ -17,7 +17,12 @@ muokkaa_array = lambda darr: darr[1:-1,...].transpose('lat','lon','vuosi') #ensi
 def main():
     kausiluvut = [1,2,3] #kesä, jäätyminen, talvi. Nolla on varattu määrittelemättömälle kaudelle.
     kausinimet = ['summer','freezing','winter']
-    kansio = config.tyotiedostot+'FT_implementointi/FT_percents_pixel_ease_flag/DOY/'
+    if sys.argv[1] == '0':
+        kansio = config.tyotiedostot+'FT_implementointi/FT_percents_pixel_ease_flag/DOY/'
+    elif sys.argv[1] == '1':
+        kansio = config.tyotiedostot+'../smos_uusi/data1/'
+    elif sys.argv[1] == '2':
+        kansio = config.tyotiedostot+'../smos_uusi/data2/'
     jaatym_alku = avaa(kansio+'freezing_start_doy_*.nc').freezing_start
     talven_alku = avaa(kansio+'winter_start_doy_*.nc').autumn_end
     talven_loppu = avaa(kansio+'winter_end_doy_*.nc').spring_start
@@ -83,9 +88,9 @@ def main():
                                     'lon':ajat.lon.data,}))
         darrpitT = darrpitT.assign({t: tmp.copy()})
     ajat.close()
-    darr.transpose('time','lat','lon').to_netcdf('%s.nc' %(sys.argv[0][:-3]))
+    darr.transpose('time','lat','lon').to_netcdf('%s%s.nc' %(sys.argv[0][:-3], sys.argv[1]))
     darr.close()
-    darrpitT.to_netcdf('kausien_pituudet.nc')
+    darrpitT.to_netcdf('kausien_pituudet%s.nc' %sys.argv[1])
     darrpitT.close()
     print('\033[92mOhjelman ajo onnistui, vaikka tähän tulleekin virheilmoitus:\033[0m')
     return
