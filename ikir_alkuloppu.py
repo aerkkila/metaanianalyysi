@@ -60,7 +60,7 @@ def nappainfunk(tapaht):
 def pintaalat1x1(kokodata,darr,tarkk):
     aste = 0.0174532925199
     R2 = 40592558970441
-    PINTAALA = lambda _lat: aste*R2*( sin((_lat+1)*aste) - sin(_lat*aste) )*1.0e-6
+    PINTAALA = lambda _lat: aste*R2*(sin((_lat+1)*aste) - sin(_lat*aste))*1.0e-6
     
     dat = darr.data.flatten().astype(int)
     minluku = int(kokodata.min())
@@ -119,7 +119,7 @@ def main():
     argumentit()
     ikir_ind = 0
     kerroin = 8
-    ftluvut = [0,1,2]
+    ftluvut = [0]
     pros = np.empty(len(ftluvut),object)
     for i,l in enumerate(ftluvut):
         doy = xr.open_dataset("kausien_pituudet%i.nc" %l)[al_muuttuja].mean(dim='vuosi')
