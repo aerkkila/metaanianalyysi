@@ -42,7 +42,8 @@ def aja(kopp, alat, ikir, ftnum):
         vuosia = paiv.size//resol
 
         for ind_ikir in range(len(luokat.ikir)):
-            print("%i/%i" %(al_ind*len(luokat.ikir)+ind_ikir+1, 2*len(luokat.ikir)))
+            print("\033[%iF%i/%i\033[%iE\033[K" %(ftnum+1, al_ind*len(luokat.ikir)+ind_ikir+1, 2*len(luokat.ikir), ftnum+1), end='')
+            sys.stdout.flush()
             for ind_kopp in range(maarat.shape[1]):
                 # Tässä lasketaan ensin montako kelvollista vuotta on kussakin pisteessä.
                 # Sitten jaetaan pisteen pinta-ala oikeisiin luokkiin
@@ -77,6 +78,8 @@ def main():
     kopp = np.tile(kopp, 2018-2012+1)
     alat = np.tile(alat, 2018-2012+1)
     pr = np.empty(3,object)
+    print('\n'*3, end='')
+    sys.stdout.flush()
     for i in range(3):
         pr[i] = Process(target=aja, args=(kopp, alat, ikir, i))
         pr[i].start()

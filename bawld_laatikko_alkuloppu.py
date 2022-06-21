@@ -69,7 +69,7 @@ def kuva(alind,ftnum):
         ylim([25,175])
     tight_layout()
     if('-s' in sys.argv):
-        savefig('kuvia/yksittäiset/bawld_laatikko_os_w%s_ft%i.png' %(aln[alind],ftnum))
+        savefig('kuvia/yksittäiset/bawld_laatikko_w%s_ft%i.png' %(aln[alind],ftnum))
         clf()
     else:
         show()

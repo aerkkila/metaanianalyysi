@@ -73,7 +73,6 @@ def tee_kuva(df, luokat_w, tarkk):
     xjako = luo_xjako(df,tarkk,luokat_w)
     print(xjako)
     print(len(xjako))
-    exit()
 
 def main():
     luokat_w = ['bog','fen','tundra_wetland','permafrost_bog']

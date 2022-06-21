@@ -26,7 +26,7 @@ def piirra(rajat, maarat, ind_ikir, xnimiot, al_ind, ftnum):
         ylabel("Extent (1000 km$^2$)")
         xlabel("winter %s, data %i" %(al_nimi[al_ind], ftnum))
         xticks(rajat, xnimiot, rotation=30)
-    legend(loc='upper right')
+    legend()
     tight_layout()
     if tallenna:
         savefig("kuvia/yksittäiset/bawld_w%s_ikir%i_ft%i.png" %(al_nimi[al_ind], ind_ikir, ftnum))
@@ -43,7 +43,8 @@ def aja(baw, alat, ikir, ftnum):
         vuosia = paiv.size//resol
 
         for ind_ikir in range(len(luokat.ikir)):
-            print("%i/%i" %(al_ind*len(luokat.ikir)+ind_ikir+1, 2*len(luokat.ikir)))
+            print("\033[%iF%i/%i\033[%iE\033[K" %(ftnum+1, al_ind*len(luokat.ikir)+ind_ikir+1, 2*len(luokat.ikir), ftnum+1), end='')
+            sys.stdout.flush()
             for ind_baw in range(maarat.shape[1]):
                 # Tässä lasketaan ensin montako kelvollista vuotta on kussakin pisteessä.
                 # Sitten jaetaan pisteen pinta-ala oikeisiin luokkiin
@@ -86,6 +87,8 @@ def main():
         paivarajat[i][1] = paivarajat[i][0] + (paivarajat[i][1]-paivarajat[i][0])//tarkk * tarkk
 
     pr = np.empty(3,object)
+    print('\n'*3, end='')
+    sys.stdout.flush()
     for i in range(3):
         pr[i] = Process(target=aja, args=(baw, alat, ikir, i))
         pr[i].start()

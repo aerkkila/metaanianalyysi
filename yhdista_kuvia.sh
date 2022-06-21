@@ -1,7 +1,7 @@
 #!/usr/bin/sh
 
-ikir_ft_histog() {
-    #./prf_ft_histog.py -s
+ikir() {
+    #./ikir_alkuloppu.py -s
     for al in 'start' 'end'; do
 	a='gm convert '
 	for i in `seq 0 3`; do
@@ -13,6 +13,7 @@ ikir_ft_histog() {
 }
 
 koppen_ikir() {
+    #./köppen_ikir_alkuloppu.py -s
     for al in 'start' 'end'; do
 	a='gm convert '
 	for i in `seq 0 3`; do
@@ -24,6 +25,7 @@ koppen_ikir() {
 }
 
 bawld_ikir() {
+    #./bald_ikir_alkuloppu.py -s
     for al in 'start' 'end'; do
 	a='gm convert '
 	for i in `seq 0 3`; do
@@ -41,18 +43,21 @@ yleinen_vierekkain() {
 }
 
 bawld_laatikko() {
-    #./BAWLD_laatikko.py -s
-    yleinen_vierekkain $@
-}
-
-bawld_laatikko_os() {
-    #./BAWLD_laatikko_painotettu.py -s
+    #./bawld_laatikko_alkuloppu.py -s
     yleinen_vierekkain $@
 }
 
 koppen_laatikko() {
-    #./köppen_laatikko.py -s
+    #./köppen_laatikko_alkuloppu.py -s
     yleinen_vierekkain $@
+}
+
+kaikki() {
+    ikir ikir
+    koppen_ikir koppen_ikir
+    bawld_ikir bawld_ikir
+    bawld_laatikko bawld_laatikko
+    koppen_laatikko köppen_laatikko
 }
 
 eval `echo $1 |tr -s ö o` $@

@@ -1,5 +1,5 @@
 __pycache__
-kuvia
+kuvia*
 köppen_shp
 *testi*
 *.nc
@@ -10,3 +10,4 @@ köppen_shp
 *.cmp/
 muunna_shapefile
 *.out
+tmp*
