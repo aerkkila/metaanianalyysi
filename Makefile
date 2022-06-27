@@ -1,11 +1,14 @@
 wetlandsumma.out: wetlandsumma.c
 	gcc -Wall wetlandsumma.c -o $@ `pkg-config --libs nctietue` -lm -O3
 
-wetlandvuosumma.out: wetlandvuosumma.c
-	gcc -Wall -g -Og wetlandvuosumma.c -o $@ `pkg-config --libs nctietue` -lm
+wetlandvuotaul.out: wetlandvuotaul.c
+	gcc -Wall -g -Og wetlandvuotaul.c -o $@ `pkg-config --libs nctietue` -lm
 
-wetlandvuosumma.csv: wetlandvuosumma.out
-	./wetlandvuosumma.out
+wetlandvuotaul.csv: wetlandvuotaul.out
+	./wetlandvuotaul.out 0
+	./wetlandvuotaul.out 1
+	./wetlandvuotaul.out 2
+	cat wetlandvuotaulukot/*.csv > wetlandvuotaul.csv
 
 wetlandvuosumma: wetlandvuosumma.csv
 	emacs -nw wetlandvuosumma.csv
