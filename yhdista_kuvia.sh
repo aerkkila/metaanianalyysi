@@ -52,12 +52,12 @@ koppen_laatikko() {
     yleinen_vierekkain $@
 }
 
-wetlandvuo() {
-    #./wetlandvuocsv.py -s
-    gm convert +append kuvia/yksittäiset/wetland_nmol,s,m2_s{0,1}.png \
-       +append kuvia/yksittäiset/wetland_nmol,s,m2_s{2,3}.png \
-       -append kuvia/wetland_nmol,s,m2.png
-}
+#wetlandvuo() {
+#    #./wetlandvuocsv.py -s
+#    gm convert +append kuvia/yksittäiset/wetland_nmol,s,m2_s{0,1}.png \
+#       +append kuvia/yksittäiset/wetland_nmol,s,m2_s{2,3}.png \
+#       -append kuvia/wetland_nmol,s,m2.png
+#}
 
 kaikki() {
     ikir ikir

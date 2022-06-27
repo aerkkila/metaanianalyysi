@@ -2,7 +2,7 @@ wetlandsumma.out: wetlandsumma.c
 	gcc -Wall wetlandsumma.c -o $@ `pkg-config --libs nctietue` -lm -O3
 
 wetlandvuotaul.out: wetlandvuotaul.c
-	gcc -Wall -g -Og wetlandvuotaul.c -o $@ `pkg-config --libs nctietue` -lm
+	gcc -Wall -g -O2 wetlandvuotaul.c -o $@ `pkg-config --libs nctietue` -lm
 
 wetlandvuotaul.csv: wetlandvuotaul.out
 	./wetlandvuotaul.out 0

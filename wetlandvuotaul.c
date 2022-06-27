@@ -83,16 +83,16 @@ int main(int argc, char** argv) {
 	    printf("Ei luotu ulostiedostoa\n");
 	    return 1;
 	}
-	fprintf(ulos[i], "#%s, data %i\n,Tg,mol/s,µmol/m²,nmol/s/m²,frac(season)\n", kaudet[i], ftnum);
+	fprintf(ulos[i], "#%s, data %i\n,Tg,mol/s,mol/m²,nmol/s/m²,frac(season)\n", kaudet[i], ftnum);
     }
 
     for(int lajinum=0; lajinum<ARRPIT(vars); lajinum++) {
 	double* wlajiptr;
-	double* lat              = baw.vars[nct_get_varid(&baw, "lat")].data;
-	int     vuosia           = round(aikapit / 365.25);
-	double  vuosumma[kausia];  memset(vuosumma, 0, kausia*sizeof(double)); // mol
-	double  pintaala[kausia];  memset(pintaala, 0, kausia*sizeof(double)); // m²
-	int     pisteita[kausia];  memset(pisteita, 0, kausia*sizeof(int));
+	double* lat                 = baw.vars[nct_get_varid(&baw, "lat")].data;
+	int     vuosia              = round(aikapit / 365.25);
+	double  ainemaara[kausia];    memset(ainemaara, 0, kausia*sizeof(double));   // mol
+	double  ala_ja_aika[kausia];  memset(ala_ja_aika, 0, kausia*sizeof(double)); // m²*s
+	int     pisteita[kausia];     memset(pisteita, 0, kausia*sizeof(int));
 
 	apuvar = baw.vars + nct_get_varid(&baw, vars[lajinum]);
 	if(apuvar->xtype != NC_DOUBLE) {
@@ -116,25 +116,28 @@ int main(int argc, char** argv) {
 		    double ala_baw = wlajiptr[ind] * ala;
 		    double vuo_baw = vuoptr[ind_t] * ala_baw / wetlptr[ind]; // pinta-ala on osuutena wetlandista
 		    if(vuo_baw == vuo_baw) {
-			vuosumma[(int)kausiptr[ind_t]] += vuo_baw; // *86400 kerrotaan lopussa: mol/s * s -> mol
-			pintaala[(int)kausiptr[ind_t]] += ala_baw;
+			ainemaara[(int)kausiptr[ind_t]]   += vuo_baw; // *86400 kerrotaan lopussa: mol/s * s -> mol
+			ala_ja_aika[(int)kausiptr[ind_t]] += ala_baw; // *86400 kerrotaan lopussa: m²*d -> m²*s
 			++pisteita[(int)kausiptr[ind_t]];
-			vuosumma[0] += vuo_baw;
-			pintaala[0] += ala_baw;
+			ainemaara[0]   += vuo_baw;
+			ala_ja_aika[0] += ala_baw;
 			++pisteita[0];
 		    }
 		}
 	    }
 	}
+	double pintaala = ala_ja_aika[0] / (vuosia*365.25);
+	//printf("%15s: %.3lf Mkm²\n", vars[lajinum], pintaala*1e-12);
 	for(int i=0; i<kausia; i++) {
-	    vuosumma[i] *= 86400;
-	    double kauden_osuus = pintaala[i]/pintaala[0]; // ei lasketa pisteistä, koska pinta-ala vaihtelee
+	    ainemaara[i]   *= 86400;
+	    ala_ja_aika[i] *= 86400;
+	    double kauden_osuus = ala_ja_aika[i]/ala_ja_aika[0]; // molemmissa on sama ala
 	    double aika         = kauden_osuus * vuosia*365.25*86400;
 	    fprintf(ulos[i], "%s,%.4lf,%.4lf,%.4lf,%.5lf,%.4lf\n", vars[lajinum],
-		    vuosumma[i] / vuosia * 1e-12*16.0416,  // Tg
-		    vuosumma[i] / aika,                    // mol/s
-		    vuosumma[i] / pintaala[i]*1e6,         // µmol/m²
-		    vuosumma[i] / aika / pintaala[i]*1e9,  // nmol/s/m²
+		    ainemaara[i] / vuosia * 1e-12*16.0416, // Tg
+		    ainemaara[i] / aika,                   // mol/s
+		    ainemaara[i] / vuosia / pintaala,      // mol/m²
+		    ainemaara[i] / ala_ja_aika[i]*1e9,     // nmol/s/m²
 		    kauden_osuus
 		);
 	}
