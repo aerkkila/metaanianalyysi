@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <math.h>
 
-// gcc wetlandsumma.c -lnctietue -lSDL2 -lpng -lnetcdf -lm -O3
+// gcc wetlandsumma.c `pkg-config --libs nctietue` -lm
 // nctietue-kirjaston saa githubista https://github.com/aerkkila/nctietue.git
 
 const double r2 = 40592558970441; //(6371229 m)^2;
@@ -27,7 +27,6 @@ int main(int argc, char** argv) {
     }
     printf("%s\t%.4lf Mkm²\t\n", vars[k], pintaala*1e-6);
   }
-  nct_write_ncfile(baw, "testi.nc");
   nct_free_vset(baw);
   free(baw);
   return 0;

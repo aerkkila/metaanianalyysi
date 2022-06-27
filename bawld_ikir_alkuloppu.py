@@ -7,15 +7,16 @@ import pandas as pd
 from matplotlib.pyplot import *
 from multiprocessing import Process
 
-blajit = ['boreal_forest', 'bog', 'fen', 'marsh', 'tundra_wetland', 'permafrost_bog', 'tundra_dry']
-tarkk = 15
-prajat_alku = [-115, 55]
+blajit = ['boreal_forest', 'tundra_dry', 'bog', 'fen', 'tundra_wetland', 'permafrost_bog']
+tarkk        = 15
+prajat_alku  = [-115, 55]
 prajat_loppu = [-10, 220]
-paivarajat = [prajat_alku, prajat_loppu]
-resol = 19800
-al_muut = ['talven_alku','talven_loppu']
-al_nimi = ['start','end']
-tallenna = False
+ymax_a_l     = [[1400, 600, 500, 1250], [1750, 700, 450, 1050]]
+paivarajat   = [prajat_alku, prajat_loppu]
+resol        = 19800
+al_muut      = ['talven_alku','talven_loppu']
+al_nimi      = ['start','end']
+tallenna     = False
 
 def piirra(rajat, maarat, ind_ikir, xnimiot, al_ind, ftnum):
     leveys = 0.8*tarkk/maarat.shape[1]
@@ -26,6 +27,7 @@ def piirra(rajat, maarat, ind_ikir, xnimiot, al_ind, ftnum):
         ylabel("Extent (1000 km$^2$)")
         xlabel("winter %s, data %i" %(al_nimi[al_ind], ftnum))
         xticks(rajat, xnimiot, rotation=30)
+    ylim([0, ymax_a_l[al_ind][ind_ikir]])
     legend()
     tight_layout()
     if tallenna:

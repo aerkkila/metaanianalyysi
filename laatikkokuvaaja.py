@@ -8,16 +8,16 @@ def laatikkokuvaaja(lista, xsij=None, fliers='.'):
         xsij = np.linspace(0,1,laatikoita+1)
     suor = np.empty(laatikoita, object)
     laatikot = np.empty([laatikoita, 4], np.float32)
-    avgs = np.empty([laatikoita], np.float32)
+    mediaanit = np.empty([laatikoita], np.float32)
     yerr_a = np.zeros([2,laatikoita], np.float32)
     yerr_y = np.zeros([2,laatikoita], np.float32)
     for i in range(laatikoita):
         if len(lista[i]):
             laatikot[i,:] = np.percentile(lista[i], [5,25,75,95])
-            avgs[i] = np.mean(lista[i])
+            mediaanit[i] = np.median(lista[i])
         else:
             laatikot[i,:] = np.nan
-            avgs[i] = np.nan
+            mediaanit[i] = np.nan
         xalue = xsij[i+1]-xsij[i]
         lev = xalue/2
         x = xalue*i-lev/2
@@ -30,7 +30,7 @@ def laatikkokuvaaja(lista, xsij=None, fliers='.'):
     ax = gca()
     errorbar(xsij[:-1], laatikot[:,1], yerr=yerr_a, fmt='none', color='b')
     errorbar(xsij[:-1], laatikot[:,2], yerr=yerr_y, fmt='none', color='b')
-    errorbar(xsij[:-1], avgs, xerr=lev/2, fmt='none', color='b')
+    errorbar(xsij[:-1], mediaanit, xerr=lev/2, fmt='none', color='b')
     for i in range(laatikoita):
         y = lista[i][ (lista[i]>laatikot[i,-1]) | (lista[i]<laatikot[i,0]) ]
         plot(np.tile(xsij[[i]], len(y)), y, fliers, color='r')
@@ -38,4 +38,4 @@ def laatikkokuvaaja(lista, xsij=None, fliers='.'):
     ax.add_collection(pc)
     xticks(xsij)
     ax.set_xlim(xsij[0]-lev/2-0.02, xsij[-2]+lev/2+0.02)
-    return {'xsij':xsij, 'laatikot':laatikot, 'avgs':avgs}
+    return {'xsij':xsij, 'laatikot':laatikot, 'mediaanit':mediaanit}
