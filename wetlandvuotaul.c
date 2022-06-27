@@ -14,9 +14,12 @@ const double r2 = 40592558970441; //(6371229 m)^2;
 
 char* vars[] = {"wetland", "bog", "fen", "marsh", "tundra_wetland", "permafrost_bog"};
 #define ARRPIT(a) sizeof(a)/sizeof(*(a))
+#define MIN(a,b) (a)<(b)? (a): (b)
 char* kaudet[] = {"whole_year", "summer", "freezing", "winter"};
+char* pripost_sisaan[] = {"flux_bio_prior", "flux_bio_posterior"};
+char* pripost_ulos[] = {"pri", "post"};
 
-int ftnum;
+int ftnum, ppnum;
 
 int kausi(char* str) {
     for(int i=0; i<sizeof(kaudet)/sizeof(*kaudet); i++)
@@ -26,12 +29,20 @@ int kausi(char* str) {
 }
 
 int argumentit(int argc, char** argv) {
-    if(argc < 2) {
-	printf("Käyttö: %s ftnum:0..3\n", argv[0]);
+    if(argc < 3) {
+	printf("Käyttö: %s ftnum:0..3 pri/post\n", argv[0]);
 	return 1;
     }
     if(sscanf(argv[1], "%d", &ftnum)!=1) {
 	printf("Ei luettu ftnum-argumenttia\n");
+	return 1;
+    }
+    if(!strcmp(argv[2], "pri"))
+	ppnum = 0;
+    else if(!strcmp(argv[2], "post"))
+	ppnum = 1;
+    else {
+	printf("Ei luettu pri/post-argumenttia\n");
 	return 1;
     }
     return 0;
@@ -53,12 +64,12 @@ int main(int argc, char** argv) {
     nct_var* apuvar;
     double *wetlptr;
     float *vuoptr;
+    char* kausiptr;
     int kausia=ARRPIT(kaudet), lonpit, latpit, aikapit;
     FILE* ulos[kausia];
     nct_read_ncfile_gd(&vuo, "./flux1x1_whole_year.nc");
     nct_read_ncfile_gd(&baw, "./BAWLD1x1.nc");
     nct_read_ncfile_gd(&kausivset, aprintf("./kaudet%i.nc", ftnum));
-    char* kausiptr = kausivset.vars[3].data;
 
     apuvar = baw.vars + nct_get_varid(&baw, "wetland");
     if(apuvar->xtype != NC_DOUBLE) {
@@ -67,19 +78,29 @@ int main(int argc, char** argv) {
     }
     wetlptr = apuvar->data;
 
-    apuvar = vuo.vars + nct_get_varid(&vuo, "flux_bio_posterior");
+    apuvar = kausivset.vars + nct_get_varid(&kausivset, "kausi");
+    if(apuvar->xtype != NC_BYTE && apuvar->xtype != NC_UBYTE) {
+	printf("Kausidatan tyyppi ei täsmää koodissa ja datassa.\n");
+	return 1;
+    }
+    kausiptr = apuvar->data;
+
+    lonpit  = NCTVARDIM(*apuvar,2).len;
+    latpit  = NCTVARDIM(*apuvar,1).len;
+    int l1 = NCTDIM(kausivset, "time").len;
+    int l2 = NCTDIM(vuo, "time").len;
+    aikapit = MIN(l1, l2);
+
+    apuvar = vuo.vars + nct_get_varid(&vuo, pripost_sisaan[ppnum]);
     if(apuvar->xtype != NC_FLOAT) {
 	printf("Vuodatan tyyppi ei täsmää koodissa ja datassa.\n");
 	return 1;
     }
     vuoptr  = apuvar->data;
 
-    lonpit  = NCTVARDIM(*apuvar,2).len;
-    latpit  = NCTVARDIM(*apuvar,1).len;
-    aikapit = NCTVARDIM(*apuvar,0).len;
-
     for(int i=0; i<kausia; i++) {
-	if(!(ulos[i] = fopen(aprintf("wetlandvuotaulukot/wetlandvuo_%s_ft%i.csv", kaudet[i], ftnum), "w"))) {
+	if(!(ulos[i] = fopen(aprintf("wetlandvuotaulukot/wetlandvuo_%s_%s_ft%i.csv",
+				     pripost_ulos[ppnum], kaudet[i], ftnum), "w"))) {
 	    printf("Ei luotu ulostiedostoa\n");
 	    return 1;
 	}
@@ -101,7 +122,7 @@ int main(int argc, char** argv) {
 	}
 	wlajiptr = apuvar->data;
 
-	for(int t=0; t<aikapit; t++) {
+	for(int t=0; t<(int)(vuosia*365.25); t++) {
 	    for(int j=0; j<latpit; j++) {
 		if(lat[j]<49.5)
 		    continue;

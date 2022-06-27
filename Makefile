@@ -4,14 +4,19 @@ wetlandsumma.out: wetlandsumma.c
 wetlandvuotaul.out: wetlandvuotaul.c
 	gcc -Wall -g -O2 wetlandvuotaul.c -o $@ `pkg-config --libs nctietue` -lm
 
-wetlandvuotaul.csv: wetlandvuotaul.out
-	./wetlandvuotaul.out 0
-	./wetlandvuotaul.out 1
-	./wetlandvuotaul.out 2
-	cat wetlandvuotaulukot/*.csv > wetlandvuotaul.csv
+wetlandvuotaul_post.csv: wetlandvuotaul.out
+	./wetlandvuotaul.out 0 post
+	./wetlandvuotaul.out 1 post
+	./wetlandvuotaul.out 2 post
+	cat wetlandvuotaulukot/wetlandvuo_post*.csv > wetlandvuotaul_post.csv
 
-wetlandvuosumma: wetlandvuosumma.csv
-	emacs -nw wetlandvuosumma.csv
+wetlandvuotaul_pri.csv: wetlandvuotaul.out
+	./wetlandvuotaul.out 0 pri
+	./wetlandvuotaul.out 1 pri
+	./wetlandvuotaul.out 2 pri
+	cat wetlandvuotaulukot/wetlandvuo_pri*.csv > wetlandvuotaul_pri.csv
+
+wetlandvuotaul.target: wetlandvuotaul_pri.csv wetlandvuotaul_post.csv
 
 FT2kaudet.out: FT2kaudet.c
 	gcc -Wall -O3 -o $@ FT2kaudet.c `pkg-config --libs nctietue`

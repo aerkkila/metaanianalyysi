@@ -1,14 +1,19 @@
 #!/usr/bin/python3
 from matplotlib.pyplot import *
 from wetlandvuo import kaudet
+from multiprocessing import Process
 import numpy as np
 import sys
+
+ppnum = -1
+pparg = ('pri', 'post')
+varit = 'rgby'
 
 def lue_data():
     alustettu = False
     for k,kausi in enumerate(kaudet):
         for ftnum in range(3):
-            nimi = 'wetlandvuotaulukot/wetlandvuo_%s_ft%i.csv' %(kausi, ftnum)
+            nimi = 'wetlandvuotaulukot/wetlandvuo_%s_%s_ft%i.csv' %(pparg[ppnum], kausi, ftnum)
             dt = np.genfromtxt(nimi, delimiter=',', skip_header=2)
             if not alustettu:
                 wluokat = []
@@ -23,8 +28,6 @@ def lue_data():
             for c in range(len(cols)):
                 taul[c,k,ftnum,:] = dt[:,c+1]
     return taul, wluokat, cols
-
-varit = 'rgby'
 
 def rikottu_akseli(Xsij, taul, c, yrajat12):
     fig, (ax2,ax1) = subplots(2, 1, sharex=True)
@@ -61,9 +64,10 @@ def season_length(Xsij, taul, c):
     ylabel('fraction of year')
     sca(axs[1])
 
-def main():
-    global axs
+def aja(ppnumarg):
+    global axs, ppnum
     rcParams.update({'figure.figsize':(10,8), 'font.size':14, 'axes.grid':True, 'axes.grid.axis':'y', 'grid.linestyle':':'})
+    ppnum = ppnumarg
     taul,wluokat,cols = lue_data()
 
     #joka toinen nimi alemmalle riville
@@ -79,6 +83,8 @@ def main():
             mol_per_m2(Xsij, taul, c)
         elif cols[c] == 'season_length':
             season_length(Xsij, taul, c)
+            if not ppnum:
+                continue # tämä ei riipu metaanivuosta
         else:
             for k in range(taul.shape[1]):
                 for j in range(taul.shape[2]):
@@ -93,10 +99,19 @@ def main():
         ylabel(cols[c])
         tight_layout()
         if '-s' in sys.argv:
-            savefig('kuvia/yksittäiset/wetland_%s.png' %(cols[c].replace('/',',')))
+            savefig('kuvia/yksittäiset/wetland_%s_%s.png' %(pparg[ppnum], cols[c].replace('/',',')))
             clf()
             continue
         show()
+
+def main():
+    pr = np.empty(2, object)
+    for i in range(len(pr)):
+        pr[i] = Process(target=aja, args=[i])
+        pr[i].start()
+    for p in pr:
+        p.join()
+    return
 
 if __name__ == '__main__':
     try:
