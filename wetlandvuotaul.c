@@ -83,7 +83,7 @@ int main(int argc, char** argv) {
 	    printf("Ei luotu ulostiedostoa\n");
 	    return 1;
 	}
-	fprintf(ulos[i], "#%s, data %i\n,Tg,mol/s,mol/m²,nmol/s/m²,frac(season)\n", kaudet[i], ftnum);
+	fprintf(ulos[i], "#%s, data %i\n,Tg,mol/s,mol/m²,nmol/s/m²,season_length\n", kaudet[i], ftnum);
     }
 
     for(int lajinum=0; lajinum<ARRPIT(vars); lajinum++) {
