@@ -67,7 +67,7 @@ int main(int argc, char** argv) {
     char* kausiptr;
     int kausia=ARRPIT(kaudet), lonpit, latpit, aikapit;
     FILE* ulos[kausia];
-    nct_read_ncfile_gd(&vuo, "./flux1x1_whole_year.nc");
+    nct_read_ncfile_gd(&vuo, "./flux1x1.nc");
     nct_read_ncfile_gd(&baw, "./BAWLD1x1.nc");
     nct_read_ncfile_gd(&kausivset, aprintf("./kaudet%i.nc", ftnum));
 
@@ -128,10 +128,9 @@ int main(int argc, char** argv) {
 		    continue;
 		double ala = PINTAALA(ASTE*lat[j], ASTE);
 		for(int i=0; i<lonpit; i++) {
-		    int ind_t = t*latpit*lonpit + j*lonpit + i;
-		    if(!kausiptr[ind_t])
-			continue;
 		    int ind   = j*lonpit + i;
+		    int ind_t = t*latpit*lonpit + ind;
+		    if(!kausiptr[ind_t]) continue;
 		    if(wetlptr[ind] == 0) continue;
 
 		    double ala_baw = wlajiptr[ind] * ala;
