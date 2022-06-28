@@ -64,8 +64,38 @@ def season_length(Xsij, taul, c):
     ylabel('fraction of year')
     sca(axs[1])
 
+def wetland_erikseen(Xsij, taul, c, wluokat, cols):
+    ax0 = gca()
+    vari = 'c'
+    with rc_context({'axes.edgecolor':vari, 'ytick.color':vari}):
+        ax1 = ax0.twinx()
+        ax1.spines['bottom'].set_visible(False)
+        ax1.spines['top'].set_visible(False)
+        ax1.spines['left'].set_visible(False)
+        ylabel(cols[c])
+        ax1.yaxis.label.set_color(vari)
+    ax1.grid(False)
+    # käännetään wetland viimeiseksi
+    assert(wluokat[0] == 'wetland')
+    wl = wluokat.copy()
+    for i in range(len(wl)-1):
+        wl[i] = wl[i+1]
+    wl[-1] = 'wetland'
+    I = lambda i: i-1 if i>0 else len(wl)-1
+    for k in range(taul.shape[1]):
+        for j in range(taul.shape[2]):
+            for i in range(taul.shape[3]):
+                ax = ax1 if i==0 else ax0
+                ax.plot(Xsij(I(i),j), taul[c,k,j,i], '.', markersize=12, color=varit[k] if i else vari)
+    sca(ax0)
+    for k in range(len(kaudet)):
+        plot(0, np.nan, '.', markersize=12, color=varit[k], label=kaudet[k])
+    legend(loc='upper center')
+    xticks(Xsij(np.arange(6),1), wl)
+    ylabel(cols[c])
+
 def aja(ppnumarg):
-    global axs, ppnum
+    global ppnum
     rcParams.update({'figure.figsize':(10,8), 'font.size':14, 'axes.grid':True, 'axes.grid.axis':'y', 'grid.linestyle':':'})
     ppnum = ppnumarg
     taul,wluokat,cols = lue_data()
@@ -79,24 +109,29 @@ def aja(ppnumarg):
     xlevo = 0.3
     Xsij = lambda wi,fti: (wi+0.5)*xlev - 0.5*xlevo*xlev + fti*xlevo*xlev/3
     for c in range(taul.shape[0]):
+        valmis = False
         if cols[c] == 'mol/m²':
             mol_per_m2(Xsij, taul, c)
         elif cols[c] == 'season_length':
-            season_length(Xsij, taul, c)
             if not ppnum:
                 continue # tämä ei riipu metaanivuosta
+            season_length(Xsij, taul, c)
+        elif cols[c] == 'Tg' or cols[c] == 'mol/s':
+            wl = wetland_erikseen(Xsij, taul, c, wluokat, cols)
+            valmis = True
         else:
             for k in range(taul.shape[1]):
                 for j in range(taul.shape[2]):
                     for i in range(taul.shape[3]):
                         plot(Xsij(i,j), taul[c,k,j,i], '.', markersize=12, color=varit[k])
 
-        for k in range(len(kaudet)):
-            plot(0, np.nan, '.', markersize=12, color=varit[k], label=kaudet[k])
-        legend()
+        if not valmis:
+            for k in range(len(kaudet)):
+                plot(0, np.nan, '.', markersize=12, color=varit[k], label=kaudet[k])
+            legend()
+            xticks(Xsij(np.arange(6),1), wluokat)
+            ylabel(cols[c])
 
-        xticks(Xsij(np.arange(6),1), wluokat)
-        ylabel(cols[c])
         tight_layout()
         if '-s' in sys.argv:
             savefig('kuvia/yksittäiset/wetland_%s_%s.png' %(pparg[ppnum], cols[c].replace('/',',')))
