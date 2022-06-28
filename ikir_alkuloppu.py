@@ -3,7 +3,7 @@ import numpy as np
 import xarray as xr
 from numpy import sin
 from matplotlib.pyplot import *
-import ikirluokat
+import luokat
 from multiprocessing import Process
 
 def argumentit():
@@ -28,7 +28,7 @@ def argumentit():
 
 def vaihda_ikirluokka(hyppy:int):
     global ikir_ind
-    ikir_ind = (ikir_ind + len(ikirluokat.dt) + hyppy) % len(ikirluokat.dt)
+    ikir_ind = (ikir_ind + len(luokat.ikir) + hyppy) % len(luokat.ikir)
     if xarrlis[ikir_ind] is None:
         xarrlis[ikir_ind],yarrlis[ikir_ind] = pintaalat1x1(paivat, paivat.where(ikirdat==ikir_ind,np.nan), tarkk)
         return True
@@ -38,7 +38,7 @@ def vaihda_ikirluokka_piirtaen(hyppy:int):
     vaihda_ikirluokka(hyppy)
     for i,suorak in enumerate(palkit):
         suorak.set_height(yarrlis[ikir_ind][i]/1000/tarkk)
-    title(ikirluokat.dt[ikir_ind])
+    title(luokat.ikir[ikir_ind])
     gca().relim()
     gca().autoscale_view()
     if aln[0] == 's':
@@ -82,7 +82,7 @@ def aja(doy,ftnum):
     ikir_ind=0
     for alm, aln in zip(al_muuttuja, al_nimi):
         paivat = doy[alm]
-        xarrlis = [None]*len(ikirluokat.dt)
+        xarrlis = [None]*len(luokat.ikir)
         yarrlis = xarrlis.copy()
         xarrlis[ikir_ind],yarrlis[ikir_ind] = pintaalat1x1(paivat, paivat.where(ikirdat==ikir_ind,np.nan), tarkk)
 
@@ -90,7 +90,7 @@ def aja(doy,ftnum):
             import locale
             locale.setlocale(locale.LC_ALL,'')
             tulosta = lambda : print(locale.format_string( 'Yhteensä "%s"-aluetta %.2f Mkm²',
-                                                           (ikirluokat.dt[ikir_ind], np.sum(yarrlis[ikir_ind])*1e-6) ))
+                                                           (luokat.ikir[ikir_ind], np.sum(yarrlis[ikir_ind])*1e-6) ))
             tulosta()
             while vaihda_ikirluokka(1):
                 tulosta()
@@ -99,7 +99,7 @@ def aja(doy,ftnum):
         palkit = bar(xarrlis[ikir_ind], yarrlis[ikir_ind]/1000, width=0.8*tarkk)
         xlabel('winter %s, data %i' %(aln,ftnum))
         ylabel('extent (1000 km$^2$)')
-        title(ikirluokat.dt[ikir_ind])
+        title(luokat.ikir[ikir_ind])
         tight_layout()
         vaihda_ikirluokka_piirtaen(0)
         if not tallenna:
@@ -108,7 +108,7 @@ def aja(doy,ftnum):
             continue
         while True:
             savefig("kuvia/yksittäiset/ikir%i_w%s_ft%i.png" %(ikir_ind,aln,ftnum))
-            if ikir_ind+1 == len(ikirluokat.dt):
+            if ikir_ind+1 == len(luokat.ikir):
                 ikir_ind = 0
                 break
             vaihda_ikirluokka_piirtaen(1)

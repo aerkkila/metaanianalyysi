@@ -4,7 +4,7 @@ import xarray as xr
 from numpy import sin
 import pandas as pd
 from matplotlib.pyplot import *
-import sys, ikirluokat, maalajit
+import sys, luokat, maalajit
 
 # laskee paljonko pinta-alaa on kullakin xjaon osuudella (km²).
 # xjaon on oltava tasavälinen
@@ -65,7 +65,7 @@ def viimeistele(kumpi):
     xlabel('winter %s day' %startend[kumpi])
     ajat = pd.to_datetime(xtaul[kumpi,ikir_ind],unit='D')
     xticks(xtaul[kumpi,ikir_ind],labels=ajat.strftime("%m/%d"),rotation=30)
-    title(ikirluokat.dt[ikir_ind])
+    title(luokat.ikir[ikir_ind])
     tight_layout()
     legend()
 
@@ -86,10 +86,10 @@ def main():
     if tallenna:
         while True:
             if verbose:
-                print(ikirluokat.dt[ikir_ind])
+                print(luokat.ikir[ikir_ind])
             savefig("kuvia/%s%s%i.png"
                     %(sys.argv[0][:-3], ('_'+startend[0] if len(startend)==1 else ''), ikir_ind))
-            if ikir_ind==len(ikirluokat.dt)-1:
+            if ikir_ind==len(luokat.ikir)-1:
                 exit()
             vaihda_luokat(1)
         return

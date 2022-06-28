@@ -3,7 +3,6 @@ import numpy as np
 import xarray as xr
 from numpy import sin
 from matplotlib.pyplot import *
-import ikirluokat
 from multiprocessing import Process
 
 def argumentit():

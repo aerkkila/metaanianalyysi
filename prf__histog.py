@@ -3,7 +3,7 @@ import numpy as np
 from numpy import sin
 import pandas as pd
 from matplotlib.pyplot import *
-import sys, ikirluokat, maalajit
+import sys, luokat, maalajit
 
 # laskee paljonko pinta-alaa on kullakin xjaon osuudella (km²).
 # xjaon on oltava tasavälinen
@@ -93,13 +93,13 @@ def viimeistele(kumpi):
     xlabel('winter %s day' %startend[kumpi])
     ajat = pd.to_datetime(xtaul[kumpi,ikir_ind],unit='D')
     xticks(xtaul[kumpi,ikir_ind],labels=ajat.strftime("%m/%d"),rotation=30)
-    title(ikirluokat.dt[ikir_ind])
+    title(luokat.ikir[ikir_ind])
     tight_layout()
     legend()
 
 def vaihda_luokka(hyppy,kumpi):
     global ikir_ind
-    ikir_ind = ( ikir_ind + len(ikirluokat.dt) + hyppy ) % len(ikirluokat.dt)
+    ikir_ind = ( ikir_ind + len(luokat.ikir) + hyppy ) % len(luokat.ikir)
     if xtaul[kumpi,ikir_ind] is None:
         tee_luokka(xtaul[kumpi,...], ytaul[kumpi,...], dflista=doydflis[kumpi,...],
                    dfind=ikir_ind, luokat2=luokat2, tarkk=tarkk, pa_kerr=osuuslis[ikir_ind])
@@ -127,29 +127,29 @@ def data_maa():
     tarkk = 15
     lse = len(startend)
     #DOY-data
-    doydflis = np.empty([lse,len(ikirluokat.dt)],object)
+    doydflis = np.empty([lse,len(luokat.ikir)],object)
     for j in range(lse):
         for i in range(doydflis.shape[1]):
             doydflis[j,i] = maalajit.nimen_jako(pd.read_csv('prf_maa_DOY_%s%i.csv' %(startend[j],i)))
     #osuusdata
     osuuslis = np.empty(doydflis.shape[1],object)
-    for i in range(len(ikirluokat.dt)):
+    for i in range(len(luokat.ikir)):
         osuuslis[i] = maalajit.nimen_jako(pd.read_csv('prf_maa_osuus_%i.csv' %(i)))
-    xtaul = np.full([lse,len(ikirluokat.dt)], None, object)
-    ytaul = np.full([lse,len(ikirluokat.dt),len(luokat2)], None, object)
+    xtaul = np.full([lse,len(luokat.ikir)], None, object)
+    ytaul = np.full([lse,len(luokat.ikir),len(luokat2)], None, object)
 
 def data_koppen():
     global tarkk,doydflis,osuuslis,xtaul,ytaul,luokat2
     luokat2 = ['D.c','D.d','ET']
     tarkk = 10
     lse = len(startend)
-    doydflis = np.empty([lse,len(ikirluokat.dt)],object)
-    osuuslis = np.full([len(ikirluokat.dt)], None)
+    doydflis = np.empty([lse,len(luokat.ikir)],object)
+    osuuslis = np.full([len(luokat.ikir)], None)
     for j in range(lse):
         for i in range(doydflis.shape[1]):
             doydflis[j,i] = pd.read_csv('prf_köppen_%s%i.csv' %(startend[j],i))
-    xtaul = np.full([lse,len(ikirluokat.dt)], None, object)
-    ytaul = np.full([lse,len(ikirluokat.dt),len(luokat2)], None, object)
+    xtaul = np.full([lse,len(luokat.ikir)], None, object)
+    ytaul = np.full([lse,len(luokat.ikir),len(luokat2)], None, object)
 
 def main():
     global axs
@@ -174,10 +174,10 @@ def main():
     if tallenna:
         while True:
             if verbose:
-                print(ikirluokat.dt[ikir_ind])
+                print(luokat.ikir[ikir_ind])
             savefig("kuvia/%s%s%i.png"
                     %(sys.argv[0][:-3], ('_'+startend[0] if len(startend)==1 else ''), ikir_ind))
-            if ikir_ind==len(ikirluokat.dt)-1:
+            if ikir_ind==len(luokat.ikir)-1:
                 exit()
             vaihda_luokat(1)
         return

@@ -4,7 +4,7 @@ import numpy as np
 import xarray as xr
 from matplotlib.pyplot import *
 import warnings,sys
-import ikirluokat
+import luokat
 import talven_ajankohta as taj
 
 def argumentit():
@@ -24,8 +24,8 @@ if __name__ == '__main__':
     doy = taj.lue_avgdoy(startend)
     ikirluok = xr.open_dataset('prfdata_avg.nc')['luokka'].sel({'lat':slice(doy.lat.min(),doy.lat.max())})
 
-    df = pd.DataFrame(columns=ikirluokat.dt)
-    for i,laji in enumerate(ikirluokat.dt):
+    df = pd.DataFrame(columns=luokat.ikir)
+    for i,laji in enumerate(luokat.ikir):
         data = doy.data.copy()
         with np.errstate(invalid='ignore'):
             data[ (data<-300) | (ikirluok!=i) ] = np.nan
