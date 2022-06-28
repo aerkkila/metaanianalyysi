@@ -1,18 +1,16 @@
 #!/usr/bin/python3
 import xarray as xr
 import numpy as np
-from numpy import log
-import pandas as pd
 import cartopy.crs as ccrs
-from matplotlib.pyplot import *
 import matplotlib.colors as mcolors
+import matplotlib, sys, luokat
+from matplotlib.pyplot import *
 from matplotlib.colors import ListedColormap as lcmap
-import matplotlib, sys, prf
-import config
+from multiprocessing import Process
 
 varoitusvari = '\033[1;33m'
-vari0 = '\033[0m'
-ikir_ind = 0
+vari0        = '\033[0m'
+ikir_ind     = 0
 
 def argumentit(argv):
     global tallenna,verbose
@@ -40,18 +38,19 @@ def luo_varikartta(ch4data):
     varit = np.empty(N,object)
     kanta = 10
 
-    #negatiiviset vuot lineaarisesti ja positiiviset logaritmisesti
-    for i in range(0,N//2): #negatiiviset vuot
+    #negatiiviset vuot lineaarisesti
+    for i in range(0,N//2):
         varit[i] = cmap(i)
-    cmaplis=np.logspace(log(0.5)/log(kanta),0,N//2)
-    for i in range(N//2,N): #positiiviset vuot
+
+    #positiiviset vuot logaritmisesti
+    cmaplis=np.logspace(np.log(0.5)/np.log(kanta),0,N//2)
+    for i in range(N//2,N):
         varit[i] = cmap(cmaplis[i-N//2])
     return lcmap(varit)
 
-
 ulkovari = '#d0e0c0'
 harmaavari = '#c0c0c0'
-    
+
 def piirra():
     ax = gca()
     ax.set_extent(kattavuus,platecarree)
@@ -71,19 +70,23 @@ def piirra():
     harmaa = lcmap(harmaavari)
     ch4data.where(~(ikirouta==ikir_ind),np.nan).plot.\
         pcolormesh( transform=platecarree, ax=gca(), add_colorbar=False, cmap=harmaa )
-    title(prf.luokat[ikir_ind])
 
 def varipalkki():
-    cbar_nimio = r'CH$_4$ flux ($\frac{\mathrm{mol}}{\mathrm{m}^2\mathrm{s}}$)'
+    cbar_nimio = r'$\frac{\mathrm{mol}}{\mathrm{m}^2\mathrm{s}}$'
     norm = mcolors.DivergingNorm(0,max(pienin*6,-suurin),suurin)
-    ax = axes((0.91,0.031,0.03,0.92))
-    cbar = gcf().colorbar(matplotlib.cm.ScalarMappable(cmap=vkartta,norm=norm), label=cbar_nimio, cax=ax)
+    ax = axes((0.87,0.031,0.03,0.92))
+    cbar = gcf().colorbar(matplotlib.cm.ScalarMappable(cmap=vkartta,norm=norm), cax=ax)
+    ax.get_yaxis().labelpad = 15
+    ylabel(cbar_nimio, rotation=0, fontsize=25)
     #väripalkki ulkoalueista
     harmaa = lcmap([ulkovari,harmaavari])
     norm = matplotlib.colors.Normalize(vmin=-2, vmax=2)
-    ax = axes((0.78,0.031,0.03,0.92))
-    cbar = gcf().colorbar(matplotlib.cm.ScalarMappable(cmap=harmaa,norm=norm),ticks=[-1,1], cax=ax)
-    cbar.set_ticklabels(['undefined', 'other\ncategories'])
+    ax = axes((0.78,0.031,0.03,0.92), frameon=False)
+    cbar = gcf().colorbar(matplotlib.cm.ScalarMappable(cmap=harmaa,norm=norm), cax=ax, drawedges=False)
+    cbar.ax.yaxis.set_ticks([])
+    for i,s in enumerate(['undefined', 'other\ncategories']):
+        cbar.ax.text(-5, -1+2*i, s)
+    cbar.outline.set_visible(False)
 
 def tee_alikuva(subplmuoto, subpl, **axes_kwargs):
     subpl_y = subplmuoto[0]-1 - subpl // subplmuoto[1]
@@ -96,39 +99,59 @@ def tee_alikuva(subplmuoto, subpl, **axes_kwargs):
               **axes_kwargs)
     return ax
 
-def main(tiedosto,muuttuja):
-    global projektio,platecarree,kattavuus,ch4data,ikirouta,vkartta,ikir_ind
-    rcParams.update({'font.size':18,'figure.figsize':(14,6),'text.usetex':True})
+pripost_sis = ['flux_bio_prior', 'flux_bio_posterior'][::-1]
+pripost_ulos = ['pri', 'post'][::-1]
+
+def aja(ppind, ftnum):
+    global ch4data, ikir_ind, vkartta
+    ch4data1 = ch4data0[pripost_sis[ppind]]
+    kaudet   = xr.open_dataarray("./kaudet%i.nc" %(ftnum))
+    for k,kausi in enumerate(luokat.kaudet):
+        if k == 0:
+            ch4data = ch4data1.where(kaudet).mean(dim='time')
+        else:
+            ch4data  = ch4data1.where(kaudet==k).mean(dim='time')
+
+        vkartta = luo_varikartta(ch4data)
+
+        for ikir_ind in range(len(luokat.ikir)):
+            sca(tee_alikuva([1,1], 0, projection=projektio))
+            piirra()
+            title("%s, %s, data %i" %(luokat.ikir[ikir_ind],
+                                      luokat.kaudet[k].replace('_', ' '), ftnum))
+            varipalkki()
+            if not tallenna:
+                show()
+                continue
+            tunniste = "%s_%s_%s_ft%i" %(pripost_ulos[ppind], luokat.ikir[ikir_ind].replace(' ', '_'),
+                                         luokat.kaudet[k], ftnum)
+            savefig("./kuvia/yksittäiset/%s_%s.png" %(sys.argv[0][:-3], tunniste))
+            clf()
+
+def main():
+    global projektio,platecarree,kattavuus,ikirouta,ch4data0
+    rcParams.update({'font.size':18,'figure.figsize':(10,7.8), 'text.usetex':True})
     argumentit(sys.argv[1:])
-    kansio = config.tyotiedostot+'FT_implementointi/FT_percents_pixel_ease_flag/DOY/'
+
+    ch4data0 = xr.open_dataset('./flux1x1.nc')
 
     ikirouta = xr.open_dataset('./prfdata.nc')['luokka']
-
-    ch4data = xr.open_dataset(tiedosto)[muuttuja]
-    ch4data = ch4data.mean(dim='time')
-    
-    ikirouta = ikirouta.sel({'time':range(2011,2019)}).mean(dim='time')
-    ikirouta = ikirouta.sel({'lat':slice(ch4data.lat.min(),ch4data.lat.max())})
+    ikirouta = ikirouta.sel({'time':range(2011,2019)}).mean(dim='time').round().astype(np.int8)
+    ikirouta = ikirouta.sel({'lat':slice(29.5, 84)})
 
     platecarree = ccrs.PlateCarree()
     projektio   = ccrs.LambertAzimuthalEqualArea(central_latitude=90)
     kattavuus   = [-180,180,30,90]
-    fig = figure()
 
-    vkartta = luo_varikartta(ch4data)
-
-    sca(tee_alikuva([1,2], 0, projection=projektio))
-    piirra()
-    ikir_ind=3
-    sca(tee_alikuva([1,2], 1, projection=projektio))
-    piirra()
-    varipalkki()
-    if not tallenna:
-        show()
-        return
-    if verbose:
-        print(prf.luokat[ikir_ind])
-    savefig("kuvia/%s.png" %(sys.argv[0][:-3]))
+    pr = np.empty(6, object)
+    i=0
+    for ppind in range(2):
+        for ftnum in range(3):
+            pr[i] = Process(target=aja, args=(ppind,ftnum))
+            pr[i].start()
+            i+=1
+    for p in pr:
+        p.join()
 
 if __name__ == '__main__':
-    main('./flux1x1_whole_year.nc', 'flux_bio_posterior')
+    main()
