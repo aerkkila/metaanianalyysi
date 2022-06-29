@@ -13,7 +13,7 @@ def lue_data():
     alustettu = False
     for k,kausi in enumerate(kaudet):
         for ftnum in range(3):
-            nimi = 'wetlandvuotaulukot/wetlandvuo_%s_%s_ft%i.csv' %(pparg[ppnum], kausi, ftnum)
+            nimi = 'vuotaulukot/wetlandvuo_%s_%s_ft%i.csv' %(pparg[ppnum], kausi, ftnum)
             dt = np.genfromtxt(nimi, delimiter=',', skip_header=2)
             if not alustettu:
                 wluokat = []

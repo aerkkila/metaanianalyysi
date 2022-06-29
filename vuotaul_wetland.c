@@ -5,7 +5,7 @@
 #include <math.h>
 #include <stdarg.h>
 
-// gcc wetlandvuosumma.c `pkg-config --libs nctietue` -lm
+// kääntäjä tarvitsee argumentit `pkg-config --libs nctietue` -lm
 // nctietue-kirjasto on osoitteessa https://github.com/aerkkila/nctietue.git
 
 const double r2 = 40592558970441; //(6371229 m)^2;
@@ -99,7 +99,7 @@ int main(int argc, char** argv) {
     vuoptr  = apuvar->data;
 
     for(int i=0; i<kausia; i++) {
-	if(!(ulos[i] = fopen(aprintf("wetlandvuotaulukot/wetlandvuo_%s_%s_ft%i.csv",
+	if(!(ulos[i] = fopen(aprintf("vuotaulukot/wetlandvuo_%s_%s_ft%i.csv",
 				     pripost_ulos[ppnum], kaudet[i], ftnum), "w"))) {
 	    printf("Ei luotu ulostiedostoa\n");
 	    return 1;
@@ -113,7 +113,6 @@ int main(int argc, char** argv) {
 	int     vuosia              = round(aikapit / 365.25);
 	double  ainemaara[kausia];    memset(ainemaara, 0, kausia*sizeof(double));   // mol
 	double  ala_ja_aika[kausia];  memset(ala_ja_aika, 0, kausia*sizeof(double)); // m²*s
-	int     pisteita[kausia];     memset(pisteita, 0, kausia*sizeof(int));
 
 	apuvar = baw.vars + nct_get_varid(&baw, vars[lajinum]);
 	if(apuvar->xtype != NC_DOUBLE) {
@@ -138,10 +137,8 @@ int main(int argc, char** argv) {
 		    if(vuo_baw == vuo_baw) {
 			ainemaara[(int)kausiptr[ind_t]]   += vuo_baw; // *86400 kerrotaan lopussa: mol/s * s -> mol
 			ala_ja_aika[(int)kausiptr[ind_t]] += ala_baw; // *86400 kerrotaan lopussa: m²*d -> m²*s
-			++pisteita[(int)kausiptr[ind_t]];
 			ainemaara[0]   += vuo_baw;
 			ala_ja_aika[0] += ala_baw;
-			++pisteita[0];
 		    }
 		}
 	    }
