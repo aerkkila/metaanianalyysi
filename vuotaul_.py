@@ -8,26 +8,27 @@ import sys
 ppnum = -1
 pparg = ('pri', 'post')
 varit = 'rgby'
+luokittelu = ''
 
 def lue_data():
     alustettu = False
     for k,kausi in enumerate(kaudet):
         for ftnum in range(3):
-            nimi = 'vuotaulukot/wetlandvuo_%s_%s_ft%i.csv' %(pparg[ppnum], kausi, ftnum)
+            nimi = 'vuotaulukot/%svuo_%s_%s_ft%i.csv' %(luokittelu, pparg[ppnum], kausi, ftnum)
             dt = np.genfromtxt(nimi, delimiter=',', skip_header=2)
             if not alustettu:
-                wluokat = []
+                luokat = []
                 with open(nimi) as f:
                     f.readline()
                     rivi = f.readline()
                     for r in f:
-                        wluokat.append(r.partition(',')[0])
+                        luokat.append(r.partition(',')[0])
                 cols      = rivi.rstrip().split(',')[1:]
-                taul      = np.empty((len(cols), len(kaudet), 3, len(wluokat)))
+                taul      = np.empty((len(cols), len(kaudet), 3, len(luokat)))
                 alustettu = True
             for c in range(len(cols)):
                 taul[c,k,ftnum,:] = dt[:,c+1]
-    return taul, wluokat, cols
+    return taul, luokat, cols
 
 def rikottu_akseli(Xsij, taul, c, yrajat12):
     fig, (ax2,ax1) = subplots(2, 1, sharex=True)
@@ -64,7 +65,7 @@ def season_length(Xsij, taul, c):
     ylabel('fraction of year')
     sca(axs[1])
 
-def wetland_erikseen(Xsij, taul, c, wluokat, cols):
+def erikseen(eriluok, Xsij, taul, c, luokat, cols):
     ax0 = gca()
     vari = 'c'
     with rc_context({'axes.edgecolor':vari, 'ytick.color':vari}):
@@ -75,51 +76,60 @@ def wetland_erikseen(Xsij, taul, c, wluokat, cols):
         ylabel(cols[c])
         ax1.yaxis.label.set_color(vari)
     ax1.grid(False)
-    # käännetään wetland viimeiseksi
-    assert(wluokat[0] == 'wetland')
-    wl = wluokat.copy()
-    for i in range(len(wl)-1):
-        wl[i] = wl[i+1]
-    wl[-1] = 'wetland'
-    I = lambda i: i-1 if i>0 else len(wl)-1
+    # käännetään eriluok viimeiseksi
+    ind_eluok = luokat.index(eriluok)
+    lk = luokat.copy()
+    for i in range(ind_eluok, len(lk)-1):
+        lk[i] = lk[i+1]
+    lk[-1] = eriluok
+    I = lambda i: i if i<ind_eluok else len(lk)-1 if i==ind_eluok else i-1
     for k in range(taul.shape[1]):
         for j in range(taul.shape[2]):
             for i in range(taul.shape[3]):
-                ax = ax1 if i==0 else ax0
+                ax = ax1 if i==ind_eluok else ax0
                 ax.plot(Xsij(I(i),j), taul[c,k,j,i], '.', markersize=12, color=varit[k] if i else vari)
     sca(ax0)
     for k in range(len(kaudet)):
         plot(0, np.nan, '.', markersize=12, color=varit[k], label=kaudet[k])
     legend(loc='upper center')
-    xticks(Xsij(np.arange(6),1), wl)
+    xticks(Xsij(np.arange(taul.shape[-1]),1), lk)
     ylabel(cols[c])
 
 def aja(ppnumarg):
     global ppnum
-    rcParams.update({'figure.figsize':(10,8), 'font.size':14, 'axes.grid':True, 'axes.grid.axis':'y', 'grid.linestyle':':'})
     ppnum = ppnumarg
-    taul,wluokat,cols = lue_data()
+    taul,luokat,cols = lue_data()
+    rcParams.update({'figure.figsize':(1.5*taul.shape[-1], 8),
+                     'font.size':14, 'axes.grid':True, 'axes.grid.axis':'y', 'grid.linestyle':':'})
 
     #joka toinen nimi alemmalle riville
-    for i,x in enumerate(wluokat):
+    for i,x in enumerate(luokat):
         if i%2:
-            wluokat[i] = '\n'+x
+            luokat[i] = '\n'+x
 
-    xlev = 1/len(wluokat)
-    xlevo = 0.3
+    xlev = 1/len(luokat)
+    xlevo = 0.45
     Xsij = lambda wi,fti: (wi+0.5)*xlev - 0.5*xlevo*xlev + fti*xlevo*xlev/3
     for c in range(taul.shape[0]):
         valmis = False
+        goto_else = True
         if cols[c] == 'mol/m²':
             mol_per_m2(Xsij, taul, c)
+            goto_else = False
         elif cols[c] == 'season_length':
             if not ppnum:
                 continue # tämä ei riipu metaanivuosta
             season_length(Xsij, taul, c)
+            goto_else = False
         elif cols[c] == 'Tg' or cols[c] == 'mol/s':
-            wl = wetland_erikseen(Xsij, taul, c, wluokat, cols)
-            valmis = True
-        else:
+            eriluok = 'D.c' if luokittelu == 'köppen' else 'wetland' if luokittelu == 'wetland' else None
+            if eriluok is None:
+                goto_else = True
+            else:
+                lk = erikseen(eriluok, Xsij, taul, c, luokat, cols)
+                valmis = True
+                goto_else = False
+        if goto_else:
             for k in range(taul.shape[1]):
                 for j in range(taul.shape[2]):
                     for i in range(taul.shape[3]):
@@ -129,17 +139,19 @@ def aja(ppnumarg):
             for k in range(len(kaudet)):
                 plot(0, np.nan, '.', markersize=12, color=varit[k], label=kaudet[k])
             legend()
-            xticks(Xsij(np.arange(6),1), wluokat)
+            xticks(Xsij(np.arange(taul.shape[-1]),1), luokat)
             ylabel(cols[c])
 
         tight_layout()
         if '-s' in sys.argv:
-            savefig('kuvia/yksittäiset/wetland_%s_%s.png' %(pparg[ppnum], cols[c].replace('/',',')))
+            savefig('kuvia/yksittäiset/%s_%s_%s.png' %(luokittelu, pparg[ppnum], cols[c].replace('/',',')))
             clf()
             continue
         show()
 
 def main():
+    global luokittelu
+    luokittelu = sys.argv[1]
     pr = np.empty(2, object)
     for i in range(len(pr)):
         pr[i] = Process(target=aja, args=[i])
