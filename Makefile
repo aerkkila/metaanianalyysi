@@ -1,3 +1,6 @@
+ks2samp.out: ks2samp.c
+	gcc -Wall ks2samp.c -o $@ `pkg-config --libs nctietue2` -lm -O3
+
 wetlandsumma.out: wetlandsumma.c
 	gcc -Wall wetlandsumma.c -o $@ `pkg-config --libs nctietue` -lm -O3
 
