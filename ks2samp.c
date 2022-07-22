@@ -4,6 +4,7 @@
 #include <string.h>
 #include <math.h>
 #include <stdarg.h>
+#include <unistd.h>
 
 // kääntäjä tarvitsee argumentit `pkg-config --libs nctietue2` -lm
 // nctietue2-kirjasto on osoitteessa https://github.com/aerkkila/nctietue2.git
@@ -14,6 +15,7 @@
 const char* ikirnimet[]      = {"non permafrost", "sporadic", "discontinuous", "continuous"};
 const char* koppnimet[]      = {"D.c", "D.d", "ET"};
 const char* wetlnimet[]      = {"wetland", "bog", "fen", "marsh", "tundra_wetland", "permafrost_bog"};
+enum {wetl_we, bog_we, fen_we, marsh_we, twet_we, pbog_we};
 const char* kaudet[]         = {"whole_year", "summer", "freezing", "winter"};
 enum kaudet_e                  {whole_year_e, summer_e, freezing_e, winter_e};
 const char* pripost_sisaan[] = {"flux_bio_prior", "flux_bio_posterior"};
@@ -83,6 +85,7 @@ float ks_2samp_approx(float* a, size_t alen, float* b, size_t blen) {
 	if(ero > maxero)
 	    maxero = ero;
     }
+    printf("max ero = %f\n", maxero);
 
     double Ne = (double)(alen*blen) / (alen+blen);
     return Q_ks((sqrt(Ne) + 0.12 + 0.11/sqrt(Ne)) * maxero);
@@ -250,9 +253,31 @@ int main(int argc, char** argv) {
 	    else
 		data_binaarista(lajinum, vuojako, kausi_ind+kausia*lajinum);
 
+	/*
 	printf("%s; %s: %f\n", luoknimet[luokenum][1], luoknimet[luokenum][2],
 	       ks_2samp_approx(vuojako[whole_year_e]+(kauden_kapasit[whole_year_e]*1), kausi_ind[kausia*1+whole_year_e],
-			       vuojako[whole_year_e]+(kauden_kapasit[whole_year_e]*1), kausi_ind[kausia*1+whole_year_e]));
+			       vuojako[whole_year_e]+(kauden_kapasit[whole_year_e]*2), kausi_ind[kausia*2+whole_year_e]));
+	*/
+	FILE *pros = popen("./piirtäjä.py", "w");
+
+#define _data(k,l) (vuojako[k]+(kauden_kapasit[k]*l))
+#define _pit(k,l) (kausi_ind[kausia*l+k])
+#define kirj(k, l) do {					\
+	    qsort(_data(k,l), _pit(k,l), 4, compfun);	\
+	    fwrite(&_pit(k,l), sizeof(int), 1, pros);	\
+	    fwrite(_data(k,l), 4, _pit(k,l), pros);	\
+	} while(0)
+	kirj(whole_year_e, bog_we);
+	kirj(whole_year_e, fen_we);
+	kirj(freezing_e, bog_we);
+#undef kirj
+#undef _pit
+#undef _data
+	/*fwrite(vuojako[whole_year_e]+(kauden_kapasit[whole_year_e]*1), 4, kausi_ind[kausia*1+whole_year_e], pros);
+	fwrite(vuojako[whole_year_e]+(kauden_kapasit[whole_year_e]*2), 4, kausi_ind[kausia*2+whole_year_e], pros);
+	fwrite(vuojako[whole_year_e]+(kauden_kapasit[whole_year_e]*1), 4, kausi_ind[kausia*1+whole_year_e], pros);
+	fwrite(vuojako[whole_year_e]+(kauden_kapasit[whole_year_e]*1), 4, kausi_ind[kausia*1+whole_year_e], pros);*/
+	fclose(pros);
 
 	nct_free_vset(&kausivset);
 	kausivset = (nct_vset){0};

@@ -7,7 +7,6 @@
 
 // kääntäjä tarvitsee argumentit `pkg-config --libs nctietue2` -lm
 // nctietue2-kirjasto on osoitteessa https://github.com/aerkkila/nctietue2.git
-// funktio lue_luokitus käyttää sisäkkäisiä funktioita, mikä vaatinee gcc-kääntäjän
 
 const double r2 = 40592558970441; //(6371229 m)^2;
 #define PINTAALA(lat, hila) ((hila)*r2*(sin((lat)+(hila))-sin(lat)))//*1.0e-6)
@@ -63,40 +62,37 @@ int argumentit(int argc, char** argv) {
     return 0;
 }
 
+void* lue_kopp() {
+    char* luok = malloc(resol);
+    int pit;
+    FILE* f = fopen("./köppenmaski.txt", "r");
+    if(!f) return NULL;
+    if((pit=fread(luok, 1, resol, f))!=resol)
+	printf("Luettiin %i eikä %i\n", pit, resol);
+    for(int i=0; i<resol; i++)
+	luok[i] -= '0'+1; // '1' -> 0 jne.
+    return (luok_c = luok);
+}
+void* lue_ikir() {
+    nct_vset *vset = nct_read_ncfile("./ikirdata.nc");
+    int varid = nct_get_varid(vset, "luokka");
+    char* ret = vset->vars[varid]->data;
+    vset->vars[varid]->nonfreeable_data = 1;
+    nct_free_vset(vset);
+    free(vset);
+    return (luok_c = ret);
+}
+void* lue_wetl() {
+    return (luok_vs = nct_read_ncfile("./BAWLD1x1.nc"));
+}
 void* lue_luokitus() {
-    void* lue_kopp() {
-	char* luok = malloc(resol);
-	int pit;
-	FILE* f = fopen("./köppenmaski.txt", "r");
-	if(!f) return NULL;
-	if((pit=fread(luok, 1, resol, f))!=resol)
-	    printf("Luettiin %i eikä %i\n", pit, resol);
-	for(int i=0; i<resol; i++)
-	    luok[i] -= '0'+1; // '1' -> 0 jne.
-	return (luok_c = luok);
-    }
-    void* lue_ikir() {
-	nct_vset *vset = nct_read_ncfile("./ikirdata.nc");
-	int varid = nct_get_varid(vset, "luokka");
-	char* ret = vset->vars[varid]->data;
-	vset->vars[varid]->nonfreeable_data = 1;
-	nct_free_vset(vset);
-	free(vset);
-	return (luok_c = ret);
-    }
-    void* lue_wetl() {
-	return (luok_vs = nct_read_ncfile("./BAWLD1x1.nc"));
-    }
-
-    void* (*funktio[])(void) = { [kopp_e]=lue_kopp, [ikir_e]=lue_ikir, [wetl_e]=lue_wetl, };
+    static void* (*funktio[])(void) = { [kopp_e]=lue_kopp, [ikir_e]=lue_ikir, [wetl_e]=lue_wetl, };
     return funktio[luokenum]();
 }
 
 void laske_binaarista(int lajinum, double* ainemaara, double* ala_ja_aika, int vuosia) {
     for(int t=0; t<(int)(vuosia*365.25); t++) {
 	for(int j=0; j<latpit; j++) {
-	    if(lat[j]<49.5)
-		continue;
 	    double ala = PINTAALA((double)ASTE*lat[j], ASTE);
 	    for(int i=0; i<lonpit; i++) {
 		int ind   = j*lonpit + i;
