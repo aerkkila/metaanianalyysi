@@ -14,7 +14,7 @@ vuosi0 = 2012
 vuosi1 = 2019
 
 def main():
-    rcParams.update({'figure.figsize':(12,10), 'font.size':14})
+    rcParams.update({'figure.figsize':(9,7), 'font.size':14})
     ftluvut    = [0,1,2]
     ikirluvut  = [0,1,2,3]
     paivadata  = [Dataset("kausien_pituudet%i.nc" %(i), "r") for i in ftluvut]
@@ -55,7 +55,7 @@ def main():
         xticks(tulos['xsij'], labels=xnimet.flatten())
         tight_layout()
         if '-s' in sys.argv:
-            savefig("kuvia/yksittäiset/%s_laatikko.png" %(al_nimi[i_muutt].replace(' ','-')))
+            savefig("kuvia/%s_laatikko.png" %(al_nimi[i_muutt].replace(' ','-')))
             clf()
         else:
             show()

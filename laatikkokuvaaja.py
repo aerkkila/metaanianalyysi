@@ -2,6 +2,7 @@ import matplotlib as mpl
 from matplotlib.pyplot import *
 import numpy as np
 
+#tämä korvattiin np.searchsorted-funktiolla
 def search_ind(num, limits):
     length = len(limits)
     lower = 0
@@ -17,17 +18,21 @@ def search_ind(num, limits):
         else:
             return mid
 
-def wpercentile(arr, painot, lista):
+def wpercentile(arr, painot, lista, on_valmis=False):
     ret = np.empty(len(lista))
-    jarj = np.argsort(arr)
-    sarr = np.array(arr)[jarj]
-    rajat = np.array(painot, np.float64)[jarj].cumsum()
-    jakaja = rajat[-1] + (rajat[-1]-rajat[-2])
-    for i in range(len(rajat)):
-        rajat[i] /= jakaja
+    if on_valmis:
+        rajat = painot
+        sarr = arr
+    else:
+        jarj = np.argsort(arr)
+        sarr = np.array(arr)[jarj]
+        rajat = np.array(painot, np.float64)[jarj].cumsum()
+        jakaja = rajat[-1] + (rajat[-1]-rajat[-2])
+        for i in range(len(rajat)):
+            rajat[i] /= jakaja
     for i,p0 in enumerate(lista):
         p           = p0/100
-        ind         = search_ind(p, rajat)
+        ind         = np.searchsorted(rajat, p, side='right')
         alaraja     = rajat[0 if ind==0 else ind-1] # rajat-taulukko sisältää ylärajat
         ylaraja     = rajat[ind-1 if ind>=len(rajat) else ind]
         valin_osuus = (p-alaraja)/(ylaraja-alaraja)
@@ -36,7 +41,7 @@ def wpercentile(arr, painot, lista):
         ret[i] = alaraja_arr + (ylaraja_arr-alaraja_arr)*valin_osuus
     return ret
 
-def laatikkokuvaaja(lista, xsij=None, fliers='.', painostot=None):
+def laatikkokuvaaja(lista, xsij=None, fliers='.', painostot=None, valmis=False):
     laatikoita = len(lista)
     if xsij is None:
         xsij = np.linspace(0,1,laatikoita+1)
@@ -52,7 +57,7 @@ def laatikkokuvaaja(lista, xsij=None, fliers='.', painostot=None):
                 laatikot[i,:] = a[1:]
                 mediaanit[i] = a[0]
             else:
-                a = wpercentile(lista[i], painostot[i], [50,5,25,75,95])
+                a = wpercentile(lista[i], painostot[i], [50,5,25,75,95], on_valmis=valmis)
                 laatikot[i,:] = a[1:]
                 mediaanit[i] = a[0]
         else:

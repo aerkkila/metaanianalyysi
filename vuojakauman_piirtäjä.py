@@ -10,29 +10,48 @@ tyylit = {' whole_year' : dict(linestyle='--', linewidth=1.6),
           ' freezing'   : dict(linestyle='-',  linewidth=2.6),}
 jarj = [0,1] # 01 -> laji,kausi; 10 -> kausi,laji
 tehtiin = False
+tee_laatikko = True
+tee_jakauma = True
+
+if tee_laatikko:
+    from laatikkokuvaaja import laatikkokuvaaja
 
 def tee_kuva():
     global tehtiin
-    xscale('log')#, linthreshx=0.001)
-    xlabel('flux nmol/m/s$^2$')
-    ylabel('pdf')
-    legend(loc='upper right')
-    tight_layout()
-    show();
+    if tee_jakauma:
+        xscale('log')#, linthreshx=0.001)
+        xlabel('flux nmol/m/s$^2$')
+        ylabel('pdf')
+        legend(loc='upper right')
+        tight_layout()
+        show()
+        clf()
+    if tee_laatikko:
+        tulos = laatikkokuvaaja(datastot, fliers=False, painostot=rajastot, valmis=True)
+        xticks(tulos['xsij'], labels=nimet, rotation=45)
+        tight_layout()
+        show()
+    
     tehtiin = True
 
 def main():
-    global tehtiin
+    global tehtiin, datastot, rajastot, nimet
     rcParams.update({'figure.figsize':(12,10), 'font.size':13})
     raaka = sys.stdin.buffer.read() # nimi\n(pit)(data)(cdf)
     lajit = [[], []]
     lasku=0
+    datastot = []
+    rajastot = []
+    nimet = []
     while len(raaka):
         ind = raaka.index(10)
-        if not ind:
-            lajit = [[],[]]
+        if not ind: # laitettiin rivinvaihto
             tee_kuva()
             raaka = raaka[1:]
+            lajit = [[], []]
+            datastot = []
+            rajastot = []
+            nimet = []
             continue
         nimi = raaka[:ind].decode('UTF-8')
         raaka = raaka[ind+1:]
@@ -52,12 +71,19 @@ def main():
             lajit[0].append(s[0])
         if s[1] not in lajit[1]:
             lajit[1].append(s[1])
-        plot(vuo[alku:], 1-cdf[alku:], label=nimi,
-             color = varit[ lajit[jarj[0]].index(s[jarj[0]]) ],
-             **tyylit[s[jarj[1]]])
+
+        if tee_jakauma:
+            plot(vuo[alku:], 1-cdf[alku:], label=nimi,
+                 color = varit[ lajit[jarj[0]].index(s[jarj[0]]) ],
+                 **tyylit[s[jarj[1]]])
+
+        if tee_laatikko:
+            datastot.append(vuo.copy())
+            rajastot.append(cdf.copy())
+            nimet.append(nimi)
 
         lasku+=1
-        print("\r%i" %lasku, end='')
+        print("\r%s: %i" %(sys.argv[0], lasku), end='')
         sys.stdout.flush()
     print('')
 

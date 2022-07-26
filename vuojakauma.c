@@ -97,7 +97,6 @@ static void* lue_ikir() {
     char* ret = vset->vars[varid]->data;
     vset->vars[varid]->nonfreeable_data = 1;
     nct_free_vset(vset);
-    free(vset);
     return (luok_c = ret);
 }
 static void* lue_wetl() {
@@ -202,7 +201,7 @@ TEE_DATA:;
 	for(int i=1; i<kauden_pit[kausi]; i++)
 	    cdfptr[i] += cdfptr[i-1];
 	for(int i=0; i<kauden_pit[kausi]; i++)
-	    cdfptr[i] /= cdfptr[kauden_pit[kausi]-1];
+	    cdfptr[i] /= cdfptr[kauden_pit[kausi]-1]; // tämä on harhautunut jakauma, mutta ero on 1e-5 tai vastaavaa
 
 	if(!(f = fopen(aprintf("./vuojakaumadata/%s_%s_%s.bin",
 			       luoknimet[luokenum][lajinum], kaudet[kausi], pripost_ulos[ppnum]), "w")))
@@ -348,7 +347,6 @@ int main(int argc, char** argv) {
     }
     free(luok_c);
     nct_free_vset(luok_vs);
-    free(luok_vs);
     nct_free_vset(&vuo);
     return 0;
 }
