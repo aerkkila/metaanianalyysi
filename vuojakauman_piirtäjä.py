@@ -11,26 +11,30 @@ tyylit = {' whole_year' : dict(linestyle='--', linewidth=1.6),
 jarj = [0,1] # 01 -> laji,kausi; 10 -> kausi,laji
 tehtiin = False
 tee_laatikko = True
-tee_jakauma = True
+tee_jakauma = False
 
 if tee_laatikko:
     from laatikkokuvaaja import laatikkokuvaaja
 
-def tee_kuva():
-    global tehtiin
-    if tee_jakauma:
+def tee_kuva(jakauma=False, laatikko=False):
+    global tehtiin, datastot, rajastot, nimet
+    if jakauma and tee_jakauma:
         xscale('log')#, linthreshx=0.001)
         xlabel('flux nmol/m/s$^2$')
         ylabel('pdf')
         legend(loc='upper right')
         tight_layout()
         show()
-        clf()
-    if tee_laatikko:
+    if laatikko and tee_laatikko:
         tulos = laatikkokuvaaja(datastot, fliers=False, painostot=rajastot, valmis=True)
-        xticks(tulos['xsij'], labels=nimet, rotation=45)
+        xticks(tulos['xsij'], labels=nimet, rotation=30, ha='right')
+        print(tulos['xsij'])
+        grid('on', axis='y')
         tight_layout()
-        show()
+        savefig('kuvia/vuojakauma_laatikko.png')
+        datastot = []
+        rajastot = []
+        nimet = []
     
     tehtiin = True
 
@@ -46,12 +50,9 @@ def main():
     while len(raaka):
         ind = raaka.index(10)
         if not ind: # laitettiin rivinvaihto
-            tee_kuva()
+            tee_kuva(jakauma=True)
             raaka = raaka[1:]
             lajit = [[], []]
-            datastot = []
-            rajastot = []
-            nimet = []
             continue
         nimi = raaka[:ind].decode('UTF-8')
         raaka = raaka[ind+1:]
@@ -62,7 +63,6 @@ def main():
         cdf = np.ndarray(pit//4, dtype=np.float32, buffer=raaka[:pit])
         raaka = raaka[pit:]
         vuo = dt*1e9
-        alku = np.searchsorted(vuo, 0.0001)
 
         tehtiin = False
 
@@ -73,6 +73,7 @@ def main():
             lajit[1].append(s[1])
 
         if tee_jakauma:
+            alku = np.searchsorted(vuo, 0.0001)
             plot(vuo[alku:], 1-cdf[alku:], label=nimi,
                  color = varit[ lajit[jarj[0]].index(s[jarj[0]]) ],
                  **tyylit[s[jarj[1]]])
@@ -88,7 +89,8 @@ def main():
     print('')
 
     if not tehtiin:
-        tee_kuva()
+        tee_kuva(jakauma=True)
+    tee_kuva(laatikko=True)
 
 if __name__=='__main__':
     main()

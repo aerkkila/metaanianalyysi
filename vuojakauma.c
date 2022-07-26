@@ -309,11 +309,11 @@ int main(int argc, char** argv) {
 
 	switch(luokenum) {
 	case wetl_e:
-	    for(int laji=0; laji<3; laji++)
+	    for(int laji=1; laji<4; laji++)
 		for(int kausi=0; kausi<4; kausi++)
 		    kirj(kausi, laji);
 	    vaihda_kuva();
-	    for(int laji=3; laji<5; laji++)
+	    for(int laji=4; laji<6; laji++)
 		for(int kausi=0; kausi<4; kausi++)
 		    kirj(kausi, laji);
 	    break;
