@@ -7,8 +7,8 @@ import luokat
 from multiprocessing import Process
 
 def argumentit():
-    global tallenna, tarkk, verbose
-    tallenna=False; tarkk=2; verbose=False
+    global tallenna, tarkk_pit, tarkk_muu, verbose
+    tallenna=False; tarkk_muu=2; tarkk_pit=1; verbose=False
     i = 1
     while i < len(sys.argv):
         a = sys.argv[i]
@@ -20,7 +20,10 @@ def argumentit():
             startend = a
         elif a == '-t' or a == '--tarkkuus':
             i += 1
-            tarkk = int(sys.argv[i])
+            tarkk_muu = int(sys.argv[i])
+        elif a=='-p' or a == '--tarkkuus_pit':
+            i += 1
+            tarkk_pit = int(sys.argv[i])
         else:
             print("Varoitus: tuntematon argumentti \"%s\"" %a)
         i += 1
@@ -41,10 +44,14 @@ def vaihda_ikirluokka_piirtaen(hyppy:int):
     title(luokat.ikir[ikir_ind])
     gca().relim()
     gca().autoscale_view()
-    if aln[0] == 's':
-        xlim([-110,75])
+    if aln == 'freezing start':
+        xlim([-130,60])
+    elif aln == 'freezing end':
+        xlim([-115,90])
+    elif aln == 'freezing length':
+        xlim([-1,100])
     else:
-        xlim([-20,180])
+        print("muuttujalle \"%s\" ei ole asetettu xlim-rajoja" %(aln))
     draw()
     return
 
@@ -74,18 +81,19 @@ def pintaalat1x1(kokodata,darr,tarkk):
             lukualat[(luku-minluku)//tarkk] += ala
     return np.arange(minluku,maxluku+1,tarkk), lukualat
 
-al_muuttuja = ['talven_alku','talven_loppu']
-al_nimi = ['start','end']
+al_muuttuja = ['jaatym_alku', 'talven_alku', 'freezing']
+al_nimi = ['freezing start', 'freezing end', 'freezing length']
 
 vuosi0 = 2012
 vuosi1 = 2019
 
 def aja(doy,ftnum):
-    global ikir_ind, xarrlis, yarrlis, paivat, palkit, aln
+    global ikir_ind, xarrlis, yarrlis, paivat, palkit, aln, tarkk
     ikir_ind=0
     vuodet = doy['vuosi'][:]
     vuosimaski = (vuosi0<=vuodet) & (vuodet<vuosi1)
     for alm, aln in zip(al_muuttuja, al_nimi):
+        tarkk = tarkk_pit if 'length' in aln else tarkk_muu
         paivat = doy[alm][vuosimaski, ...]
         xarrlis = [None]*len(luokat.ikir)
         yarrlis = xarrlis.copy()
@@ -102,7 +110,7 @@ def aja(doy,ftnum):
 
         fig = figure()
         palkit = bar(xarrlis[ikir_ind], yarrlis[ikir_ind]/1000, width=0.8*tarkk)
-        xlabel('winter %s, data %i' %(aln,ftnum))
+        xlabel('%s, data %i' %(aln,ftnum))
         ylabel('extent (1000 km$^2$)')
         title(luokat.ikir[ikir_ind])
         tight_layout()
@@ -112,7 +120,7 @@ def aja(doy,ftnum):
             show()
             continue
         while True:
-            savefig("kuvia/yksittäiset/ikir%i_%s_ft%i.png" %(ikir_ind,alm,ftnum))
+            savefig("kuvia/yksittäiset/ikir%i_%s_ft%i.png" %(ikir_ind,aln.replace(' ','-'),ftnum))
             if ikir_ind+1 == len(luokat.ikir):
                 ikir_ind = 0
                 break
@@ -123,8 +131,7 @@ def main():
     rcParams.update({'font.size':19,'figure.figsize':(12,10)})
     argumentit()
     ikir_ind = 0
-    kerroin = 8
-    ftluvut = [0]
+    ftluvut = [0,1,2]
     pros = np.empty(len(ftluvut),object)
     for i,l in enumerate(ftluvut):
         doy = Dataset("kausien_pituudet%i.nc" %l, "r")
@@ -143,4 +150,8 @@ def main():
 if __name__ == '__main__':
     from warnings import filterwarnings
     filterwarnings(action='ignore', category=DeprecationWarning, message='`np.bool` is a deprecated alias')
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print('')
+        sys.exit()
