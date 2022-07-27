@@ -1,8 +1,16 @@
 tehoisa_kosteikko.out: tehoisa_kosteikko.c
 	gcc -Wall tehoisa_kosteikko.c -o $@ `pkg-config --libs nctietue2 gsl` -g -Og
 
-vuojakauma.out: vuojakauma.c
-	gcc -Wall vuojakauma.c -o $@ `pkg-config --libs nctietue2 gsl` -lm -g -O0
+vuojakaumadata.out: vuojakaumadata.c
+	gcc -Wall vuojakaumadata.c -o $@ `pkg-config --libs nctietue2 gsl` -lm -g -O3
+
+vuojakauma_ikir: vuojakaumadata.out
+	./vuojakaumadata.out ikir post
+vuojakauma_köpp: vuojakaumadata.out
+	./vuojakaumadata.out köpp post
+vuojakauma_wetl: vuojakaumadata.out
+	./vuojakaumadata.out wetl post
+vuojakaumadata.target: vuojakauma_ikir vuojakauma_köpp vuojakauma_wetl
 
 wetlandsumma.out: wetlandsumma.c
 	gcc -Wall wetlandsumma.c -o $@ `pkg-config --libs nctietue` -lm -O3
