@@ -24,7 +24,7 @@ def main():
             uusi = xr.where(kausidata!=0, vuo, np.nan)
         else:
             uusi = xr.where(kausidata==kaudet[kausi], vuo, np.nan)
-        uusi.to_netcdf('%s_%s.nc' %(sys.argv[0][:-3],kausi))
+        uusi.to_netcdf('flux1x1_%s.nc' %([:-3],kausi))
         uusi.close()
     vuo.close()
     kausidata.close()

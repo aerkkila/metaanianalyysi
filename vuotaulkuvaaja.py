@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 from matplotlib.pyplot import *
-from wetlandvuo import kaudet
+import luokat as lkt
 from multiprocessing import Process
 import numpy as np
 import sys
@@ -12,7 +12,7 @@ luokittelu = ''
 
 def lue_data():
     alustettu = False
-    for k,kausi in enumerate(kaudet):
+    for k,kausi in enumerate(lkt.kaudet):
         for ftnum in range(3):
             nimi = 'vuotaulukot/%svuo_%s_%s_ft%i.csv' %(luokittelu, pparg[ppnum], kausi, ftnum)
             dt = np.genfromtxt(nimi, delimiter=',', skip_header=2)
@@ -24,7 +24,7 @@ def lue_data():
                     for r in f:
                         luokat.append(r.partition(',')[0])
                 cols      = rivi.rstrip().split(',')[1:]
-                taul      = np.empty((len(cols), len(kaudet), 3, len(luokat)))
+                taul      = np.empty((len(cols), len(lkt.kaudet), 3, len(luokat)))
                 alustettu = True
             for c in range(len(cols)):
                 taul[c,k,ftnum,:] = dt[:,c+1]
@@ -89,8 +89,8 @@ def erikseen(eriluok, Xsij, taul, c, luokat, cols):
                 ax = ax1 if i==ind_eluok else ax0
                 ax.plot(Xsij(I(i),j), taul[c,k,j,i], '.', markersize=12, color=varit[k] if i else vari)
     sca(ax0)
-    for k in range(len(kaudet)):
-        plot(0, np.nan, '.', markersize=12, color=varit[k], label=kaudet[k])
+    for k in range(len(lkt.kaudet)):
+        plot(0, np.nan, '.', markersize=12, color=varit[k], label=lkt.kaudet[k])
     legend(loc='upper center')
     xticks(Xsij(np.arange(taul.shape[-1]),1), lk)
     ylabel(cols[c])
@@ -136,8 +136,8 @@ def aja(ppnumarg):
                         plot(Xsij(i,j), taul[c,k,j,i], '.', markersize=12, color=varit[k])
 
         if not valmis:
-            for k in range(len(kaudet)):
-                plot(0, np.nan, '.', markersize=12, color=varit[k], label=kaudet[k])
+            for k in range(len(lkt.kaudet)):
+                plot(0, np.nan, '.', markersize=12, color=varit[k], label=lkt.kaudet[k])
             legend()
             xticks(Xsij(np.arange(taul.shape[-1]),1), luokat)
             ylabel(cols[c])

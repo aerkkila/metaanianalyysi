@@ -65,7 +65,7 @@ def aja(doy,ftnum):
         if not tallenna:
             show()
             continue
-        savefig("kuvia/yksittäiset/ikir%i_w%s_ft%i.png" %(ikir_ind,aln,ftnum))
+        savefig("kuvia/yksittäiset/w%s_ft%i.png" %(aln,ftnum))
 
 def main():
     rcParams.update({'font.size':19,'figure.figsize':(12,10)})
