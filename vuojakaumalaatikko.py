@@ -8,7 +8,7 @@ import luokat
 luokitus = np.array([*luokat.ikir, *luokat.wetl, *luokat.kopp])
 #luokitus = luokitus[luokitus!='wetland']
 kaudet   = ['summer','freezing','winter']
-flatjarj = 'F'
+flatjarj = 'C'
 
 def main():
     rcParams.update({'figure.figsize':(13,11), 'font.size':14})
@@ -24,10 +24,12 @@ def main():
             nimet [luokkai, kausii] = "%s, %s" %(luokka,kausi)
             pitdet[luokkai, kausii] = pit2[1]
 
-    tulos = laatikkokuvaaja(dt.flatten(order=flatjarj), fliers='')
+    varit = 'rkb'*dt.shape[0]
+    tulos = laatikkokuvaaja(dt.flatten(order=flatjarj), fliers='', vari=varit)
     xticks(tulos['xsij'][:-1], labels=nimet.flatten(order=flatjarj), rotation=90, ha='center')
     ax = gca()
-    ax.spines['top'].set_visible(True)
+    #[t.set_color(v) for t,v in zip(ax.xaxis.get_ticklabels(), varit)]
+    #[t.set_color(v) for t,v in zip(ax.xaxis.get_ticklines(), varit)]
     grid('on', axis='y')
     ylabel('nmol m$^{-2}$ s$^{-1}$')
     yticks(rotation=90)

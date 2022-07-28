@@ -41,7 +41,7 @@ def wpercentile(arr, painot, lista, on_valmis=False):
         ret[i] = alaraja_arr + (ylaraja_arr-alaraja_arr)*valin_osuus
     return ret
 
-def laatikkokuvaaja(lista, xsij=None, fliers='.', painostot=None, valmis=False):
+def laatikkokuvaaja(lista, xsij=None, fliers='.', painostot=None, valmis=False, vari='b'):
     laatikoita = len(lista)
     if xsij is None:
         xsij = np.linspace(0,1,laatikoita+1)
@@ -73,14 +73,15 @@ def laatikkokuvaaja(lista, xsij=None, fliers='.', painostot=None, valmis=False):
         yerr_a[0,i] = laatikot[i,1]-laatikot[i,0]
         yerr_y[1,i] = laatikot[i,3]-laatikot[i,2]
     ax = gca()
-    errorbar(xsij[:-1], laatikot[:,1], yerr=yerr_a, fmt='none', color='b')
-    errorbar(xsij[:-1], laatikot[:,2], yerr=yerr_y, fmt='none', color='b')
-    errorbar(xsij[:-1], mediaanit, xerr=lev/2, fmt='none', color='b')
+    errorbar(xsij[:-1], laatikot[:,1], yerr=yerr_a, fmt='none', color=vari)
+    errorbar(xsij[:-1], laatikot[:,2], yerr=yerr_y, fmt='none', color=vari)
+    errorbar(xsij[:-1], mediaanit, xerr=lev/2, fmt='none', color=vari, linewidth=2)
+    #scatter(xsij[:-1], [np.mean(l) for l in lista], marker='x', color=vari)
     if fliers:
         for i in range(laatikoita):
             y = lista[i][ (lista[i]>laatikot[i,-1]) | (lista[i]<laatikot[i,0]) ]
             plot(np.tile(xsij[[i]], len(y)), y, fliers, color='r')
-    pc = mpl.collections.PatchCollection(suor, facecolor="#00000000", edgecolor='b')
+    pc = mpl.collections.PatchCollection(suor, facecolor="#00000000", edgecolor=vari)
     ax.add_collection(pc)
     xticks(xsij)
     ax.set_xlim(xsij[0]-lev/2-0.02, xsij[-2]+lev/2+0.02)
