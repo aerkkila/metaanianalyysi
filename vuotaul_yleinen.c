@@ -4,12 +4,14 @@
 #include <string.h>
 #include <math.h>
 #include <stdarg.h>
+#include <time.h>
 
 // kääntäjä tarvitsee argumentit `pkg-config --libs nctietue2` -lm
 // nctietue2-kirjasto on osoitteessa https://github.com/aerkkila/nctietue2.git
+// vuo- ja jäätymissyötteen on alettava 1.8. samana vuonna
 
-const double r2 = 40592558970441; //(6371229 m)^2;
-#define PINTAALA(lat, hila) ((hila)*r2*(sin((lat)+(hila))-sin(lat)))//*1.0e-6)
+const double r2 = 6371229.0*6371229.0;
+#define PINTAALA(lat, hila) ((hila) * r2 * (sin((lat)+(0.5*hila)) - sin((lat)-(0.5*hila))))
 #define ASTE 0.017453293
 
 #define ARRPIT(a) sizeof(a)/sizeof(*(a))
@@ -24,17 +26,11 @@ const int resol = 19800;
 enum luokitus_e {kopp_e, ikir_e, wetl_e} luokenum;
 int ppnum;
 
-float *vuoptr, *lat;
-char *kausiptr, *luok_c;
+float *restrict vuoptr, *restrict lat;
+char *restrict kausiptr, *restrict luok_c;
+double *restrict alat;
 nct_vset *luok_vs;
-int lonpit, latpit;
-
-int kausi(char* str) {
-    for(int i=0; i<sizeof(kaudet)/sizeof(*kaudet); i++)
-	if(!strcmp(kaudet[i], str))
-	    return i;
-    return -1;
-}
+int lonpit, latpit, ikirvuosi0, ikirvuosia;
 
 int argumentit(int argc, char** argv) {
     if(argc < 3) {
@@ -78,8 +74,10 @@ void* lue_ikir() {
     int varid = nct_get_varid(vset, "luokka");
     char* ret = vset->vars[varid]->data;
     vset->vars[varid]->nonfreeable_data = 1;
+    nct_var* var = &NCTVAR(*vset, "vuosi");
+    ikirvuosi0 = ((short*)var->data)[0]; // nouseva tavujärjestys, joten short toimii myös int-datalle
+    ikirvuosia = nct_get_varlen(var);
     nct_free_vset(vset);
-    free(vset);
     return (luok_c = ret);
 }
 void* lue_wetl() {
@@ -90,15 +88,15 @@ void* lue_luokitus() {
     return funktio[luokenum]();
 }
 
-void laske_binaarista(int lajinum, double* ainemaara, double* ala_ja_aika, int vuosia) {
+void laske_kopp(int lajinum, double* ainemaara, double* ala_ja_aika, int vuosia) {
     for(int t=0; t<(int)(vuosia*365.25); t++) {
 	for(int j=0; j<latpit; j++) {
-	    double ala = PINTAALA((double)ASTE*lat[j], ASTE);
+	    double ala = alat[j];
 	    for(int i=0; i<lonpit; i++) {
-		int ind   = j*lonpit + i;
-		int ind_t = t*latpit*lonpit + ind;
-		if(!kausiptr[ind_t]) continue;
-		if(luok_c[ind] != lajinum) continue;
+		int ind_r = j*lonpit + i;
+		int ind_t = t*latpit*lonpit + ind_r;
+		if(!kausiptr[ind_t])         continue;
+		if(luok_c[ind_r] != lajinum) continue;
 
 		double vuo1 = vuoptr[ind_t] * ala;
 		if(vuo1 == vuo1) {
@@ -112,22 +110,49 @@ void laske_binaarista(int lajinum, double* ainemaara, double* ala_ja_aika, int v
     }
 }
 
+void laske_ikir(int lajinum, double* ainemaara, double* ala_ja_aika, int vuosia) {
+    struct tm tma = {.tm_year=2011-1900, .tm_mon=8-1, .tm_mday=1};
+    for(int t=0; t<(int)(vuosia*365.25); t++) {
+	mktime(&tma);
+	int v = tma.tm_year+1900-ikirvuosi0;
+	if(v >= ikirvuosia)
+	    v = ikirvuosia-1; // käytetään viimeistä vuotta, kun ikiroutadata loppuu kesken
+	for(int j=0; j<latpit; j++) {
+	    double ala = alat[j];
+	    for(int i=0; i<lonpit; i++) {
+		int ind_r = j*lonpit + i;
+		int ind_t = t*latpit*lonpit + ind_r;
+		int ind_v = v*latpit*lonpit + ind_r;
+		if(!kausiptr[ind_t])         continue;
+		if(luok_c[ind_v] != lajinum) continue;
+
+		double vuo1 = vuoptr[ind_t] * ala;
+		if(vuo1 == vuo1) {
+		    ainemaara[(int)kausiptr[ind_t]]   += vuo1; // *86400 kerrotaan lopussa: mol/s * s -> mol
+		    ala_ja_aika[(int)kausiptr[ind_t]] += ala;  // *86400 kerrotaan lopussa: m²*d -> m²*s
+		    ainemaara[0]   += vuo1;
+		    ala_ja_aika[0] += ala;
+		}
+	    }
+	}
+	tma.tm_mday++;
+    }
+}
+
 void laske_wetland(int lajinum, double* ainemaara, double* ala_ja_aika, int vuosia) {
     double* osuus0ptr = NCTVAR(*luok_vs, "wetland").data;
     double* osuus1ptr = NCTVAR(*luok_vs, wetlnimet[lajinum]).data;
     for(int t=0; t<(int)(vuosia*365.25); t++) {
 	for(int j=0; j<latpit; j++) {
-	    if(lat[j]<49.5)
-		continue;
-	    double ala = PINTAALA(ASTE*lat[j], ASTE);
+	    double ala = alat[j];
 	    for(int i=0; i<lonpit; i++) {
-		int ind   = j*lonpit + i;
-		int ind_t = t*latpit*lonpit + ind;
-		if(!kausiptr[ind_t]) continue;
-		if(osuus0ptr[ind] == 0) continue;
+		int ind_r = j*lonpit + i;
+		int ind_t = t*latpit*lonpit + ind_r;
+		if(!kausiptr[ind_t])        continue;
+		if(osuus0ptr[ind_r] < 0.05) continue;
 
-		double ala1 = osuus1ptr[ind] * ala;
-		double vuo1 = vuoptr[ind_t] * ala1 / osuus0ptr[ind]; // pinta-ala on osuutena wetlandista
+		double ala1 = osuus1ptr[ind_r] * ala;
+		double vuo1 = vuoptr[ind_t] * ala1 / osuus0ptr[ind_r]; // pinta-ala on osuutena wetlandista
 		if(vuo1 == vuo1) {
 		    ainemaara[(int)kausiptr[ind_t]]   += vuo1; // *86400 kerrotaan lopussa: mol/s * s -> mol
 		    ala_ja_aika[(int)kausiptr[ind_t]] += ala1; // *86400 kerrotaan lopussa: m²*d -> m²*s
@@ -177,6 +202,11 @@ int main(int argc, char** argv) {
 
     lonpit  = NCTVARDIM(*apuvar,2).len;
     latpit  = NCTVARDIM(*apuvar,1).len;
+    lat = NCTVAR(vuo, "lat").data;
+    double _alat[latpit];
+    alat = _alat;
+    for(int i=0; i<latpit; i++)
+	alat[i] = PINTAALA(ASTE*lat[i], ASTE);
 
     for(int ftnum=0; ftnum<3; ftnum++) {
 	nct_vset kausivset;
@@ -192,7 +222,6 @@ int main(int argc, char** argv) {
 	int l1 = NCTDIM(kausivset, "time").len;
 	int l2 = NCTDIM(vuo, "time").len;
 	int aikapit = MIN(l1, l2);
-	lat = NCTVAR(vuo, "lat").data;
 
 	for(int i=0; i<kausia; i++) {
 	    if(!(ulos[i] = fopen(aprintf("vuotaulukot/%svuo_%s_%s_ft%i.csv",
@@ -207,10 +236,11 @@ int main(int argc, char** argv) {
 	    double  ainemaara[kausia];    memset(ainemaara, 0, kausia*sizeof(double));   // mol
 	    double  ala_ja_aika[kausia];  memset(ala_ja_aika, 0, kausia*sizeof(double)); // m²*s
 
-	    if(luokenum == wetl_e)
-		laske_wetland(lajinum, ainemaara, ala_ja_aika, vuosia);
-	    else
-		laske_binaarista(lajinum, ainemaara, ala_ja_aika, vuosia);
+	    switch(luokenum) {
+	    case wetl_e: laske_wetland(lajinum, ainemaara, ala_ja_aika, vuosia); break;
+	    case ikir_e: laske_ikir   (lajinum, ainemaara, ala_ja_aika, vuosia); break;
+	    case kopp_e: laske_kopp   (lajinum, ainemaara, ala_ja_aika, vuosia); break;
+	    }
 
 	    double pintaala = ala_ja_aika[0] / (vuosia*365.25);
 	    //printf("%15s: %.3lf Mkm²\n", vars[lajinum], pintaala*1e-12);
@@ -235,7 +265,6 @@ int main(int argc, char** argv) {
     }
     free(luok_c);
     nct_free_vset(luok_vs);
-    free(luok_vs);
     nct_free_vset(&vuo);
     return 0;
 }
