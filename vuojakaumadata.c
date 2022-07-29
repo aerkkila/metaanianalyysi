@@ -16,7 +16,6 @@
 
 #define ARRPIT(a) (sizeof(a)/sizeof(*(a)))
 #define MIN(a,b) (a)<(b)? (a): (b)
-#define ABS(a) (a)<0? -(a): a
 #define ASTE 0.017453293
 #define SUHT_ALA(lat, hila) (sin(((lat)+(hila)*0.5) * ASTE) - sin(((lat)-(hila)*0.5) * ASTE))
 
@@ -145,8 +144,8 @@ void tee_data(int luokitusnum, int lajinum, float** vuoulos, float** cdf) {
 		int kausi = kausiptr[ind_t];
 		if(osuus0ptr[r] < 0.05) continue;
 		if(!kausi)              continue;
-		osdet  [kausi][kauden_pit[kausi]  ] = osuus1ptr[r]/osuus0ptr[r];
-		osdet  [0    ][kauden_pit[0    ]  ] = osuus1ptr[r]/osuus0ptr[r];
+		osdet  [kausi][kauden_pit[kausi]  ] = osuus1ptr[r]; // /osuus0ptr[r];
+		osdet  [0    ][kauden_pit[0    ]  ] = osuus1ptr[r]; // /osuus0ptr[r];
 		vuoulos[kausi][kauden_pit[kausi]  ] = vuoptr[ind_t] * osuus1ptr[r]/osuus0ptr[r];
 		vuoulos[0    ][kauden_pit[0    ]  ] = vuoptr[ind_t] * osuus1ptr[r]/osuus0ptr[r];
 		cdf    [kausi][kauden_pit[kausi]++] = alat[r/360];
@@ -280,10 +279,10 @@ int main(int argc, char** argv) {
 
 	size_t kauden_kapasit_arr[kausia];
 	kauden_kapasit = kauden_kapasit_arr;
-	kauden_kapasit[whole_year_e] = (size_t)(aikapit*1.0 * resol*0.75);
-	kauden_kapasit[summer_e]     = (size_t)(aikapit*0.7 * resol*0.75);
-	kauden_kapasit[winter_e]     = (size_t)(aikapit*0.6 * resol*0.75);
-	kauden_kapasit[freezing_e]   = (size_t)(aikapit*0.1 * resol*0.75);
+	kauden_kapasit[whole_year_e] = (size_t)(aikapit*1.0 * resol*0.7);
+	kauden_kapasit[summer_e]     = (size_t)(aikapit*0.7 * resol*0.7);
+	kauden_kapasit[winter_e]     = (size_t)(aikapit*0.5 * resol*0.7);
+	kauden_kapasit[freezing_e]   = (size_t)(aikapit*0.1 * resol*0.7);
 
 	float* vuojako[kausia];
 	for(int i=0; i<kausia; i++)

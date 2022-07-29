@@ -12,11 +12,19 @@ vuojakauma_wetl: vuojakaumadata.out
 	./vuojakaumadata.out wetl post
 vuojakaumadata.target: vuojakauma_ikir vuojakauma_köpp vuojakauma_wetl
 
+vuojakauma_pri_ikir: vuojakaumadata.out
+	./vuojakaumadata.out ikir pri
+vuojakauma_pri_köpp: vuojakaumadata.out
+	./vuojakaumadata.out köpp pri
+vuojakauma_pri_wetl: vuojakaumadata.out
+	./vuojakaumadata.out wetl pri
+vuojakaumadata_pri.target: vuojakauma_pri_ikir vuojakauma_pri_köpp vuojakauma_pri_wetl
+
 wetlandsumma.out: wetlandsumma.c
 	gcc -Wall wetlandsumma.c -o $@ `pkg-config --libs nctietue` -lm -O3
 
 vuotaul_yleinen.out: vuotaul_yleinen.c
-	gcc -Wall -g -O2 vuotaul_yleinen.c -o $@ `pkg-config --libs nctietue2` -lm
+	gcc -Wall -g -O3 vuotaul_yleinen.c -o $@ `pkg-config --libs nctietue2` -lm
 
 vuotaul_wetland_post.csv: vuotaul_yleinen.out
 	./vuotaul_yleinen.out wetl post

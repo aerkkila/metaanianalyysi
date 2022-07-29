@@ -41,7 +41,7 @@ def wpercentile(arr, painot, lista, on_valmis=False):
         ret[i] = alaraja_arr + (ylaraja_arr-alaraja_arr)*valin_osuus
     return ret
 
-def laatikkokuvaaja(lista, xsij=None, fliers='.', painostot=None, valmis=False, vari='b'):
+def laatikkokuvaaja(lista, xsij=None, fliers='.', painostot=None, valmis=False, vari='b', avgmarker=False):
     laatikoita = len(lista)
     if xsij is None:
         xsij = np.linspace(0,1,laatikoita+1)
@@ -76,7 +76,8 @@ def laatikkokuvaaja(lista, xsij=None, fliers='.', painostot=None, valmis=False, 
     errorbar(xsij[:-1], laatikot[:,1], yerr=yerr_a, fmt='none', color=vari)
     errorbar(xsij[:-1], laatikot[:,2], yerr=yerr_y, fmt='none', color=vari)
     errorbar(xsij[:-1], mediaanit, xerr=lev/2, fmt='none', color=vari, linewidth=2)
-    #scatter(xsij[:-1], [np.mean(l) for l in lista], marker='x', color=vari)
+    if(avgmarker):
+        scatter(xsij[:-1], [np.mean(l) for l in lista], marker=avgmarker, color=vari)
     if fliers:
         for i in range(laatikoita):
             y = lista[i][ (lista[i]>laatikot[i,-1]) | (lista[i]<laatikot[i,0]) ]

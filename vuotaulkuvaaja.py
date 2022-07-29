@@ -7,7 +7,7 @@ import sys
 
 ppnum = -1
 pparg = ('pri', 'post')
-varit = 'rgby'
+varit = 'rkby'
 luokittelu = ''
 
 def lue_data():
