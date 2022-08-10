@@ -23,7 +23,7 @@ const int resol = 19800;
 #define LATPIT 55
 
 const char* ikirnimet[]      = {"non permafrost", "sporadic", "discontinuous", "continuous"};
-const char* koppnimet[]      = {"D.c", "D.d", "ET"};
+const char* koppnimet[]      = {"D.b", "D.c", "D.d", "ET"};
 const char* wetlnimet[]      = {"wetland", "bog", "fen", "marsh", "tundra_wetland", "permafrost_bog"};
 const char* kaudet[]         = {"whole_year", "summer", "freezing", "winter"};
 enum                           {whole_year_e, summer_e, freezing_e, winter_e};

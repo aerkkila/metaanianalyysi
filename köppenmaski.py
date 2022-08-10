@@ -3,7 +3,7 @@ import numpy as np
 import xarray as xr
 import re
 
-luokat = ['D.c', 'D.d', 'ET']
+luokat = ['D.b', 'D.c', 'D.d', 'ET']
 
 if __name__ == '__main__':
     koppmaski = xr.open_dataset("köppen1x1maski.nc").astype(bool)
