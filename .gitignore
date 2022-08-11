@@ -12,3 +12,4 @@ muunna_shapefile
 *.out
 tmp*
 vuojakaumadata/
+*.tex

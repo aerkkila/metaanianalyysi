@@ -103,9 +103,10 @@ def aja(ppnumarg):
                      'font.size':14, 'axes.grid':True, 'axes.grid.axis':'y', 'grid.linestyle':':'})
 
     #joka toinen nimi alemmalle riville
-    for i,x in enumerate(luokat):
-        if i%2:
-            luokat[i] = '\n'+x
+    if luokittelu != 'köppen':
+        for i,x in enumerate(luokat):
+            if i%2:
+                luokat[i] = '\n'+x
 
     xlev = 1/len(luokat)
     xlevo = 0.45
@@ -152,6 +153,8 @@ def aja(ppnumarg):
 def main():
     global luokittelu
     luokittelu = sys.argv[1]
+    aja(0)
+    return
     pr = np.empty(2, object)
     for i in range(len(pr)):
         pr[i] = Process(target=aja, args=[i])
