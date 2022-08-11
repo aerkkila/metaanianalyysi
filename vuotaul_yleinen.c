@@ -17,7 +17,7 @@ const double r2 = 6371229.0*6371229.0;
 #define ARRPIT(a) sizeof(a)/sizeof(*(a))
 #define MIN(a,b) (a)<(b)? (a): (b)
 const char* ikirnimet[]      = {"non permafrost", "sporadic", "discontinuous", "continuous"};
-const char* koppnimet[]      = {"D.c", "D.d", "ET"};
+const char* koppnimet[]      = {"D.b", "D.c", "D.d", "ET"};
 const char* wetlnimet[]      = {"wetland", "bog", "fen", "marsh", "tundra_wetland", "permafrost_bog"};
 const char* kaudet[]         = {"whole_year", "summer", "freezing", "winter"};
 const char* pripost_sisaan[] = {"flux_bio_prior", "flux_bio_posterior"};
@@ -30,7 +30,8 @@ float *restrict vuoptr, *restrict lat;
 char *restrict kausiptr, *restrict luok_c;
 double *restrict alat;
 nct_vset *luok_vs;
-int lonpit, latpit, ikirvuosi0, ikirvuosia;
+int lonpit, latpit, ikirvuosi0, ikirvuosia, aikapit;
+struct tm tm0;
 
 int argumentit(int argc, char** argv) {
     if(argc < 3) {
@@ -89,7 +90,7 @@ void* lue_luokitus() {
 }
 
 void laske_kopp(int lajinum, double* ainemaara, double* ala_ja_aika, int vuosia) {
-    for(int t=0; t<(int)(vuosia*365.25); t++) {
+    for(int t=0; t<aikapit; t++) {
 	for(int j=0; j<latpit; j++) {
 	    double ala = alat[j];
 	    for(int i=0; i<lonpit; i++) {
@@ -112,7 +113,7 @@ void laske_kopp(int lajinum, double* ainemaara, double* ala_ja_aika, int vuosia)
 
 void laske_ikir(int lajinum, double* ainemaara, double* ala_ja_aika, int vuosia) {
     struct tm tma = {.tm_year=2011-1900, .tm_mon=8-1, .tm_mday=1};
-    for(int t=0; t<(int)(vuosia*365.25); t++) {
+    for(int t=0; t<aikapit; t++) {
 	mktime(&tma);
 	int v = tma.tm_year+1900-ikirvuosi0;
 	if(v >= ikirvuosia)
@@ -142,7 +143,7 @@ void laske_ikir(int lajinum, double* ainemaara, double* ala_ja_aika, int vuosia)
 void laske_wetland(int lajinum, double* ainemaara, double* ala_ja_aika, int vuosia) {
     double* osuus0ptr = NCTVAR(*luok_vs, "wetland").data;
     double* osuus1ptr = NCTVAR(*luok_vs, wetlnimet[lajinum]).data;
-    for(int t=0; t<(int)(vuosia*365.25); t++) {
+    for(int t=0; t<aikapit; t++) {
 	for(int j=0; j<latpit; j++) {
 	    double ala = alat[j];
 	    for(int i=0; i<lonpit; i++) {
@@ -219,9 +220,18 @@ int main(int argc, char** argv) {
 	}
 	kausiptr = apuvar->data;
 	
-	int l1 = NCTDIM(kausivset, "time").len;
-	int l2 = NCTDIM(vuo, "time").len;
-	int aikapit = MIN(l1, l2);
+	int l1      = NCTDIM(kausivset, "time").len;
+	int l2      = NCTDIM(vuo, "time").len;
+	aikapit     = MIN(l1, l2);
+	int vuosia  = round(aikapit / 365.25);
+	nct_anyd t_ = nct_mktime0(&NCTVAR(kausivset, "time"), &tm0);
+	if(t_.d < 0) {
+	    puts("Ei löytynyt ajan yksikköä");
+	    continue;
+	}
+	struct tm tm1 = tm0;
+	tm1.tm_year   += vuosia;
+	aikapit       = (mktime(&tm1) - t_.a.t) / 86400;
 
 	for(int i=0; i<kausia; i++) {
 	    if(!(ulos[i] = fopen(aprintf("vuotaulukot/%svuo_%s_%s_ft%i.csv",
@@ -232,9 +242,8 @@ int main(int argc, char** argv) {
 	    fprintf(ulos[i], "#%s, data %i\n,Tg,mol/s,mol/m²,nmol/s/m²,season_length\n", kaudet[i], ftnum);
 	}
 	for(int lajinum=0; lajinum<luokkia; lajinum++) {
-	    int     vuosia              = round(aikapit / 365.25);
-	    double  ainemaara[kausia];    memset(ainemaara, 0, kausia*sizeof(double));   // mol
-	    double  ala_ja_aika[kausia];  memset(ala_ja_aika, 0, kausia*sizeof(double)); // m²*s
+	    double ainemaara[kausia];    memset(ainemaara, 0, kausia*sizeof(double));   // mol
+	    double ala_ja_aika[kausia];  memset(ala_ja_aika, 0, kausia*sizeof(double)); // m²*s
 
 	    switch(luokenum) {
 	    case wetl_e: laske_wetland(lajinum, ainemaara, ala_ja_aika, vuosia); break;
@@ -242,13 +251,13 @@ int main(int argc, char** argv) {
 	    case kopp_e: laske_kopp   (lajinum, ainemaara, ala_ja_aika, vuosia); break;
 	    }
 
-	    double pintaala = ala_ja_aika[0] / (vuosia*365.25);
+	    double pintaala = ala_ja_aika[0] / aikapit;
 	    //printf("%15s: %.3lf Mkm²\n", vars[lajinum], pintaala*1e-12);
 	    for(int i=0; i<kausia; i++) {
 		ainemaara[i]   *= 86400;
 		ala_ja_aika[i] *= 86400;
 		double kauden_osuus = ala_ja_aika[i]/ala_ja_aika[0]; // molemmissa on sama ala, koska luokka on sama
-		double aika         = kauden_osuus * vuosia*365.25*86400;
+		double aika         = kauden_osuus * aikapit*86400;
 		fprintf(ulos[i], "%s,%.4lf,%.4lf,%.4lf,%.5lf,%.4lf\n", luoknimet[luokenum][lajinum],
 			ainemaara[i] / vuosia * 1e-12*16.0416, // Tg
 			ainemaara[i] / aika,                   // mol/s
