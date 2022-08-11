@@ -58,7 +58,7 @@ def aja(vuodata0, ikirouta, ialue, alue):
 
 def main():
     rcParams.update({'font.size':13,'figure.figsize':(5,8)})
-    vuodata  = xr.open_dataset('./flux1x1_summer.nc')['flux_bio_posterior'].mean(dim='time')
+    vuodata  = xr.open_dataset('./flux1x1_whole_year.nc')['flux_bio_posterior'].mean(dim='time')
     ikirouta = xr.open_dataset('./ikirdata.nc')['luokka'].sel({"lat":slice(29.5,84)})
     ikirouta = ikirouta.mean(dim='vuosi').round().astype(np.int8)
     #bawdata = xr.open_dataset('./BAWLD1x1.nc')['wetland']
