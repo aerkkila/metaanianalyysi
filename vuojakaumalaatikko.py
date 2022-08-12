@@ -27,6 +27,7 @@ def aja(luokitus,tunniste):
             pitdet[luokkai, kausii] = pit2[1]
 
     varit = 'rkb'*dt.shape[0]
+    varit = [*varit]
     tulos = laatikkokuvaaja(dt.flatten(order=flatjarj), fliers='', vari=varit, avgmarker='.')
     xticks(tulos['xsij'][:-1], labels=nimet.flatten(order=flatjarj), rotation=90, ha='center')
     ax = gca()

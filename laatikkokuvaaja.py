@@ -73,11 +73,11 @@ def laatikkokuvaaja(lista, xsij=None, fliers='.', painostot=None, valmis=False, 
         yerr_a[0,i] = laatikot[i,1]-laatikot[i,0]
         yerr_y[1,i] = laatikot[i,3]-laatikot[i,2]
     ax = gca()
-    errorbar(xsij[:-1], laatikot[:,1], yerr=yerr_a, fmt='none', color=vari)
-    errorbar(xsij[:-1], laatikot[:,2], yerr=yerr_y, fmt='none', color=vari)
-    errorbar(xsij[:-1], mediaanit, xerr=lev/2, fmt='none', color=vari, linewidth=2)
+    errorbar(xsij[:-1], laatikot[:,1], yerr=yerr_a, fmt='none', ecolor=vari)
+    errorbar(xsij[:-1], laatikot[:,2], yerr=yerr_y, fmt='none', ecolor=vari)
+    errorbar(xsij[:-1], mediaanit, xerr=lev/2, fmt='none', ecolor=vari, linewidth=2)
     if(avgmarker):
-        scatter(xsij[:-1], [np.mean(l) for l in lista], marker=avgmarker, color=vari)
+        scatter(xsij[:-1], [np.mean(l) for l in lista], marker=avgmarker, c=vari)
     if fliers:
         for i in range(laatikoita):
             y = lista[i][ (lista[i]>laatikot[i,-1]) | (lista[i]<laatikot[i,0]) ]
