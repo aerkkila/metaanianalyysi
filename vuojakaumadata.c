@@ -40,6 +40,7 @@ float *restrict vuoptr;
 char  *restrict kausiptr, *restrict luok_c;
 int ikirvuosi0, ikirvuosia;
 int pakota, verbose;
+struct tm tm0;
 
 char aprintapu[256];
 char* aprintf(const char* muoto, ...) {
@@ -271,11 +272,18 @@ int main(int argc, char** argv) {
 	}
 	kausiptr = apuvar->data;
 	
-	int l1 = NCTDIM(*kausivset, "time").len;
-	int l2 = NCTDIM(vuo, "time").len;
-	aikapit = MIN(l1, l2);
+	int l1      = NCTDIM(*kausivset, "time").len;
+	int l2      = NCTDIM(vuo, "time").len;
+	aikapit     = MIN(l1, l2);
 	int vuosia  = roundf(aikapit / 365.25f);
-	aikapit = vuosia*365.25;
+	nct_anyd t_ = nct_mktime0(&NCTVAR(*kausivset, "time"), &tm0);
+	if(t_.d < 0) {
+	    puts("Ei löytynyt ajan yksikköä");
+	    continue;
+	}
+	struct tm tm1 = tm0;
+	tm1.tm_year   += vuosia;
+	aikapit       = (mktime(&tm1) - t_.a.t) / 86400;
 
 	size_t kauden_kapasit_arr[kausia];
 	kauden_kapasit = kauden_kapasit_arr;
