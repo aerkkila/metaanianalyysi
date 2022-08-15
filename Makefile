@@ -3,7 +3,6 @@ tehoisa_kosteikko.out: tehoisa_kosteikko.c
 
 vuojakaumadata.out: vuojakaumadata.c
 	gcc -Wall vuojakaumadata.c -o $@ `pkg-config --libs nctietue2 gsl` -lm -g -O3
-
 vuojakauma_ikir: vuojakaumadata.out
 	./vuojakaumadata.out ikir post
 vuojakauma_köpp: vuojakaumadata.out
@@ -19,6 +18,26 @@ vuojakauma_pri_köpp: vuojakaumadata.out
 vuojakauma_pri_wetl: vuojakaumadata.out
 	./vuojakaumadata.out wetl pri
 vuojakaumadata_pri.target: vuojakauma_pri_ikir vuojakauma_pri_köpp vuojakauma_pri_wetl
+
+
+vuojakaumadata_vuosittain.out: vuojakaumadata_vuosittain.c
+	gcc -Wall vuojakaumadata_vuosittain.c -o $@ `pkg-config --libs nctietue2 gsl` -lm -g -O3
+vuojakauma_vuosittain_ikir: vuojakaumadata_vuosittain.out
+	./vuojakaumadata_vuosittain.out ikir post
+vuojakauma_vuosittain_köpp: vuojakaumadata_vuosittain.out
+	./vuojakaumadata_vuosittain.out köpp post
+vuojakauma_vuosittain_wetl: vuojakaumadata_vuosittain.out
+	./vuojakaumadata_vuosittain.out wetl post
+vuojakaumadata_vuosittain.target: vuojakauma_vuosittain_ikir vuojakauma_vuosittain_köpp vuojakauma_vuosittain_wetl
+
+vuojakauma_vuosittain_pri_ikir: vuojakaumadata_vuosittain.out
+	./vuojakaumadata_vuosittain.out ikir pri
+vuojakauma_vuosittain_pri_köpp: vuojakaumadata_vuosittain.out
+	./vuojakaumadata_vuosittain.out köpp pri
+vuojakauma_vuosittain_pri_wetl: vuojakaumadata_vuosittain.out
+	./vuojakaumadata_vuosittain.out wetl pri
+vuojakaumadata_vuosittain_pri.target: vuojakauma_vuosittain_pri_ikir vuojakauma_vuosittain_pri_köpp vuojakauma_vuosittain_pri_wetl
+
 
 wetlandsumma.out: wetlandsumma.c
 	gcc -Wall wetlandsumma.c -o $@ `pkg-config --libs nctietue` -lm -O3

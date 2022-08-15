@@ -12,7 +12,7 @@ def nimesta_vuosi(ds):
     return ds
 
 avaa = lambda nimi: xr.open_mfdataset(nimi, engine='h5netcdf', combine='nested', concat_dim=['vuosi'], preprocess=nimesta_vuosi)
-muokkaa_array = lambda darr: darr[1:-1,...].transpose('lat','lon','vuosi') #ensimmäinen ja viimeinen vuosi ovat huonoja
+muokkaa_array = lambda darr: darr.transpose('lat','lon','vuosi')
 
 def main():
     kausiluvut = [1,2,3] #kesä, jäätyminen, talvi. Nolla on varattu määrittelemättömälle kaudelle.
@@ -23,7 +23,7 @@ def main():
         kansio = config.tyotiedostot+'../smos_uusi/data1/'
     elif sys.argv[1] == '2':
         kansio = config.tyotiedostot+'../smos_uusi/data2/'
-    jaatym_alku = avaa(kansio+'freezing_start_doy_*.nc').freezing_start
+    jaatym_alku = avaa(kansio+'freezing_start_doy_*.nc').data
     talven_alku = avaa(kansio+'winter_start_doy_*.nc').autumn_end
     talven_loppu = avaa(kansio+'winter_end_doy_*.nc').spring_start
     jaatym_alku = muokkaa_array(jaatym_alku)
@@ -34,6 +34,7 @@ def main():
     jaatym_alku.close()
     talven_alku.close()
     talven_loppu.close()
+    maski = xr.open_dataarray('aluemaski.nc').data # tämä nopeuttaa, mutta ei vaikuta tuloksiin
 
     alkuaika = pd.Period('%4i-08-01' %(int(ajat.vuosi[0])-1), freq='D')
     loppuaika = pd.Period('%4i-08-01' %(int(ajat.vuosi[-1])), freq='D')
@@ -50,19 +51,24 @@ def main():
         print('\033[F%i/%i\033[K' %(j+1,ajat.lat.size))
         for i in range(ajat.lon.size):
             ind = 0
+            if not maski[j,i]:
+                continue
             for v,vuosi in enumerate(ajat.vuosi):
                 vuoden_paivat = 366 if (vuosi % 4 and not (vuosi % 100)) or (vuosi % 400) else 365
                 nollakohta = pd.Period('%4i-01-01' %vuosi)
                 jokoNaNtai1 = 1 #Tällä laitetaan puuttuva data epäluvuksi. Esim. winter_end puuttuu --> talvi ja kesä pois.
+                joko0tai1 = 1
                 for kausi,tapahtuma in zip(kausiluvut, tapahtumat):
                     paiva = ajat[tapahtuma].data[j,i,v]
                     if paiva != paiva:
                         jokoNaNtai1 = np.nan
+                        joko0tai1 = 0
                         continue
                     pit = (nollakohta+int(paiva) - paivamaarat[ind]).n
-                    dt[j,i,ind:ind+pit] = kausi*jokoNaNtai1
+                    dt[j,i,ind:ind+pit] = kausi*joko0tai1
                     dtpit[kausi-1][j,i,v] = pit*jokoNaNtai1 if pit*jokoNaNtai1 <= vuoden_paivat else vuoden_paivat
                     jokoNaNtai1 = 1
+                    joko0tai1 = 1
                     ind += pit
             dt[j,i,ind:] = kausiluvut[0] if jokoNaNtai1==1 else 0 #loppu on kesää
     darr = xr.DataArray(dt, name='kausi',
