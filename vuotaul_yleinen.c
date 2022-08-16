@@ -11,7 +11,7 @@
 // vuo- ja jäätymissyötteen on alettava 1.8. samana vuonna
 
 const double r2 = 6371229.0*6371229.0;
-#define PINTAALA(lat, hila) ((hila) * r2 * (sin((lat)+(0.5*hila)) - sin((lat)-(0.5*hila))))
+#define PINTAALA(lat, hila) ((hila) * r2 * (sin((lat)+0.5*(hila)) - sin((lat)-0.5*(hila))))
 #define ASTE 0.017453293
 
 #define ARRPIT(a) sizeof(a)/sizeof(*(a))

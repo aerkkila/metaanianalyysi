@@ -19,7 +19,6 @@ vuojakauma_pri_wetl: vuojakaumadata.out
 	./vuojakaumadata.out wetl pri
 vuojakaumadata_pri.target: vuojakauma_pri_ikir vuojakauma_pri_köpp vuojakauma_pri_wetl
 
-
 vuojakaumadata_vuosittain.out: vuojakaumadata_vuosittain.c
 	gcc -Wall vuojakaumadata_vuosittain.c -o $@ `pkg-config --libs nctietue2 gsl` -lm -g -O3
 vuojakauma_vuosittain_ikir: vuojakaumadata_vuosittain.out
@@ -29,6 +28,8 @@ vuojakauma_vuosittain_köpp: vuojakaumadata_vuosittain.out
 vuojakauma_vuosittain_wetl: vuojakaumadata_vuosittain.out
 	./vuojakaumadata_vuosittain.out wetl post
 vuojakaumadata_vuosittain.target: vuojakauma_vuosittain_ikir vuojakauma_vuosittain_köpp vuojakauma_vuosittain_wetl
+	cat vuojakaumadata_vuosittain/summat_ft[21]*.csv > summat_vuosittain_kaikki.csv
+	cat vuojakaumadata_vuosittain/summat_ft2*_post*.csv > summat_vuosittain.csv
 
 vuojakauma_vuosittain_pri_ikir: vuojakaumadata_vuosittain.out
 	./vuojakaumadata_vuosittain.out ikir pri

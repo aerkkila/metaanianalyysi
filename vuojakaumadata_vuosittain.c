@@ -304,7 +304,7 @@ void kirjoita_summat(double summat[][vuosi1-vuosi0][kausia], int ftnum) {
 	for(int kausi=0; kausi<kausia; kausi++) {
 	    fprintf(f, "%s", kaudet[kausi]);
 	    for(int v=0; v<vuosi1-vuosi0; v++)
-		fprintf(f, ", %.4lf", summat[lajinum][v][kausi] * SUHT2ABS_KERR(1) * 86400 * 16.0416 * 1e-12);
+		fprintf(f, ",%.4lf", summat[lajinum][v][kausi] * SUHT2ABS_KERR(1) * 86400 * 16.0416 * 1e-12);
 	    fputc('\n', f);
 	}
 	fclose(f);
