@@ -16,10 +16,12 @@
 #define ARRPIT(a) (sizeof(a)/sizeof(*(a)))
 #define MIN(a,b) (a)<(b)? (a): (b)
 #define ASTE 0.017453293
+const double r2 = 6371229.0*6371229.0;
 #define SUHT_ALA(lat, hila) (sin(((lat)+(hila)*0.5) * ASTE) - sin(((lat)-(hila)*0.5) * ASTE))
 
 const int resol = 19800;
 #define LATPIT 55
+#define Printf(...) do { if(verbose) printf(__VA_ARGS__); } while(0)
 
 const char* ikirnimet[]      = {"non_permafrost", "sporadic", "discontinuous", "continuous"};
 const char* koppnimet[]      = {"D.b", "D.c", "D.d", "ET"};
@@ -31,14 +33,15 @@ const char* pripost_ulos[]   = {"pri", "post"};
 enum                           {kopp_e, ikir_e, wetl_e} luokenum;
 const char*** luoknimet;
 
+int vuosi1=2021, vuosi0=2012;
 size_t   *kauden_kapasit;
-float     alat[LATPIT] = {0};
+float    alat[LATPIT] = {0};
 nct_vset *luok_vs;
 int       ppnum, kausia, aikapit, lajinum;
 float *restrict vuoptr;
 char  *restrict kausiptr, *restrict luok_c;
 float *restrict kpitptr;
-int ikirvuosi0, ikirvuosia, vuosia, k_alku, v_alku;
+int ikirvuosi0, ikirvuosia, vuosia, k_alku, v_alku, lajeja;
 int pakota, verbose;
 struct tm tm0 = {.tm_mon=8-1, .tm_mday=15};
 struct tm tm1 = {.tm_mon=1-1, .tm_mday=15};
@@ -128,15 +131,19 @@ void* lue_luokitus() {
     return funktio[luokenum]();
 }
 
-void tee_data(int luokitusnum, float** vuoulos, float** cdf) {
+void tee_data(int luokitusnum, float** vuoulos, float** cdf, double* summa, int ftnum) {
     float *osdet[kausia];
     int kauden_pit[kausia];
+    int vuosi = tm0.tm_year+1+1900;
     if(luokenum == wetl_e)
 	for(int i=0; i<kausia; i++)
 	    osdet[i] = malloc(kauden_kapasit[i]*4);
 
     memset(kauden_pit, 0, sizeof(int)*kausia);
-
+    for(int i=0; i<kausia; i++) {
+	memset(vuoulos[i], 0, kauden_kapasit[i]*sizeof(float));
+	summa[i] = 0;
+    }
     if (luokitusnum == wetl_e) {
 	double *restrict osuus0ptr = NCTVAR(*luok_vs, "wetland").data;
 	double *restrict osuus1ptr = NCTVAR(*luok_vs, wetlnimet[lajinum]).data;
@@ -152,20 +159,23 @@ void tee_data(int luokitusnum, float** vuoulos, float** cdf) {
 		int ind_t = t*resol + r;
 		int kausi = kausiptr[ind_t];
 		if(kausi != kuluva_kausi) {
+		    if(!kausi) continue; // Ehkä tarpeeton tarkistus.
 		    if(kuluva_kausi == summer_e)
 			break;
 		    kuluva_kausi = kausi;
 		}
-		osdet  [kausi][kauden_pit[kausi]  ] = osuus1ptr[r]; // /osuus0ptr[r];
+		osdet  [kausi][kauden_pit[kausi]  ] = osuus1ptr[r]; // /osuus0ptr[r]; Olisi väärin jakaa jo tässä.
 		osdet  [0    ][kauden_pit[0    ]  ] = osuus1ptr[r]; // /osuus0ptr[r];
 		vuoulos[kausi][kauden_pit[kausi]  ] = vuoptr[ind_t] * osuus1ptr[r]/osuus0ptr[r];
 		vuoulos[0    ][kauden_pit[0    ]  ] = vuoptr[ind_t] * osuus1ptr[r]/osuus0ptr[r];
+		summa  [kausi]                      += (double)vuoulos[kausi][kauden_pit[kausi]] * alat[r/360];
+		summa  [0    ]                      += (double)vuoulos[0    ][kauden_pit[0    ]] * alat[r/360];
 		cdf    [kausi][kauden_pit[kausi]++] = alat[r/360];
 		cdf    [0    ][kauden_pit[0    ]++] = alat[r/360];
 	    }
 	}
     }
-    else if (luokitusnum == kopp_e)
+    else if (luokitusnum == kopp_e) {
 	for(int r=0; r<resol; r++) {
 	    if(luok_c[r] != lajinum) continue;
 	    int t;
@@ -178,17 +188,24 @@ void tee_data(int luokitusnum, float** vuoulos, float** cdf) {
 		int ind_t = t*resol + r;
 		int kausi = kausiptr[ind_t];
 		if(kausi != kuluva_kausi) {
+		    if(!kausi) continue; // Ehkä tarpeeton tarkistus.
 		    if(kuluva_kausi == summer_e)
 			break;
 		    kuluva_kausi = kausi;
 		}
 		vuoulos[kausi][kauden_pit[kausi]  ] = vuoptr[ind_t];
 		vuoulos[0    ][kauden_pit[0    ]  ] = vuoptr[ind_t];
+		summa  [kausi]                      += (double)vuoulos[kausi][kauden_pit[kausi]] * alat[r/360];
+		summa  [0    ]                      += (double)vuoulos[0    ][kauden_pit[0    ]] * alat[r/360];
 		cdf    [kausi][kauden_pit[kausi]++] = alat[r/360];
 		cdf    [0    ][kauden_pit[0    ]++] = alat[r/360];
 	    }
 	}
-    else if (luokitusnum == ikir_e) {
+	Printf("%e\t%i\t%s\t%i\n",
+	       gsl_stats_float_mean(vuoulos[1], 1, kauden_pit[1]),
+	       tm0.tm_year+1+1900, luoknimet[luokenum][lajinum], kauden_pit[1]);
+    }
+    else if (luokitusnum == ikir_e)
 	for(int r=0; r<resol; r++) {
 	    int t;
 	    for(t=0; t<aikapit; t++) {
@@ -198,7 +215,7 @@ void tee_data(int luokitusnum, float** vuoulos, float** cdf) {
 	    int kuluva_kausi = freezing_e;
 	    struct tm tma = tm0;
 	    for(; t<aikapit; t++) {
-		int v = tma.tm_year+1900-ikirvuosi0;
+		int v = tma.tm_year+1+1900-ikirvuosi0;
 		if(v >= ikirvuosia)
 		    v = ikirvuosia-1; // käytetään viimeistä vuotta, kun ikiroutadata loppuu kesken
 		int ind_v = v*resol + r;
@@ -206,19 +223,21 @@ void tee_data(int luokitusnum, float** vuoulos, float** cdf) {
 		if(luok_c[ind_v] != lajinum) continue;
 		int kausi = kausiptr[ind_t];
 		if(kausi != kuluva_kausi) {
+		    if(!kausi) continue; // Ehkä tarpeeton tarkistus.
 		    if(kuluva_kausi == summer_e)
 			break;
 		    kuluva_kausi = kausi;
 		}
 		vuoulos[kausi][kauden_pit[kausi]  ] = vuoptr[ind_t];
 		vuoulos[0    ][kauden_pit[0    ]  ] = vuoptr[ind_t];
+		summa  [kausi]                      += (double)vuoulos[kausi][kauden_pit[kausi]] * alat[r/360];
+		summa  [0    ]                      += (double)vuoulos[0    ][kauden_pit[0    ]] * alat[r/360];
 		cdf    [kausi][kauden_pit[kausi]++] = alat[r/360];
 		cdf    [0    ][kauden_pit[0    ]++] = alat[r/360];
 		tma.tm_mday++;
 		mktime(&tma);
 	    }
 	}
-    }
     else
 	printf("Tuntematon luokitusnum: %i\n", luokitusnum);
 
@@ -233,6 +252,7 @@ void tee_data(int luokitusnum, float** vuoulos, float** cdf) {
 	float* cdfptr = cdf       [kausi]; // tässä vaiheessa sisältää vain dataa vastaavat pinta-alat
 	int    pit    = kauden_pit[kausi];
 
+	Printf("len(%s) = %i\n", kaudet[kausi], pit);
 	if(luokitusnum==wetl_e) {
 	    float avg = gsl_stats_float_wmean(cdfptr, 1, osdet[kausi], 1, kauden_pit[kausi]);
 	    free(osdet[kausi]);
@@ -247,8 +267,8 @@ void tee_data(int luokitusnum, float** vuoulos, float** cdf) {
 	for(int i=0; i<kauden_pit[kausi]; i++)
 	    cdfptr[i] /= cdfptr[kauden_pit[kausi]-1]; // tämä on harhautunut jakauma, mutta virhe on sangen pieni
 
-	FILE *f = fopen(aprintf("./vuojakaumadata_vuosittain/%s_%s_%s_%i.bin",
-				luoknimet[luokenum][lajinum], kaudet[kausi], pripost_ulos[ppnum], tm0.tm_year+1+1900), "w");
+	FILE *f = fopen(aprintf("./vuojakaumadata_vuosittain/ft%i_%s_%s_%s_%i.bin",
+				ftnum, luoknimet[luokenum][lajinum], kaudet[kausi], pripost_ulos[ppnum], tm0.tm_year+1+1900), "w");
 	if(!f) puts("Kohdekansio puuttunee.");
 
 	static int kirjpit = 1000;
@@ -265,7 +285,7 @@ void tee_data(int luokitusnum, float** vuoulos, float** cdf) {
     }
 }
 
-/* Paljonko pitää siirtyä eteenpäin, jotta päästään t0:n kohdalle */
+/* Paljonko pitää siirtyä eteenpäin, jotta päästään t0:n kohdalle. */
 int hae_alku(nct_vset* vset, time_t t0) {
     struct tm tm1;
     nct_anyd tn1 = nct_mktime0(&NCTVAR(*vset, "time"), &tm1);
@@ -278,6 +298,21 @@ int hae_alku(nct_vset* vset, time_t t0) {
     return (t0-t1) / 86400;
 }
 
+void kirjoita_summat(double summat[][vuosi1-vuosi0][kausia], int ftnum) {
+    for(int lajinum=0; lajinum<lajeja; lajinum++) {
+	FILE* f = fopen(aprintf("./vuojakaumadata_vuosittain/summat_ft%i_%s_%s.csv",
+				ftnum, luoknimet[luokenum][lajinum], pripost_ulos[ppnum]), "w");
+	fprintf(f, "#ft%i %s %s\n", ftnum, luoknimet[luokenum][lajinum], pripost_ulos[ppnum]);
+	for(int kausi=0; kausi<kausia; kausi++) {
+	    fprintf(f, "%s", kaudet[kausi]);
+	    for(int v=0; v<vuosi1-vuosi0; v++)
+		fprintf(f, ", %.4lf", summat[lajinum][v][kausi] * r2 * 86400 * 1e-12*16.0416);
+	    fputc('\n', f);
+	}
+	fclose(f);
+    }
+}
+
 int main(int argc, char** argv) {
     if(argumentit(argc, argv))
 	return 1;
@@ -285,10 +320,10 @@ int main(int argc, char** argv) {
     kausia = ARRPIT(kaudet);
     const char** _luoknimet[]    = { [kopp_e]=koppnimet, [ikir_e]=ikirnimet, [wetl_e]=wetlnimet, };
     luoknimet = _luoknimet;
-    int lajeja = ( luokenum==kopp_e? ARRPIT(koppnimet):
-		   luokenum==ikir_e? ARRPIT(ikirnimet):
-		   luokenum==wetl_e? ARRPIT(wetlnimet):
-		   -1 );
+    lajeja = ( luokenum==kopp_e? ARRPIT(koppnimet):
+	       luokenum==ikir_e? ARRPIT(ikirnimet):
+	       luokenum==wetl_e? ARRPIT(wetlnimet):
+	       -1 );
 
     nct_read_ncfile_gd0(&vuo, "./flux1x1.nc");
     nct_var* vuovar = &NCTVAR(vuo, pripost_sisaan[ppnum]);
@@ -312,16 +347,24 @@ int main(int argc, char** argv) {
 	    printf("Kausidatan tyyppi ei täsmää koodissa ja datassa.\n");
 	    continue;
 	}
-	for(int vuosi=2011; vuosi<2021; vuosi++) {
+	double summat[lajeja][vuosi1-vuosi0][kausia];
+	for(int vuosi=vuosi0; vuosi<vuosi1; vuosi++) {
 	    /* Laitetaan alku- ja loppuhetket. */
 	    tm0.tm_year = vuosi-1-1900;
 	    tm1.tm_year = vuosi+1-1900;
 	    time_t t0 = mktime(&tm0); // haluttu alkuhetki
 	    time_t t1 = mktime(&tm1); // haluttu loppuhetki
 	    v_alku = hae_alku(&vuo, t0);
-	    vuoptr  = vuovar->data + v_alku*19800;
+	    vuoptr = (float*)vuovar->data + v_alku*resol;
+	    if(0) {
+		printf("%i\n", vuosi);
+		void* tmp = vuovar->data;
+		vuovar->data = vuoptr;
+		nct_plot_var(vuovar);
+		vuovar->data = tmp;
+	    }
 	    k_alku = hae_alku(kausivset, t0);
-	    kausiptr = kausivar->data + k_alku*19800;
+	    kausiptr = kausivar->data + k_alku*resol;
 	    if(k_alku < 0) {
 		printf("k_alku = %i vuonna %i\n", k_alku, vuosi);
 		continue;
@@ -336,6 +379,7 @@ int main(int argc, char** argv) {
 	    int testi = MIN(l1, l2);
 	    if(testi < aikapit)
 		aikapit = testi; // viimeinen kesä voi loppua kesken
+	    Printf("%i: v_alku = %i, k_alku = %i, aikapit = %i\n", vuosi, v_alku, k_alku, aikapit);
 
 	    size_t kauden_kapasit_arr[kausia];
 	    kauden_kapasit = kauden_kapasit_arr;
@@ -358,7 +402,7 @@ int main(int argc, char** argv) {
 		}
 
 	    for(lajinum=0; lajinum<lajeja; lajinum++)
-		tee_data(luokenum, vuojako, cdf);
+		tee_data(luokenum, vuojako, cdf, summat[lajinum][vuosi-vuosi0], ftnum);
 
 	    for(int i=0; i<kausia; i++) {
 		free(vuojako[i]);
@@ -368,6 +412,7 @@ int main(int argc, char** argv) {
 	    }
 	    kauden_kapasit = NULL;
 	}
+	kirjoita_summat(summat, ftnum);
 	nct_free_vset(kausivset);
 	kausivset = NULL;
     }
