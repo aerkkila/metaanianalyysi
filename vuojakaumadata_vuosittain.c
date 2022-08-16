@@ -18,6 +18,7 @@
 #define ASTE 0.017453293
 const double r2 = 6371229.0*6371229.0;
 #define SUHT_ALA(lat, hila) (sin(((lat)+(hila)*0.5) * ASTE) - sin(((lat)-(hila)*0.5) * ASTE))
+#define SUHT2ABS_KERR(hila) (r2 * ASTE * (hila))
 
 const int resol = 19800;
 #define LATPIT 55
@@ -42,7 +43,7 @@ float *restrict vuoptr;
 char  *restrict kausiptr, *restrict luok_c;
 float *restrict kpitptr;
 int ikirvuosi0, ikirvuosia, vuosia, k_alku, v_alku, lajeja;
-int pakota, verbose;
+int verbose;
 struct tm tm0 = {.tm_mon=8-1, .tm_mday=15};
 struct tm tm1 = {.tm_mon=1-1, .tm_mday=15};
 
@@ -71,7 +72,7 @@ int binsearch(const float* a, float f, int lower, int upper) {
 
 int argumentit(int argc, char** argv) {
     if(argc < 3) {
-	printf("Käyttö: %s luokitus:köpp/ikir/wetl pri/post [-Bv]\n", argv[0]);
+	printf("Käyttö: %s luokitus:köpp/ikir/wetl pri/post [-v]\n", argv[0]);
 	return 1;
     }
     if(!strcmp(argv[1], "köpp"))
@@ -93,9 +94,7 @@ int argumentit(int argc, char** argv) {
 	return 1;
     }
     for(int i=3; i<argc; i++)
-	if(!strcmp(argv[i], "-B"))
-	    pakota = 1;
-	else if(!strcmp(argv[i], "-v"))
+	if(!strcmp(argv[i], "-v"))
 	    verbose = 1;
     return 0;
 }
@@ -140,10 +139,9 @@ void tee_data(int luokitusnum, float** vuoulos, float** cdf, double* summa, int 
 	    osdet[i] = malloc(kauden_kapasit[i]*4);
 
     memset(kauden_pit, 0, sizeof(int)*kausia);
-    for(int i=0; i<kausia; i++) {
-	memset(vuoulos[i], 0, kauden_kapasit[i]*sizeof(float));
+    for(int i=0; i<kausia; i++)
 	summa[i] = 0;
-    }
+
     if (luokitusnum == wetl_e) {
 	double *restrict osuus0ptr = NCTVAR(*luok_vs, "wetland").data;
 	double *restrict osuus1ptr = NCTVAR(*luok_vs, wetlnimet[lajinum]).data;
@@ -203,7 +201,7 @@ void tee_data(int luokitusnum, float** vuoulos, float** cdf, double* summa, int 
 	}
 	Printf("%e\t%i\t%s\t%i\n",
 	       gsl_stats_float_mean(vuoulos[1], 1, kauden_pit[1]),
-	       tm0.tm_year+1+1900, luoknimet[luokenum][lajinum], kauden_pit[1]);
+	       vuosi, luoknimet[luokenum][lajinum], kauden_pit[1]);
     }
     else if (luokitusnum == ikir_e)
 	for(int r=0; r<resol; r++) {
@@ -268,7 +266,7 @@ void tee_data(int luokitusnum, float** vuoulos, float** cdf, double* summa, int 
 	    cdfptr[i] /= cdfptr[kauden_pit[kausi]-1]; // tämä on harhautunut jakauma, mutta virhe on sangen pieni
 
 	FILE *f = fopen(aprintf("./vuojakaumadata_vuosittain/ft%i_%s_%s_%s_%i.bin",
-				ftnum, luoknimet[luokenum][lajinum], kaudet[kausi], pripost_ulos[ppnum], tm0.tm_year+1+1900), "w");
+				ftnum, luoknimet[luokenum][lajinum], kaudet[kausi], pripost_ulos[ppnum], vuosi), "w");
 	if(!f) puts("Kohdekansio puuttunee.");
 
 	static int kirjpit = 1000;
@@ -306,7 +304,7 @@ void kirjoita_summat(double summat[][vuosi1-vuosi0][kausia], int ftnum) {
 	for(int kausi=0; kausi<kausia; kausi++) {
 	    fprintf(f, "%s", kaudet[kausi]);
 	    for(int v=0; v<vuosi1-vuosi0; v++)
-		fprintf(f, ", %.4lf", summat[lajinum][v][kausi] * r2 * 86400 * 1e-12*16.0416);
+		fprintf(f, ", %.4lf", summat[lajinum][v][kausi] * SUHT2ABS_KERR(1) * 86400 * 16.0416 * 1e-12);
 	    fputc('\n', f);
 	}
 	fclose(f);
@@ -340,7 +338,9 @@ int main(int argc, char** argv) {
     for(int i=0; i<LATPIT; i++)
 	alat[i] = SUHT_ALA(29.5+i, 1);
 
-    for(int ftnum=1; ftnum<3; ftnum++) {
+    putchar('\n');
+    int ftnum0=1, ftnum1=3;
+    for(int ftnum=ftnum0; ftnum<ftnum1; ftnum++) {
 	nct_vset *kausivset = nct_read_ncfile(aprintf("./kaudet%i.nc", ftnum));
 	nct_var* kausivar = &NCTVAR(*kausivset, "kausi");
 	if(kausivar->xtype != NC_BYTE && kausivar->xtype != NC_UBYTE) {
@@ -349,6 +349,8 @@ int main(int argc, char** argv) {
 	}
 	double summat[lajeja][vuosi1-vuosi0][kausia];
 	for(int vuosi=vuosi0; vuosi<vuosi1; vuosi++) {
+	    printf("\033[A\rvuosi %i/%i, ft %i/%i\n",
+		   vuosi-vuosi0+1, vuosi1-vuosi0, ftnum-ftnum0+1, ftnum1-ftnum0);
 	    /* Laitetaan alku- ja loppuhetket. */
 	    tm0.tm_year = vuosi-1-1900;
 	    tm1.tm_year = vuosi+1-1900;
