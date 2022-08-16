@@ -9,11 +9,19 @@ def tee_data(kausi='whole_year', priori=False):
     dsbaw = xr.open_dataset('./BAWLD1x1.nc')[nimet]
     dsbaw = xr.where(dsbaw.wetland>=raja_wl, dsbaw, np.nan)
     muuttuja = 'flux_bio_prior' if priori else 'flux_bio_posterior'
-    dsvuo = xr.open_dataset('./flux1x1_%s.nc' %(kausi))[muuttuja].mean(dim='time')
+    dsvuo = xr.open_dataset('./flux1x1.nc')[muuttuja]
+    k = xr.open_dataset('kaudet.nc')
+    t0 = max(k.time[0],  dsvuo.time[0])
+    t1 = min(k.time[-1], dsvuo.time[-1])
+    dsvuo = vuo.sel(time=slice(t0, t1))
     if kausi != 'whole_year':
         kausien_pituudet = xr.open_dataset('kausien_pituudet.nc')[kausi].mean(dim='vuosi').data.flatten()
+        num = 1 if kausi=='summer' else 2 if kausi=='freezing' else 3 if kausi=='winter' else 0
+        dsvuo = dsvuo.where(kaudet.data==num, np.nan)
     else:
         kausien_pituudet = [365.25]*55*360
+    dsvuo = dsvuo.mean(dim='time')
+    k.close()
     dsvuo *= 1e9
     lon,lat = np.meshgrid(dsvuo.lon.data, dsvuo.lat.data)
     lon = lon.flatten()

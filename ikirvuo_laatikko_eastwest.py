@@ -58,13 +58,9 @@ def aja(vuodata0, ikirouta, ialue, alue):
 
 def main():
     rcParams.update({'font.size':13,'figure.figsize':(5,8)})
-    vuodata  = xr.open_dataset('./flux1x1_whole_year.nc')['flux_bio_posterior'].mean(dim='time')
+    vuodata  = xr.open_dataset('./flux1x1.nc')['flux_bio_posterior'].mean(dim='time')
     ikirouta = xr.open_dataset('./ikirdata.nc')['luokka'].sel({"lat":slice(29.5,84)})
     ikirouta = ikirouta.mean(dim='vuosi').round().astype(np.int8)
-    #bawdata = xr.open_dataset('./BAWLD1x1.nc')['wetland']
-    #bawdata = bawdata.sel({'lat':slice(vuodata.lat.min(),vuodata.lat.max()+0.01)})
-    #vuodata = vuodata.where(bawdata.data.flatten() >= 0.00, np.nan)
-    #bawdata.close()
     pr = np.empty(3, object)
     for ialue,alue in enumerate(['','_west','_east']):
         pr[ialue] = Process(target=aja, args=[vuodata, ikirouta, ialue, alue])
