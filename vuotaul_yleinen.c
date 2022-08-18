@@ -8,7 +8,6 @@
 
 // kääntäjä tarvitsee argumentit `pkg-config --libs nctietue2` -lm
 // nctietue2-kirjasto on osoitteessa https://github.com/aerkkila/nctietue2.git
-// vuo- ja jäätymissyötteen on alettava 1.8. samana vuonna
 
 const double r2 = 6371229.0*6371229.0;
 #define PINTAALA(lat, hila) ((hila) * r2 * (sin((lat)+0.5*(hila)) - sin((lat)-0.5*(hila))))
@@ -209,7 +208,7 @@ int main(int argc, char** argv) {
     for(int i=0; i<latpit; i++)
 	alat[i] = PINTAALA(ASTE*lat[i], ASTE);
 
-    for(int ftnum=0; ftnum<3; ftnum++) {
+    for(int ftnum=1; ftnum<3; ftnum++) {
 	nct_vset kausivset;
 	nct_read_ncfile_gd0(&kausivset, aprintf("./kaudet%i.nc", ftnum));
 
@@ -219,19 +218,33 @@ int main(int argc, char** argv) {
 	    return 1;
 	}
 	kausiptr = apuvar->data;
-	
-	int l1      = NCTDIM(kausivset, "time").len;
-	int l2      = NCTDIM(vuo, "time").len;
-	aikapit     = MIN(l1, l2);
-	int vuosia  = round(aikapit / 365.25);
-	nct_anyd t_ = nct_mktime0(&NCTVAR(kausivset, "time"), &tm0);
-	if(t_.d < 0) {
-	    puts("Ei löytynyt ajan yksikköä");
-	    continue;
+
+	struct tm tm1;
+	time_t t0, t1;
+	tm0 = (struct tm){.tm_year=2011-1900, .tm_mon=8-1, .tm_mday=15};
+	t0 = mktime(&tm0);
+	t1 = nct_mktime(&NCTVAR(kausivset, "time"), &tm1, 0).a.t;
+	int k_alku = (t0-t1) / 86400;
+	t1 = nct_mktime(&NCTVAR(vuo, "time"), &tm1, 0).a.t;
+	int v_alku = (t0-t1) / 86400;
+	if(k_alku<0 || v_alku<0) {
+	    puts("Virheellinen alkuhetki");
+	    break;
 	}
-	struct tm tm1 = tm0;
-	tm1.tm_year   += vuosia;
-	aikapit       = (mktime(&tm1) - t_.a.t) / 86400;
+	kausiptr += k_alku*resol;
+	vuoptr   += v_alku*resol;
+	
+	int l1      = NCTDIM(kausivset, "time").len - k_alku;
+	int l2      = NCTDIM(vuo, "time").len       - v_alku;
+	int maxpit  = MIN(l1, l2);
+	tm1         = tm0;
+	tm1.tm_year = 2020-1900;
+	aikapit     = (mktime(&tm1) - t0) / 86400;
+	if(maxpit < aikapit) {
+	    puts("liikaa aikaa");
+	    return 1;
+	}
+	int vuosia = round(aikapit/365.0);
 
 	for(int i=0; i<kausia; i++) {
 	    if(!(ulos[i] = fopen(aprintf("vuotaulukot/%svuo_%s_%s_ft%i.csv",
