@@ -71,6 +71,7 @@ vuotaul_ikir_pri.csv: vuotaul_yleinen.out
 	cat vuotaulukot/ikirvuo_pri*csv > vuotaul_ikir_pri.csv
 
 vuotaul_yleinen.target: vuotaul_köppen_pri.csv vuotaul_köppen_post.csv vuotaul_ikir_pri.csv vuotaul_ikir_post.csv vuotaul_wetland_pri.csv vuotaul_wetland_post.csv
+	cat vuotaul_*.csv > vuotaul.csv
 
 FT2kaudet.out: FT2kaudet.c
 	gcc -Wall -O3 -o $@ FT2kaudet.c `pkg-config --libs nctietue`
