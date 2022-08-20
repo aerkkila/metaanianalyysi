@@ -21,7 +21,7 @@
 const int resol = 19800;
 #define LATPIT 55
 
-const char* ikirnimet[]      = {"non permafrost", "sporadic", "discontinuous", "continuous"};
+const char* ikirnimet[]      = {"non_permafrost", "sporadic", "discontinuous", "continuous"};
 const char* koppnimet[]      = {"D.b", "D.c", "D.d", "ET"};
 const char* wetlnimet[]      = {"wetland", "bog", "fen", "marsh", "tundra_wetland", "permafrost_bog"};
 const char* kaudet[]         = {"whole_year", "summer", "freezing", "winter"};
@@ -40,7 +40,7 @@ char  *restrict kausiptr, *restrict luok_c;
 float *restrict kpitptr;
 int ikirvuosi0, ikirvuosia, vuosia, k_alku, v_alku;
 int pakota, verbose;
-struct tm tm0 = {.tm_year=2011-1900, .tm_mon=8-1, .tm_mday=1};
+struct tm tm0 = {.tm_year=2011-1900, .tm_mon=8-1, .tm_mday=15};
 
 char aprintapu[256];
 char* aprintf(const char* muoto, ...) {
@@ -127,44 +127,55 @@ void* lue_luokitus() {
     return funktio[luokenum]();
 }
 
+double* jaa(double* a, double* b, int pit) {
+    double *c = malloc(8*pit);
+    for(int i=0; i<pit; i++)
+	c[i] = a[i]/b[i];
+    return c;
+}
+
 void tee_data(int luokitusnum, float** vuoulos, float** cdf) {
-    float *osdet[kausia];
     int kauden_pit[kausia];
-    if(luokenum == wetl_e)
-	for(int i=0; i<kausia; i++)
-	    osdet[i] = malloc(kauden_kapasit[i]*4);
 
     memset(kauden_pit, 0, sizeof(int)*kausia);
 
     if (luokitusnum == wetl_e) {
 	double *restrict osuus0ptr = NCTVAR(*luok_vs, "wetland").data;
 	double *restrict osuus1ptr = NCTVAR(*luok_vs, wetlnimet[lajinum]).data;
-	for(int t=0; t<aikapit; t++)
-	    for(int r=0; r<resol; r++) {
+	double* tmp = jaa(osuus1ptr,osuus0ptr,resol);
+	gsl_sort(tmp, 1, resol);
+	double keskiosuus = gsl_stats_quantile_from_sorted_data(tmp, 1, resol, 0.75);
+	free(tmp);
+	for(int r=0; r<resol; r++) {
+	    if(osuus0ptr[r] < 0.05) continue;
+	    if(osuus1ptr[r]/osuus0ptr[r] < keskiosuus) continue;
+	    for(int t=0; t<aikapit; t++) {
 		int ind_t = t*resol + r;
 		int kausi = kausiptr[ind_t];
-		if(osuus0ptr[r] < 0.05) continue;
-		if(!kausi)              continue;
-		osdet  [kausi][kauden_pit[kausi]  ] = osuus1ptr[r]; // /osuus0ptr[r];
-		osdet  [0    ][kauden_pit[0    ]  ] = osuus1ptr[r]; // /osuus0ptr[r];
-		vuoulos[kausi][kauden_pit[kausi]  ] = vuoptr[ind_t] * osuus1ptr[r]/osuus0ptr[r];
-		vuoulos[0    ][kauden_pit[0    ]  ] = vuoptr[ind_t] * osuus1ptr[r]/osuus0ptr[r];
-		cdf    [kausi][kauden_pit[kausi]++] = alat[r/360];
-		cdf    [0    ][kauden_pit[0    ]++] = alat[r/360];
+		if(!kausi)          continue;
+		float ala = alat[r/360];
+		//vuoulos[kausi][kauden_pit[kausi]  ] = vuoptr[ind_t] * osuus1ptr[r]/osuus0ptr[r] * ala;
+		//vuoulos[0    ][kauden_pit[0    ]  ] = vuoptr[ind_t] * osuus1ptr[r]/osuus0ptr[r] * ala;
+		vuoulos[kausi][kauden_pit[kausi]  ] = vuoptr[ind_t] / osuus0ptr[r];
+		vuoulos[0    ][kauden_pit[0    ]  ] = vuoptr[ind_t] / osuus0ptr[r];
+		cdf    [kausi][kauden_pit[kausi]++] = osuus1ptr[r] * ala;
+		cdf    [0    ][kauden_pit[0    ]++] = osuus1ptr[r] * ala;
 	    }
+	}
     }
     else if (luokitusnum == kopp_e)
-	for(int t=0; t<aikapit; t++)
-	    for(int r=0; r<resol; r++) {
+	for(int r=0; r<resol; r++) {
+	    if(luok_c[r] != lajinum) continue;
+	    for(int t=0; t<aikapit; t++) {
 		int ind_t = t*resol + r;
 		int kausi = kausiptr[ind_t];
-		if(!kausi)               continue;
-		if(luok_c[r] != lajinum) continue;
+		if(!kausi)           continue;
 		vuoulos[kausi][kauden_pit[kausi]  ] = vuoptr[ind_t];
 		vuoulos[0    ][kauden_pit[0    ]  ] = vuoptr[ind_t];
 		cdf    [kausi][kauden_pit[kausi]++] = alat[r/360];
 		cdf    [0    ][kauden_pit[0    ]++] = alat[r/360];
 	    }
+	}
     else if (luokitusnum == ikir_e) {
 	struct tm tma = tm0;
 	for(int t=0; t<aikapit; t++) {
@@ -199,13 +210,6 @@ void tee_data(int luokitusnum, float** vuoulos, float** cdf) {
 	float* data   = vuoulos   [kausi];
 	float* cdfptr = cdf       [kausi]; // tässä vaiheessa sisältää vain dataa vastaavat pinta-alat
 	int    pit    = kauden_pit[kausi];
-
-	if(luokitusnum==wetl_e) {
-	    float avg = gsl_stats_float_wmean(cdfptr, 1, osdet[kausi], 1, kauden_pit[kausi]);
-	    free(osdet[kausi]);
-	    for(int j=0; j<kauden_pit[kausi]; j++)
-		data[j] /= avg;
-	}
 	
 	gsl_sort2_float(data, 1, cdfptr, 1, pit);
 
@@ -217,9 +221,11 @@ void tee_data(int luokitusnum, float** vuoulos, float** cdf) {
 	FILE *f = fopen(aprintf("./vuojakaumadata/%s_%s_%s.bin",
 				luoknimet[luokenum][lajinum], kaudet[kausi], pripost_ulos[ppnum]), "w");
 	if(!f)
-	    puts("Mitä ihmettä");
+	    puts("Tallennuskansio puuttunee");
 
-	static int kirjpit = 1000;
+	int kirjpit = 1000;
+	if(kauden_pit[kausi] < kirjpit)
+	    puts("liian vähän dataa");
 	float kirj[kirjpit];
 	fwrite(&kirjpit, 4, 1, f);
 	fwrite(kauden_pit+kausi, 4, 1, f);
@@ -236,14 +242,12 @@ void tee_data(int luokitusnum, float** vuoulos, float** cdf) {
 /* Paljonko pitää siirtyä eteenpäin, jotta päästään t0:n kohdalle */
 int hae_alku(nct_vset* vset, time_t t0) {
     struct tm tm1;
-    nct_anyd tn1 = nct_mktime0(&NCTVAR(*vset, "time"), &tm1);
+    nct_anyd tn1 = nct_mktime(&NCTVAR(*vset, "time"), &tm1, 0);
     if(tn1.d < 0) {
 	puts("Ei löytynyt ajan yksikköä");
 	return -1;
     }
-    tm1 = *nct_localtime((long)nct_get_value_integer(&NCTVAR(*vset, "time"), 0), tn1);
-    time_t t1 = mktime(&tm1);
-    return (t0-t1) / 86400;
+    return (t0-tn1.a.t) / 86400;
 }
 
 int main(int argc, char** argv) {
@@ -268,7 +272,7 @@ int main(int argc, char** argv) {
 	return 1;
     }
     v_alku = hae_alku(&vuo, t0);
-    vuoptr  = apuvar->data + v_alku*19800;
+    vuoptr = (float*)apuvar->data + v_alku*resol;
 
     if(!lue_luokitus()) {
 	printf("Luokitusta ei luettu\n");
@@ -278,7 +282,7 @@ int main(int argc, char** argv) {
     for(int i=0; i<LATPIT; i++)
 	alat[i] = SUHT_ALA(29.5+i, 1);
 
-    for(int ftnum=1; ftnum<3; ftnum++) {
+    for(int ftnum=2; ftnum<3; ftnum++) {
 	nct_vset *kausivset = nct_read_ncfile(aprintf("./kaudet%i.nc", ftnum));
 
 	apuvar = &NCTVAR(*kausivset, "kausi");
@@ -291,15 +295,18 @@ int main(int argc, char** argv) {
 	    printf("k_alku = %i\n", k_alku);
 	    return 1;
 	}
-	kausiptr = apuvar->data + k_alku*19800;
+	kausiptr = (char*)apuvar->data + k_alku*resol;
 	
 	int l1  = NCTDIM(*kausivset, "time").len - k_alku;
 	int l2  = NCTDIM(vuo, "time").len - v_alku;
-	aikapit = MIN(l1, l2);
-	vuosia  = roundf(aikapit / 365.25f);
+	int maxpit = MIN(l1, l2);
 	struct tm tm1 = tm0;
-	tm1.tm_year += vuosia;
-	aikapit = (mktime(&tm1) - t0) / 86400;
+	tm1.tm_year = 2020-1900;
+	aikapit = (mktime(&tm1)-t0) / 86400;
+	if(maxpit < aikapit) {
+	    puts("liikaa aikaa");
+	    aikapit = maxpit;
+	}
 
 	size_t kauden_kapasit_arr[kausia];
 	kauden_kapasit = kauden_kapasit_arr;
