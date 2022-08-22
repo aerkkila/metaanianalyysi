@@ -136,13 +136,15 @@ void laske_köpp(struct laskenta* args) {
 	alusta_lasku(args);
 	for(; t<aikapit; t++) {
 	    int ind_t = t*resol + r;
-	    if(!tarkista_kausi(args, ind_t)) break;
+	    if(!tarkista_kausi(args, ind_t)) goto piste_kelpaa;
 	    double vuo1 = vuoptr[ind_t] * ala;
 	    args->ainemäärä1  [(int)kausiptr[ind_t]] += vuo1; // *86400 kerrotaan lopussa: mol/s * s -> mol
 	    args->ala_ja_aika1[(int)kausiptr[ind_t]] += ala;  // *86400 kerrotaan lopussa: m²*d -> m²*s
 	    args->ainemäärä1  [0]                    += vuo1;
 	    args->ala_ja_aika1[0]                    += ala;
 	}
+	continue;
+    piste_kelpaa:
 	hyväksy_data(args);
     }
 }
@@ -239,7 +241,7 @@ void laske_wetland(struct laskenta* args) {
 
 	for(; t<aikapit; t++) {
 	    int ind_t = t*resol + r;
-	    if(!tarkista_kausi(args, ind_t)) break;
+	    if(!tarkista_kausi(args, ind_t)) goto piste_kelpaa;
 	    double ala1 = osuus1ptr[r] * ala;
 	    double vuo1 = vuoptr[ind_t] * ala1 / osuus0ptr[r]; // pinta-ala on osuutena wetlandista
 	    args->ainemäärä1  [(int)kausiptr[ind_t]] += vuo1;  // *86400 kerrotaan lopussa: mol/s * s -> mol
@@ -247,6 +249,8 @@ void laske_wetland(struct laskenta* args) {
 	    args->ainemäärä1  [0]                    += vuo1;
 	    args->ala_ja_aika1[0]                    += ala1;
 	}
+	continue;
+    piste_kelpaa:
 	hyväksy_data(args);
     }
 }
