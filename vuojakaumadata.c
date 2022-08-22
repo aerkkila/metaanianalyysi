@@ -10,7 +10,7 @@
 #include <assert.h>
 #include <time.h>
 
-// kääntäjä tarvitsee argumentit `pkg-config --libs nctietue2 gsl` -lm
+// kääntäjä tarvitsee argumentit `pkg-config --libs nctietue2 gsl`
 // nctietue2-kirjasto on osoitteessa https://github.com/aerkkila/nctietue2.git
 
 #define ARRPIT(a) (sizeof(a)/sizeof(*(a)))
@@ -144,11 +144,11 @@ void tee_data(int luokitusnum, float** vuoulos, float** cdf) {
 	double *restrict osuus1ptr = NCTVAR(*luok_vs, wetlnimet[lajinum]).data;
 	double* tmp = jaa(osuus1ptr,osuus0ptr,resol);
 	gsl_sort(tmp, 1, resol);
-	double keskiosuus = gsl_stats_quantile_from_sorted_data(tmp, 1, resol, 0.75);
+	//double keskiosuus = gsl_stats_quantile_from_sorted_data(tmp, 1, resol, 0.25);
 	free(tmp);
 	for(int r=0; r<resol; r++) {
 	    if(osuus0ptr[r] < 0.05) continue;
-	    if(osuus1ptr[r]/osuus0ptr[r] < keskiosuus) continue;
+	    //if(osuus1ptr[r]/osuus0ptr[r] < keskiosuus) continue;
 	    for(int t=0; t<aikapit; t++) {
 		int ind_t = t*resol + r;
 		int kausi = kausiptr[ind_t];

@@ -77,7 +77,8 @@ def laatikkokuvaaja(lista, xsij=None, fliers='.', painostot=None, valmis=False, 
     errorbar(xsij[:-1], laatikot[:,2], yerr=yerr_y, fmt='none', ecolor=vari)
     errorbar(xsij[:-1], mediaanit, xerr=lev/2, fmt='none', ecolor=vari, linewidth=2)
     if(avgmarker):
-        scatter(xsij[:-1], [np.mean(l) for l in lista], marker=avgmarker, c=vari)
+        avg = [np.mean(l) for l in lista]
+        scatter(xsij[:-1], avg, marker=avgmarker, c=vari)
     if fliers:
         for i in range(laatikoita):
             y = lista[i][ (lista[i]>laatikot[i,-1]) | (lista[i]<laatikot[i,0]) ]
@@ -86,7 +87,10 @@ def laatikkokuvaaja(lista, xsij=None, fliers='.', painostot=None, valmis=False, 
     ax.add_collection(pc)
     xticks(xsij)
     ax.set_xlim(xsij[0]-lev/2-0.02, xsij[-2]+lev/2+0.02)
-    return {'xsij':xsij, 'laatikot':laatikot, 'mediaanit':mediaanit}
+    ret = {'xsij':xsij, 'laatikot':laatikot, 'mediaanit':mediaanit}
+    if avgmarker:
+        ret.update({'avg':avg})
+    return ret
 
 def testi():
     painot = [1,1,2,2]

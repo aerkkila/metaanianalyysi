@@ -12,6 +12,22 @@ kaudet   = ['summer','freezing','winter']
 flatjarj = 'C'
 pripost  = ['pri', 'post']
 
+def laita_keskiarvot(avg, nimet, tunniste):
+    assert(flatjarj == 'C')
+    a = [nimi.split(',') for nimi in nimet.flatten()]
+    rivit = [b[0] for b in a[::len(kaudet)]]
+    sarakt = [b[1] for b in a[:len(kaudet)]]
+    avg = np.array(avg).reshape([len(rivit),len(sarakt)])
+    f = open('vuojakaumalaatikko_avg%s.csv' %tunniste, 'w')
+    for s in sarakt:
+        f.write(',%s' %s)
+    for j,r in enumerate(rivit):
+        f.write('\n%s' %r)
+        for i,s in enumerate(sarakt):
+            f.write(',%.4f' %avg[j,i])
+    f.write('\n')
+    f.close()
+
 def aja(luokitus,tunniste):
     dt     = np.empty([len(luokitus),len(kaudet)], object)
     nimet  = np.empty([len(luokitus),len(kaudet)], object)
@@ -29,6 +45,7 @@ def aja(luokitus,tunniste):
     varit = 'rkb'*dt.shape[0]
     varit = [*varit]
     tulos = laatikkokuvaaja(dt.flatten(order=flatjarj), fliers='', vari=varit, avgmarker='.')
+    laita_keskiarvot(tulos['avg'], nimet, tunniste)
     xticks(tulos['xsij'][:-1], labels=nimet.flatten(order=flatjarj), rotation=90, ha='center')
     ax = gca()
     #[t.set_color(v) for t,v in zip(ax.xaxis.get_ticklabels(), varit)]
