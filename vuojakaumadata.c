@@ -41,6 +41,7 @@ float *restrict kpitptr;
 int ikirvuosi0, ikirvuosia, vuosia, k_alku, v_alku;
 int pakota, verbose;
 struct tm tm0 = {.tm_year=2011-1900, .tm_mon=8-1, .tm_mday=15};
+const int vuosi1 = 2020;
 
 char aprintapu[256];
 char* aprintf(const char* muoto, ...) {
@@ -301,7 +302,7 @@ int main(int argc, char** argv) {
 	int l2  = NCTDIM(vuo, "time").len - v_alku;
 	int maxpit = MIN(l1, l2);
 	struct tm tm1 = tm0;
-	tm1.tm_year = 2020-1900;
+	tm1.tm_year = vuosi1-1900;
 	aikapit = (mktime(&tm1)-t0) / 86400;
 	if(maxpit < aikapit) {
 	    puts("liikaa aikaa");
