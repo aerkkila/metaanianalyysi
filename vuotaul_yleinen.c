@@ -26,19 +26,24 @@ const char* pripost_sisaan[] = {"flux_bio_prior", "flux_bio_posterior"};
 const char* pripost_ulos[]   = {"pri", "post"};
 const int resol = 19800;
 #define kausia 4
-enum luokitus_e {kopp_e, ikir_e, wetl_e} luokenum;
+#define wraja 0.05
+enum luokitus_e {kopp_e, ikir_e, wetl_e, kart_e} luokenum;
 int ppnum;
 
 float *restrict vuoptr, *restrict lat;
 char *restrict luok_c;
 double *restrict alat;
 nct_vset *luok_vs;
-int latpit, ikirvuosi0, ikirvuosia, aikapit, vuosia;
+int latpit, ikirvuosi0, ikirvuosia, aikapit, vuosia, luokkia;
 struct tm tm0;
 
 int argumentit(int argc, char** argv) {
     if(argc < 3) {
-	printf("Käyttö: %s luokitus:köpp/ikir/wetl pri/post\n", argv[0]);
+	if(argc == 2 && !strcmp(argv[1], "kartta")) {
+	    luokenum = kart_e;
+	    return 0;
+	}
+	printf("Käyttö: %s (kartta) TAI (köpp/ikir/wetl pri/post)\n", argv[0]);
 	return 1;
     }
     if(!strcmp(argv[1], "köpp"))
@@ -88,14 +93,16 @@ void* lue_wetl() {
     return (luok_vs = nct_read_ncfile("./BAWLD1x1.nc"));
 }
 void* lue_luokitus() {
+    if(luokenum == kart_e) return (void*)1;
     static void* (*funktio[])(void) = { [kopp_e]=lue_kopp, [ikir_e]=lue_ikir, [wetl_e]=lue_wetl, };
     return funktio[luokenum]();
 }
 
 struct laskenta {
     char* kausiptr;
-    double *ainemäärä, *ainemäärä1, *ala_ja_aika, *ala_ja_aika1;
+    double *ainemäärä, *ainemäärä1, *ala_ja_aika, *ala_ja_aika1, *ainemäärä2, *ala_ja_aika2;
     int kuluva_kausi, kuluva_vuosi, lajinum;
+    const char* lajinimi;
 };
 
 void alusta_lasku(struct laskenta* args) {
@@ -109,6 +116,22 @@ void hyväksy_data(struct laskenta* args) {
     for(int k=0; k<kausia; k++) {
 	args->ainemäärä   [k] += args->ainemäärä1[k];
 	args->ala_ja_aika [k] += args->ala_ja_aika1[k];
+	args->ainemäärä1[k]=args->ala_ja_aika1[k] = 0;
+    }
+}
+
+void hyväksy_data_välitilasta(struct laskenta* args) {
+    for(int k=0; k<kausia; k++) {
+	args->ainemäärä   [k] += args->ainemäärä2[k];
+	args->ala_ja_aika [k] += args->ala_ja_aika2[k];
+	args->ainemäärä2[k]=args->ala_ja_aika2[k] = 0;
+    }
+}
+
+void välihyväksy_data(struct laskenta* args) {
+    for(int k=0; k<kausia; k++) {
+	args->ainemäärä2   [k] += args->ainemäärä1[k];
+	args->ala_ja_aika2 [k] += args->ala_ja_aika1[k];
 	args->ainemäärä1[k]=args->ala_ja_aika1[k] = 0;
     }
 }
@@ -149,6 +172,61 @@ void laske_köpp(struct laskenta* args) {
     }
 }
 
+void laske_kuiva(struct laskenta* args) {
+    double* osuusptr = NCTVAR(*luok_vs, "wetland").data;
+    char* kausiptr = args->kausiptr;
+    for(int r=0; r<resol; r++) {
+	if(osuusptr[r] >= wraja) continue;
+	double ala = alat[r/360];
+	int t;
+	for(t=0; t<aikapit; t++)
+	    if(kausiptr[t*resol + r] == freezing_e) break;
+	alusta_lasku(args);
+	for(; t<aikapit; t++) {
+	    int ind_t = t*resol + r;
+	    if(!tarkista_kausi(args, ind_t)) goto piste_kelpaa;
+	    double vuo1 = vuoptr[ind_t] * ala;
+	    args->ainemäärä1  [(int)kausiptr[ind_t]] += vuo1; // *86400 kerrotaan lopussa: mol/s * s -> mol
+	    args->ala_ja_aika1[(int)kausiptr[ind_t]] += ala;  // *86400 kerrotaan lopussa: m²*d -> m²*s
+	    args->ainemäärä1  [0]                    += vuo1;
+	    args->ala_ja_aika1[0]                    += ala;
+	}
+	continue;
+    piste_kelpaa:
+	hyväksy_data(args);
+    }
+}
+
+void tee_kartta(struct laskenta* args) {
+    static int tehty = 0;
+    if(tehty)
+	puts("Varoitus, uusi kutsu tee_kartta-funktioon päällekirjoittaa vanhan kartan");
+    tehty = 1;
+    char* kausiptr = args->kausiptr;
+    char kartta[resol];
+    for(int r=0; r<resol; r++) {
+	if(!kausiptr[r]) {
+	    kartta[r]=0; continue; }
+	kartta[r] = 1;
+	int t;
+	for(t=0; t<aikapit; t++)
+	    if(kausiptr[t*resol+r] == freezing_e) break;
+	alusta_lasku(args);
+	for(; t<aikapit; t++) {
+	    int ind_t = t*resol+r;
+	    if(!tarkista_kausi(args, ind_t)) {
+		kartta[r] = 2;
+		break;
+	    }
+	}
+    }
+    nct_vset v = {0};
+    size_t dimlens[] = {latpit, resol/latpit};
+    nct_add_var_(&v, kartta, NC_BYTE, "data", 2, NULL, dimlens, NULL)->nonfreeable_data = 1;
+    nct_write_ncfile(&v, "käytetty_alue.nc");
+    nct_free_vset(&v);
+}
+
 /* Tämä kävi yllätävän monimutkaiseksi ollen ainoa ajasta riippuva luokitus.
    Jos ikiroutaluokka vaihtuu, aloitettu kausisto (syksy,talvi,kesä) käydään kuitenkin loppuun samana ikiroutaluokkana.
    Muissa luokituksissa pistettä ei huomioitaisi, jos kausia on eri määrä kuin vuosia.
@@ -186,10 +264,12 @@ void laske_ikir(struct laskenta* args) {
 	    int ind_v, ind_t = t*resol + r;
 	    int apu = tarkista_kausi(args, ind_t);
 	    if(!apu) { // vuosi vaihtui ja määrä täyttyi
+		välihyväksy_data(args);
 		if(lukitse_data) args->kuluva_vuosi--; // tätä oli muutettu, joten palautetaan
 		break;
 	    }
 	    if(apu==3) { // vuosi vaihtui
+		välihyväksy_data(args);
 		if(lukitse_data) args->kuluva_vuosi--;
 		lukitse_ikirvuosi = 0;
 	    }
@@ -214,14 +294,14 @@ void laske_ikir(struct laskenta* args) {
 	    args->ainemäärä1  [0]                    += vuo1;
 	    args->ala_ja_aika1[0]                    += ala;
 	}
-	if(!args->kuluva_vuosi)
+	if(args->kuluva_vuosi == 0)
 	    continue;
-	double kerroin = (double)vuosia / args->kuluva_vuosi;
+	double kerroin = (double)vuosia/args->kuluva_vuosi;
 	for(int k=0; k<kausia; k++) {
-	    args->ainemäärä1  [k] *= kerroin;
-	    args->ala_ja_aika1[k] *= kerroin;
+	    args->ainemäärä2  [k] *= kerroin;
+	    args->ala_ja_aika2[k] *= kerroin;
 	}
-	hyväksy_data(args);
+	hyväksy_data_välitilasta(args);
     }
 }
 
@@ -231,8 +311,8 @@ void laske_wetland(struct laskenta* args) {
     double* osuus1ptr = NCTVAR(*luok_vs, wetlnimet[args->lajinum]).data;
     for(int r=0; r<resol; r++) {
 	double ala = alat[r/360];
-	if(!kausiptr[r])        continue;
-	if(osuus0ptr[r] < 0.05) continue;
+	if(!kausiptr[r])         continue;
+	if(osuus0ptr[r] < wraja) continue;
 
 	int t;
 	for(t=0; t<aikapit; t++)
@@ -264,18 +344,37 @@ char* aprintf(const char* muoto, ...) {
     return aprintapu;
 }
 
+void kirjoita_csv(struct laskenta* args, double tallenn[kausia][luokkia], FILE** ulos) {
+    double pintaala = args->ala_ja_aika[0] / aikapit;
+    for(int i=0; i<kausia; i++) {
+	args->ainemäärä[i]   *= 86400;
+	args->ala_ja_aika[i] *= 86400;
+	double kauden_osuus = args->ala_ja_aika[i]/args->ala_ja_aika[0]; // molemmissa on sama ala, koska luokka on sama
+	double aika         = kauden_osuus * aikapit*86400;
+	fprintf(ulos[i], "%s,%.4lf,%.4lf,%.4lf,%.5lf,%.4lf\n", args->lajinimi,
+		args->ainemäärä[i] / vuosia * 1e-12*16.0416,   // Tg
+		args->ainemäärä[i] / aika,                     // mol/s
+		args->ainemäärä[i] / vuosia / pintaala,        // mol/m²
+		args->ainemäärä[i] / args->ala_ja_aika[i]*1e9, // nmol/s/m²
+		kauden_osuus
+	    );
+	tallenn[i][args->lajinum] = args->ainemäärä[i] / args->ala_ja_aika[i]*1e9;
+    }
+}
+
 int main(int argc, char** argv) {
     if(argumentit(argc, argv))
 	return 1;
     nct_vset vuo;
     nct_var* apuvar;
     FILE* ulos[kausia];
-    const char** luoknimet[]    = { [kopp_e]=köppnimet, [ikir_e]=ikirnimet, [wetl_e]=wetlnimet, };
+    const char** luoknimet[]   = { [kopp_e]=köppnimet, [ikir_e]=ikirnimet, [wetl_e]=wetlnimet, };
     const char* luokitus_ulos[] = { [kopp_e]="köppen",  [ikir_e]="ikir",    [wetl_e]="wetland", };
-    int luokkia = ( luokenum==kopp_e? ARRPIT(köppnimet):
-		    luokenum==ikir_e? ARRPIT(ikirnimet):
-		    luokenum==wetl_e? ARRPIT(wetlnimet):
-		    -1 );
+    luokkia = ( luokenum==kopp_e? ARRPIT(köppnimet):
+		luokenum==ikir_e? ARRPIT(ikirnimet):
+		luokenum==wetl_e? ARRPIT(wetlnimet):
+		luokenum==kart_e? 1:
+		-1 );
 
     nct_read_ncfile_gd0(&vuo, "./flux1x1.nc");
     if(!lue_luokitus()) {
@@ -339,49 +438,51 @@ int main(int argc, char** argv) {
 	}
 	vuosia = aikapit / 365;
 
-	for(int i=0; i<kausia; i++) {
-	    if(!(ulos[i] = fopen(aprintf("vuotaulukot/%svuo_%s_%s_ft%i.csv",
-					 luokitus_ulos[luokenum], pripost_ulos[ppnum], kaudet[i], ftnum), "w"))) {
-		printf("Ei luotu ulostiedostoa\n");
-		return 1;
+	if(luokenum != kart_e)
+	    for(int i=0; i<kausia; i++) {
+		if(!(ulos[i] = fopen(aprintf("vuotaulukot/%svuo_%s_%s_ft%i.csv",
+					     luokitus_ulos[luokenum], pripost_ulos[ppnum], kaudet[i], ftnum), "w"))) {
+		    printf("Ei luotu ulostiedostoa\n");
+		    return 1;
+		}
+		fprintf(ulos[i], "#%s, data %i\n,Tg,mol/s,mol/m²,nmol/s/m²,season_length\n", kaudet[i], ftnum);
 	    }
-	    fprintf(ulos[i], "#%s, data %i\n,Tg,mol/s,mol/m²,nmol/s/m²,season_length\n", kaudet[i], ftnum);
-	}
-	double tallenn[kausia][luokkia];
+	double tallenn[kausia][luokkia+1];
 	for(int lajinum=0; lajinum<luokkia; lajinum++) {
 	    double ainemäärä   [kausia] = {0}; // mol
 	    double ala_ja_aika [kausia] = {0}; // m²*s
 	    double ainemäärä1  [kausia] = {0}; // mol
 	    double ala_ja_aika1[kausia] = {0}; // m²*s
+	    double ainemäärä2  [kausia] = {0}; // mol
+	    double ala_ja_aika2[kausia] = {0}; // m²*s
 
 	    struct laskenta l_args = {.ainemäärä=ainemäärä, .ala_ja_aika=ala_ja_aika,
 				      .ainemäärä1=ainemäärä1, .ala_ja_aika1=ala_ja_aika1,
-				      .lajinum=lajinum, .kausiptr=kausiptr};
+				      .ainemäärä2=ainemäärä2, .ala_ja_aika2=ala_ja_aika2,
+				      .lajinum=lajinum, .kausiptr=kausiptr,
+				      .lajinimi=luokenum!=kart_e? luoknimet[luokenum][lajinum]: NULL};
 
 	    switch(luokenum) {
 	    case wetl_e: laske_wetland(&l_args); break;
 	    case ikir_e: laske_ikir   (&l_args); break;
 	    case kopp_e: laske_köpp   (&l_args); break;
+	    case kart_e: tee_kartta (&l_args); goto vapauta;
 	    }
 
-	    double pintaala = ala_ja_aika[0] / aikapit;
-	    for(int i=0; i<kausia; i++) {
-		ainemäärä[i]   *= 86400;
-		ala_ja_aika[i] *= 86400;
-		double kauden_osuus = ala_ja_aika[i]/ala_ja_aika[0]; // molemmissa on sama ala, koska luokka on sama
-		double aika         = kauden_osuus * aikapit*86400;
-		fprintf(ulos[i], "%s,%.4lf,%.4lf,%.4lf,%.5lf,%.4lf\n", luoknimet[luokenum][lajinum],
-			ainemäärä[i] / vuosia * 1e-12*16.0416, // Tg
-			ainemäärä[i] / aika,                   // mol/s
-			ainemäärä[i] / vuosia / pintaala,      // mol/m²
-			ainemäärä[i] / ala_ja_aika[i]*1e9,     // nmol/s/m²
-			kauden_osuus
-		    );
-		tallenn[i][lajinum] = ainemäärä[i] / ala_ja_aika[i]*1e9;
-	    }
+	    kirjoita_csv(&l_args, tallenn, ulos);
 	}
 
 	if(luokenum == wetl_e) {
+	    double ainemäärä   [kausia] = {0}; // mol
+	    double ala_ja_aika [kausia] = {0}; // m²*s
+	    double ainemäärä1  [kausia] = {0}; // mol
+	    double ala_ja_aika1[kausia] = {0}; // m²*s
+	    struct laskenta l_args = {.ainemäärä=ainemäärä, .ala_ja_aika=ala_ja_aika,
+				      .ainemäärä1=ainemäärä1, .ala_ja_aika1=ala_ja_aika1,
+				      .lajinum=luokkia, .kausiptr=kausiptr, .lajinimi="dryland"};
+	    laske_kuiva(&l_args);
+	    kirjoita_csv(&l_args, tallenn, ulos);
+
 	    FILE *f = fopen(aprintf("vuokertoimet_%s%i.csv", pripost_ulos[ppnum], ftnum), "w");
 	    for(int i=0; i<kausia; i++)
 		fprintf(f, ",%s", kaudet[i]);
@@ -397,6 +498,7 @@ int main(int argc, char** argv) {
 
 	for(int i=0; i<kausia; i++)
 	    fclose(ulos[i]);
+    vapauta:
 	nct_free_vset(&kausivset);
 	kausivset = (nct_vset){0};
     }
