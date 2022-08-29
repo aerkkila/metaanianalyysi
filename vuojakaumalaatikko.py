@@ -46,7 +46,7 @@ def aja(luokitus,tunniste):
     varit = [*varit]
     tulos = laatikkokuvaaja(dt.flatten(order=flatjarj), fliers='', vari=varit, avgmarker='.')
     laita_keskiarvot(tulos['avg'], nimet, tunniste)
-    xticks(tulos['xsij'][:-1], labels=nimet.flatten(order=flatjarj), rotation=90, ha='center')
+    xticks(tulos['xsij'][:-1], labels=[s.replace('_',' ') for s in nimet.flatten(order=flatjarj)], rotation=90, ha='center')
     ax = gca()
     #[t.set_color(v) for t,v in zip(ax.xaxis.get_ticklabels(), varit)]
     #[t.set_color(v) for t,v in zip(ax.xaxis.get_ticklines(), varit)]
@@ -65,8 +65,9 @@ def aja(luokitus,tunniste):
         show()
 
 def main():
-    rcParams.update({'figure.figsize':(7,11), 'font.size':14})
+    rcParams.update({'figure.figsize':(len(luokitus0)*1.3,11), 'font.size':16})
     aja(luokitus0, '0')
+    rcParams.update({'figure.figsize':(len(luokitus1)*1.3,11), 'font.size':16})
     aja(luokitus1, '1')
 
 if __name__=='__main__':

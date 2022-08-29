@@ -4,6 +4,7 @@ from netCDF4 import Dataset
 from matplotlib.pyplot import *
 import luokat, warnings
 from multiprocessing import Process
+import time
 
 def argumentit():
     global tallenna, tarkk, verbose
@@ -50,6 +51,14 @@ def laita_xrajat():
     a2 = xarrlis[-1][ylänolla(-1)]
     b = max(a1, a2) + 5
     xlim([a,b])
+    # päivämäärät x-akselille
+    sij = np.linspace(a,b,9).astype(int)
+    nimiöt = np.empty(sij.size, object)
+    for i,s in enumerate(sij):
+        ts = time.localtime(time.mktime(time.struct_time((2002, 1, s, 0,0,0,0,0,0))))
+        nimiöt[i] = time.strftime('%m-%d', ts)
+    xticks(sij, nimiöt, rotation=30)
+    tight_layout()
 
 def vaihda_ikirluokka(hyppy:int):
     global ikir_ind
@@ -64,7 +73,7 @@ def vaihda_ikirluokka_piirtäen(hyppy:int):
     vaihda_ikirluokka(hyppy)
     for i,suorak in enumerate(palkit):
         suorak.set_height(yarrlis[ikir_ind][i]/1000/tarkk)
-    title(luokat.ikir[ikir_ind])
+    title(luokat.ikir[ikir_ind].replace('_',' '))
     gca().relim()
     gca().autoscale_view()
     laita_xrajat()
@@ -120,10 +129,9 @@ def aja(kaudet, ftnum, ikirdat, alat):
 
         fig = figure()
         palkit = bar(xarrlis[ikir_ind], yarrlis[ikir_ind]/1000, width=0.8*tarkk)
-        xlabel('%s%s' %(aln.replace('_',' '), '' if ftnum<0 else ', data%i' %ftnum))
+        xlabel('%s%s (month-day)' %(aln.replace('_',' '), '' if ftnum<0 else ', data%i' %ftnum))
         ylabel('extent (1000 km$^2$)')
         title(luokat.ikir[ikir_ind])
-        tight_layout()
         vaihda_ikirluokka_piirtäen(0)
         if not tallenna:
             fig.canvas.mpl_connect('key_press_event',nappainfunk)
@@ -139,7 +147,7 @@ def aja(kaudet, ftnum, ikirdat, alat):
 
 def main():
     global ikirdat, alat
-    rcParams.update({'font.size':19,'figure.figsize':(12,10)})
+    rcParams.update({'font.size':23,'figure.figsize':(9,8)})
     argumentit()
     ikir_ind = 0
     kerroin = 8
