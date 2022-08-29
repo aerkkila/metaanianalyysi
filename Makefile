@@ -45,34 +45,21 @@ wetlandsumma.out: wetlandsumma.c
 
 vuotaul_yleinen.out: vuotaul_yleinen.c
 	gcc -Wall -g -O3 vuotaul_yleinen.c -o $@ `pkg-config --libs nctietue2` -lm
-
 vuotaul_wetland_post.csv: vuotaul_yleinen.out
 	./vuotaul_yleinen.out wetl post
-	cat vuotaulukot/wetlandvuo_post*.csv > vuotaul_wetland_post.csv
-
 vuotaul_wetland_pri.csv: vuotaul_yleinen.out
 	./vuotaul_yleinen.out wetl pri
-	cat vuotaulukot/wetlandvuo_pri*.csv > vuotaul_wetland_pri.csv
-
 vuotaul_köppen_post.csv: vuotaul_yleinen.out
 	./vuotaul_yleinen.out köpp post
-	cat vuotaulukot/köppenvuo_post*csv > vuotaul_köppen_post.csv
-
 vuotaul_köppen_pri.csv: vuotaul_yleinen.out
 	./vuotaul_yleinen.out köpp pri
-	cat vuotaulukot/köppenvuo_pri*csv > vuotaul_köppen_pri.csv
-
 vuotaul_ikir_post.csv: vuotaul_yleinen.out
 	./vuotaul_yleinen.out ikir post
-	cat vuotaulukot/ikirvuo_post*csv > vuotaul_ikir_post.csv
-
 vuotaul_ikir_pri.csv: vuotaul_yleinen.out
 	./vuotaul_yleinen.out ikir pri
-	cat vuotaulukot/ikirvuo_pri*csv > vuotaul_ikir_pri.csv
-
 vuotaul_yleinen.target: vuotaul_köppen_pri.csv vuotaul_köppen_post.csv vuotaul_ikir_pri.csv vuotaul_ikir_post.csv vuotaul_wetland_pri.csv vuotaul_wetland_post.csv
-	cat vuotaul_*pri*.csv > vuotaul_pri.csv
-	cat vuotaul_*post*.csv > vuotaul_post.csv
+	cat vuotaulukot/*_pri_*ft2.csv > vuotaul_pri.csv
+	cat vuotaulukot/*_post_*ft2.csv > vuotaul_post.csv
 
 FT2kaudet.out: FT2kaudet.c
 	gcc -Wall -O3 -o $@ FT2kaudet.c `pkg-config --libs nctietue`
