@@ -1,6 +1,6 @@
-#!/usr/bin/bash
+#!/usr/bin/sh
 
-ikir() {
+vanha_ikir() {
     #./ikir_alkuloppu.py -s
     for al in 'start' 'end'; do
 	a='gm convert '
@@ -10,6 +10,20 @@ ikir() {
 	a="$a -append kuvia/ikir_w${al}.png"
 	$a &
     done
+}
+
+ikir() {
+    #./ikir_alkuloppu.py -s
+    a='gm convert '
+    for i in `seq 0 3`; do
+	a="$a +append"
+	for k in 'freezing' 'winter' 'summer'; do
+	    a="$a kuvia/yksittäiset/ikir${i}_${k}_start.png"
+	done
+    done
+    a="$a -append kuvia/ikir_kaudet.png"
+    echo $a
+    $a
 }
 
 koppen_ikir() {
