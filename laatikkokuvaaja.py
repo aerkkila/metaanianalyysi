@@ -87,7 +87,7 @@ def laatikkokuvaaja(lista, xsij=None, fliers='.', painostot=None, valmis=False, 
     ax.add_collection(pc)
     xticks(xsij)
     ax.set_xlim(xsij[0]-lev/2-0.02, xsij[-2]+lev/2+0.02)
-    ret = {'xsij':xsij, 'laatikot':laatikot, 'mediaanit':mediaanit}
+    ret = {'xsij':xsij[:-1], 'laatikot':laatikot, 'mediaanit':mediaanit}
     if avgmarker:
         ret.update({'avg':avg})
     return ret

@@ -63,18 +63,18 @@ def kuva(luokittelu, alind, ftnum):
     lajit     = luokat.kopp if koppen else bawlajit
     lista     = tee_luokat(luokittelu, kausidata, indeksit, lajit, alind, ftnum)
     kausidata.close()
-    jarj = np.array([np.median(lis) for lis in lista]).argsort() # järjestetään laatikot mediaanin mukaan
+    järj = np.array([np.median(lis) for lis in lista]).argsort() # järjestetään laatikot mediaanin mukaan
     if alind:
-        jarj = jarj[::-1]
-    lista = lista[jarj]
+        järj = järj[::-1]
+    lista = lista[järj]
     grid(True, axis='y')
-    laatikkokuvaaja(lista, fliers=' ')
-    xnimet = np.array(lajit, object)[jarj]
+    tulos = laatikkokuvaaja(lista, fliers=' ')
+    xnimet = np.array(lajit, object)[järj]
     #joka toinen sarake alemmalle riville
     for i,x in enumerate(xnimet):
         if i%2:
             xnimet[i] = '\n'+x
-    gca().set_xticklabels(xnimet)
+    xticks(tulos['xsij'], xnimet)
     ylabel('winter %s, data %i' %(aln[alind],ftnum))
     if(alind==0): #talven alku
         ylims = [-110,50]

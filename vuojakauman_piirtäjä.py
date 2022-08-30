@@ -3,6 +3,12 @@ from matplotlib.pyplot import *
 import numpy as np
 import sys, struct
 
+'''
+Tarkoitettu kutsuttavaksi C-ohjelmasta, joka ensin laskee asioita.
+Tämä lukee datan stdin-putkesta joten yksinään kutsuttuna
+tämä jää vain odottamaan dataa.
+'''
+
 varit  = 'crkym'
 tyylit = {' whole_year' : dict(linestyle='--', linewidth=1.6),
           ' winter'     : dict(linestyle='-.', linewidth=1.6),

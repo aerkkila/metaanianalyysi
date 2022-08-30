@@ -46,7 +46,7 @@ def aja(luokitus,tunniste):
     varit = [*varit]
     tulos = laatikkokuvaaja(dt.flatten(order=flatjarj), fliers='', vari=varit, avgmarker='.')
     laita_keskiarvot(tulos['avg'], nimet, tunniste)
-    xticks(tulos['xsij'][:-1], labels=[s.replace('_',' ') for s in nimet.flatten(order=flatjarj)], rotation=90, ha='center')
+    xticks(tulos['xsij'], labels=[s.replace('_',' ') for s in nimet.flatten(order=flatjarj)], rotation=90, ha='center')
     ax = gca()
     #[t.set_color(v) for t,v in zip(ax.xaxis.get_ticklabels(), varit)]
     #[t.set_color(v) for t,v in zip(ax.xaxis.get_ticklines(), varit)]
