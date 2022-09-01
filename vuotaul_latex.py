@@ -40,18 +40,21 @@ def main():
         s.format(precision=3, subset=(csv.index, csv.columns[2::kolme]))
         nimi = 'vuosummat_%s.tex' %(pp)
         s.to_latex(nimi, hrules=True)
-        os.system('ed -s %s <<EOF\n1\ns/rrr/rrr|/g\nw\nq\nEOF' %nimi) # lisätään pystyviivat kausien väleihin
+        os.system('ed -s %s >/dev/null <<EOF\n1\ns/rrr/rrr|/g\nw\nq\nEOF' %nimi) # lisätään pystyviivat kausien väleihin
 
         #taulukosta tiivistelmä
-        csv.drop(columns=csv.columns.to_list()[:3], inplace=True) # kokovuosi pois
+        csv.drop(columns=csv.columns.to_list()[:3], inplace=True)  # kokovuosi pois
         csv.drop(columns=csv.columns.to_list()[::3], inplace=True) # Tg pois
-        csv.drop(index=['wetland'], inplace=True)
+        csv.drop(index=['wetland'], inplace=True)                  # wetland pois
         s = csv.style
         s.format(precision=0, subset=(csv.index, csv.columns[0::2]))
         s.format(precision=3, subset=(csv.index, csv.columns[1::2]))
         nimi = 'vuosummat_tiivistelmä_%s.tex' %(pp)
         s.to_latex(nimi, hrules=False)
-        os.system('ed -s %s <<EOF\n1\ns/rr/rr|/g\nw\nq\nEOF' %nimi) # lisätään pystyviivat kausien väleihin
+        os.system('ed -s %s >/dev/null <<EOF\n' %nimi +
+                  '1\ns/rr/rr|/g\n'     + # lisätään pystyviivat kausien väleihin
+                  '/ET\na\n\\\\\\\\\n.' + # tyhjä rivi ET:n jälkeen
+                  '\nw\nq\nEOF')
 
 if __name__=='__main__':
     try:
