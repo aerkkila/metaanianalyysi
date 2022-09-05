@@ -46,7 +46,7 @@ int ota_rivi(FILE* f, float* taul, int tg_ind, int vuo_ind, const char** nimet, 
     int nimi_ind;
     for(nimi_ind=0; nimi_ind<pit; nimi_ind++)
 	if(!strncmp(nimet[nimi_ind], a, strlen(nimet[nimi_ind]))) goto kelpaa;
-    return 0;
+    return -1;
 kelpaa:
     int ind[] = {tg_ind, vuo_ind};
     int ensin = tg_ind>vuo_ind; // vuo eli ind(1) ensin
@@ -79,8 +79,10 @@ int lue_data(int ppnum, const char* ylänimi, const char** nimet, int pit, float
 	while(fgetc(f) != '\n'); // 2. rivi on otsikkorivi
 
 	unsigned maski = 0;
-	while(maski != (1<<pit)-1)
-	    maski |= 1<<ota_rivi(f, taul+k*2, tg_ind, vuo_ind, nimet, pit);
+	/* Maskin ensimmäinen bitti jätetään käyttämättä, koska funktio palauttaa -1:n,
+	   kun riviltä ei löytynyt haluttua nimeä ja tällöin maski |= 1<<(-1+1) */
+	while(maski>>1 != (1<<pit)-1)
+	    maski |= 1<<(1+ota_rivi(f, taul+k*2, tg_ind, vuo_ind, nimet, pit));
 	fclose(f);
     }
     return 0;
