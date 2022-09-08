@@ -61,6 +61,12 @@ vuotaul_yleinen.target: vuotaul_köppen_pri.csv vuotaul_köppen_post.csv vuotaul
 	cat vuotaulukot/*_pri_*ft2.csv > vuotaul_pri.csv
 	cat vuotaulukot/*_post_*ft2.csv > vuotaul_post.csv
 
+vuotaul_latex.out: vuotaul_latex.c #vuotaul_yleinen.target
+	gcc vuotaul_latex.c -o $@ -g -Wall
+
+vuosummat_tiivistelmä_post.tex: vuotaul_latex.out
+	./vuotaul_latex.out
+
 FT2kaudet.out: FT2kaudet.c
 	gcc -Wall -O3 -o $@ FT2kaudet.c `pkg-config --libs nctietue`
 
