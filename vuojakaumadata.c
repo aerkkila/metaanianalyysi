@@ -39,7 +39,6 @@ float *restrict vuoptr;
 char  *restrict kausiptr, *restrict luok_c;
 float *restrict kpitptr;
 int ikirvuosi0, ikirvuosia, vuosia, k_alku, v_alku;
-int pakota, verbose;
 struct tm tm0 = {.tm_year=2011-1900, .tm_mon=8-1, .tm_mday=15};
 const int vuosi1 = 2020;
 
@@ -89,11 +88,6 @@ int argumentit(int argc, char** argv) {
 	printf("Ei luettu pri/post-argumenttia\n");
 	return 1;
     }
-    for(int i=3; i<argc; i++)
-	if(!strcmp(argv[i], "-B"))
-	    pakota = 1;
-	else if(!strcmp(argv[i], "-v"))
-	    verbose = 1;
     return 0;
 }
 
@@ -155,8 +149,6 @@ void tee_data(int luokitusnum, float** vuoulos, float** cdf) {
 		int kausi = kausiptr[ind_t];
 		if(!kausi)          continue;
 		float ala = alat[r/360];
-		//vuoulos[kausi][kauden_pit[kausi]  ] = vuoptr[ind_t] * osuus1ptr[r]/osuus0ptr[r] * ala;
-		//vuoulos[0    ][kauden_pit[0    ]  ] = vuoptr[ind_t] * osuus1ptr[r]/osuus0ptr[r] * ala;
 		vuoulos[kausi][kauden_pit[kausi]  ] = vuoptr[ind_t] / osuus0ptr[r];
 		vuoulos[0    ][kauden_pit[0    ]  ] = vuoptr[ind_t] / osuus0ptr[r];
 		cdf    [kausi][kauden_pit[kausi]++] = osuus1ptr[r] * ala;
@@ -209,15 +201,19 @@ void tee_data(int luokitusnum, float** vuoulos, float** cdf) {
 
     for(int kausi=0; kausi<kausia; kausi++) {
 	float* data   = vuoulos   [kausi];
-	float* cdfptr = cdf       [kausi]; // tässä vaiheessa sisältää vain dataa vastaavat pinta-alat
+	float* cdfptr = cdf       [kausi]; // alussa sisältää pinta-alat
 	int    pit    = kauden_pit[kausi];
 	
 	gsl_sort2_float(data, 1, cdfptr, 1, pit);
 
 	for(int i=1; i<kauden_pit[kausi]; i++)
 	    cdfptr[i] += cdfptr[i-1];
-	for(int i=0; i<kauden_pit[kausi]; i++)
-	    cdfptr[i] /= cdfptr[kauden_pit[kausi]-1]; // tämä on harhautunut jakauma, mutta ero on 1e-4 tai vastaavaa
+	{
+	    float tmp0 = cdfptr[0];
+	    float tmp1 = cdfptr[kauden_pit[kausi]-1] - tmp0;
+	    for(int i=0; i<kauden_pit[kausi]; i++)
+		cdfptr[i] = (cdfptr[i]-tmp0) / tmp1;
+	}
 
 	FILE *f = fopen(aprintf("./vuojakaumadata/%s_%s_%s.bin",
 				luoknimet[luokenum][lajinum], kaudet[kausi], pripost_ulos[ppnum]), "w");
