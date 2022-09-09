@@ -13,4 +13,5 @@ muunna_shapefile
 tmp*
 vuojakaumadata/
 vuojakaumadata_vuosittain/
+talteen_vuojakaumadata/
 *.tex

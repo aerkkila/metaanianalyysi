@@ -5,18 +5,21 @@
 #include <math.h>
 #include <stdarg.h>
 #include <time.h>
+#include <assert.h>
 
 /* Kääntäjä tarvitsee argumentit `pkg-config --libs nctietue2` -lm
    nctietue2-kirjasto on osoitteessa https://github.com/aerkkila/nctietue2.git
    Jos kääntäminen ei onnistu, päivitettäköön gcc uudempaan versioon
    tai vaihdettakoon muuttujien nimet ascii-merkeiksi, kun nyt siellä on utf-8:a. */
 
+#define ARRPIT(a) sizeof(a)/sizeof(*(a))
+#define MIN(a,b) (a)<(b)? (a): (b)
 const double r2 = 6371229.0*6371229.0;
 #define PINTAALA(lat, hila) ((hila) * r2 * (sin((lat)+0.5*(hila)) - sin((lat)-0.5*(hila))))
 #define ASTE 0.017453293
 
-#define ARRPIT(a) sizeof(a)/sizeof(*(a))
-#define MIN(a,b) (a)<(b)? (a): (b)
+const int resol = 19800;
+
 const char* ikirnimet[]      = {"non_permafrost", "sporadic", "discontinuous", "continuous"};
 const char* köppnimet[]      = {"D.b", "D.c", "D.d", "ET"};
 const char* wetlnimet[]      = {"wetland", "bog", "fen", "marsh", "permafrost_bog", "tundra_wetland"};
@@ -24,18 +27,17 @@ const char* kaudet[]         = {"whole_year", "summer", "freezing", "winter"};
 enum                           {whole_year_e, summer_e, freezing_e, winter_e};
 const char* pripost_sisaan[] = {"flux_bio_prior", "flux_bio_posterior"};
 const char* pripost_ulos[]   = {"pri", "post"};
-const int resol = 19800;
 #define kausia 4
 #define wraja 0.05
 enum luokitus_e {kopp_e, ikir_e, wetl_e, kart_e} luokenum;
 int ppnum;
 
-float *restrict vuoptr, *restrict lat;
-char *restrict luok_c;
-double *restrict alat;
-nct_vset *luok_vs;
-int latpit, ikirvuosi0, ikirvuosia, aikapit, vuosia, luokkia;
-struct tm tm0;
+static float *restrict vuoptr, *restrict lat;
+static char *restrict luok_c;
+static double *restrict alat;
+static nct_vset *luok_vs;
+static int latpit, ikirvuosi0, ikirvuosia, aikapit, vuosia, luokkia;
+static struct tm tm0 = {.tm_year=2011-1900, .tm_mon=8-1, .tm_mday=15};
 
 char aprintapu[256];
 char* aprintf(const char* muoto, ...) {
@@ -247,6 +249,8 @@ void laske_köpp(struct laskenta* args) {
     char* kausiptr = args->kausiptr;
     for(int r=0; r<resol; r++) {
 	if(luok_c[r] != args->lajinum) continue;
+
+	/* Kopioitu ja liitetty kaikkiin funktioihin */
 	int t;
 	for(t=0; t<aikapit; t++)
 	    if(kausiptr[t*resol+r] == 0)
@@ -277,13 +281,15 @@ void laske_kuiva(struct laskenta* args) {
     char* kausiptr = args->kausiptr;
     for(int r=0; r<resol; r++) {
 	if(osuusptr[r] >= wraja) continue;
+
+	/* Kopioitu ja liitetty kaikkiin funktioihin */
 	int t;
 	for(t=0; t<aikapit; t++)
 	    if(kausiptr[t*resol+r] == 0)
 		goto seuraava;
 	for(t=0; t<aikapit; t++)
 	    if(kausiptr[t*resol + r] == freezing_e) break;
-	
+
 	alusta_lasku(args);
 	double ala = alat[r/360];
 	for(; t<aikapit; t++) {
@@ -309,8 +315,10 @@ void laske_kosteikko(struct laskenta* args) {
     args->pintaala = 0;
     for(int r=0; r<resol; r++) {
 	if(osuus0ptr[r] < wraja) continue;
+
+	/* Kopioitu ja liitetty kaikkiin funktioihin */
 	int t;
-	for(int t=0; t<aikapit; t++)
+	for(t=0; t<aikapit; t++)
 	    if(kausiptr[t*resol+r] == 0)
 		goto seuraava;
 	for(t=0; t<aikapit; t++)
@@ -345,8 +353,10 @@ void laske_ikir(struct laskenta* args) {
 		goto piste_kelpaa2;
 	continue;
     piste_kelpaa2:
+
+	/* Kopioitu ja liitetty kaikkiin funktioihin */
 	int t;
-	for(int t=0; t<aikapit; t++)
+	for(t=0; t<aikapit; t++)
 	    if(kausiptr[t*resol+r] == 0)
 		goto seuraava;
 	for(t=0; t<aikapit; t++)
@@ -406,6 +416,17 @@ void kirjoita_csv(struct laskenta* args, double tallenn[kausia][luokkia], FILE**
     }
 }
 
+/* Paljonko pitää siirtyä eteenpäin, jotta päästään t0:n kohdalle */
+int hae_alku(nct_vset* vset, time_t t0) {
+    struct tm tm1;
+    nct_anyd tn1 = nct_mktime(&NCTVAR(*vset, "time"), &tm1, 0);
+    if(tn1.d < 0) {
+	puts("Ei löytynyt ajan yksikköä");
+	return -1;
+    }
+    return (t0-tn1.a.t) / 86400;
+}
+
 int main(int argc, char** argv) {
     if(argumentit(argc, argv))
 	return 1;
@@ -419,27 +440,22 @@ int main(int argc, char** argv) {
 		luokenum==wetl_e? ARRPIT(wetlnimet):
 		luokenum==kart_e? 1:
 		-1 );
+    time_t t0 = mktime(&tm0); // haluttu alkuhetki
 
     nct_read_ncfile_gd0(&vuo, "./flux1x1.nc");
-    if(!lue_luokitus()) {
-	printf("Luokitusta ei luettu\n");
-	return 1;
-    }
-
+    int v_alku = hae_alku(&vuo, t0);
+    assert(v_alku >= 0);
     apuvar = &NCTVAR(vuo, pripost_sisaan[ppnum]);
-    if(apuvar->xtype != NC_FLOAT) {
-	printf("Vuodatan tyyppi ei täsmää koodissa ja datassa.\n");
-	return 1;
-    }
-    vuoptr  = apuvar->data;
+    assert(apuvar->xtype == NC_FLOAT);
+    vuoptr = (float*)apuvar->data + v_alku*resol;
 
-    int res = NCTVARDIM(*apuvar,2).len;
+    assert(lue_luokitus());
+
+    int lonpit = NCTVARDIM(*apuvar,2).len;
     latpit = NCTVARDIM(*apuvar,1).len;
-    if(res*latpit != resol) {
-	puts("Virheellinen resoluutio");
-	return 1;
-    }
-    lat = NCTVAR(vuo, "lat").data;
+    assert(lonpit*latpit == resol);
+    assert((apuvar=&NCTVAR(vuo, "lat"))->xtype == NC_FLOAT);
+    lat = apuvar->data;
     double _alat[latpit];
     alat = _alat;
     for(int i=0; i<latpit; i++)
@@ -450,32 +466,20 @@ int main(int argc, char** argv) {
 	nct_read_ncfile_gd0(&kausivset, aprintf("./kaudet%i.nc", ftnum));
 
 	apuvar = &NCTVAR(kausivset, "kausi");
-	if(apuvar->xtype != NC_BYTE && apuvar->xtype != NC_UBYTE) {
-	    printf("Kausidatan tyyppi ei täsmää koodissa ja datassa.\n");
+	assert(apuvar->xtype == NC_BYTE || apuvar->xtype == NC_UBYTE);
+	
+	int k_alku = hae_alku(&kausivset, t0);
+	if(k_alku < 0) {
+	    printf("k_alku = %i\n", k_alku);
 	    return 1;
 	}
-	char* kausiptr = apuvar->data;
-
-	struct tm tm1;
-	time_t t0, t1;
-	tm0 = (struct tm){.tm_year=2011-1900, .tm_mon=8-1, .tm_mday=15};
-	t0 = mktime(&tm0);
-	t1 = nct_mktime(&NCTVAR(kausivset, "time"), &tm1, 0).a.t;
-	int k_alku = (t0-t1) / 86400;
-	t1 = nct_mktime(&NCTVAR(vuo, "time"), &tm1, 0).a.t;
-	int v_alku = (t0-t1) / 86400;
-	if(k_alku<0 || v_alku<0) {
-	    puts("Virheellinen alkuhetki");
-	    break;
-	}
-	kausiptr += k_alku*resol;
-	vuoptr   += v_alku*resol;
+	char* kausiptr = (char*)apuvar->data + k_alku*resol;
 	
-	int l1      = NCTDIM(kausivset, "time").len - k_alku;
-	int l2      = NCTDIM(vuo, "time").len - v_alku;
-	int maxpit  = MIN(l1, l2);
-	tm1         = (struct tm){.tm_year=2020-1900, .tm_mon=4-1, .tm_mday=15};
-	aikapit     = (mktime(&tm1) - t0) / 86400;
+	int l1        = NCTDIM(kausivset, "time").len - k_alku;
+	int l2        = NCTDIM(vuo, "time").len - v_alku;
+	int maxpit    = MIN(l1, l2);
+	struct tm tm1 = (struct tm){.tm_year=2020-1900, .tm_mon=4-1, .tm_mday=15};
+	aikapit       = (mktime(&tm1) - t0) / 86400;
 	if(aikapit > maxpit) {
 	    puts("Liikaa aikaa");
 	    aikapit = maxpit;
