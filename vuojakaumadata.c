@@ -34,13 +34,13 @@ const char*** luoknimet;
 
 static size_t   *kauden_kapasit;
 static nct_vset *luok_vs;
-static int       ppnum, aikapit, lajinum;
+static int       ppnum, aikapit, lajinum, vuodet_erikseen;
 static float *restrict vuoptr, *restrict lat;
 static char  *restrict kausiptr, *restrict luok_c;
 static double *restrict alat;
 static int latpit, ikirvuosi0, ikirvuosia, vuosia, k_alku, v_alku;
 static struct tm tm0 = {.tm_year=2011-1900, .tm_mon=8-1, .tm_mday=15};
-static const int vuosi1 = 2020;
+static const int vuosi1 = 2021;
 
 char aprintapu[256];
 char* aprintf(const char* muoto, ...) {
@@ -67,7 +67,7 @@ int binsearch(const float* a, float f, int lower, int upper) {
 
 int argumentit(int argc, char** argv) {
     if(argc < 3) {
-	printf("Käyttö: %s luokitus:köpp/ikir/wetl pri/post [-Bv]\n", argv[0]);
+	printf("Käyttö: %s luokitus:köpp/ikir/wetl pri/post [v]\n", argv[0]);
 	return 1;
     }
     if(!strcmp(argv[1], "köpp"))
@@ -88,6 +88,8 @@ int argumentit(int argc, char** argv) {
 	printf("Ei luettu pri/post-argumenttia\n");
 	return 1;
     }
+    if(argc>3 && !strcmp(argv[3],"v"))
+	vuodet_erikseen = 1;
     return 0;
 }
 
@@ -304,8 +306,9 @@ void täytä_ikirdata(struct laskenta* args) {
 }
 
 void kirjoita_data(struct laskenta* args) {
-    if(access("./vuojakaumadata", F_OK))
-	if(system("mkdir vuojakaumadata")) {
+    const char* kansio = vuodet_erikseen ? "./vuojakaumadata/vuosittain" : "./vuojakaumadata";
+    if(access(kansio, F_OK))
+	if(system(aprintf("mkdir %s", kansio)) {
 	    register int eax asm("eax");
 	    printf("system(mkdir)-komento palautti arvon %i", eax);
 	}
@@ -326,8 +329,9 @@ void kirjoita_data(struct laskenta* args) {
 		cdfptr[i] = (cdfptr[i]-tmp0) / tmp1;
 	}
 
-	FILE *f = fopen(aprintf("./vuojakaumadata/%s_%s_%s.bin",
-				args->lajinimi, kaudet[kausi], pripost_ulos[ppnum]), "w");
+	FILE *f = fopen(vuodet_erikseen ?
+			aprintf("./%s/%s_%s_%s_%i.bin", kansio, args->lajinimi, kaudet[kausi], pripost_ulos[ppnum], args->vuosi) :
+			aprintf("./%s/%s_%s_%s.bin", kansio, args->lajinimi, kaudet[kausi], pripost_ulos[ppnum]), "w");
 	assert(f);
 
 	int kirjpit = 1000;
@@ -416,12 +420,15 @@ int main(int argc, char** argv) {
 	int l2  = NCTDIM(vuo, "time").len - v_alku;
 	int maxpit = MIN(l1, l2);
 	struct tm tm1 = {.tm_year=vuosi1-1900, .tm_mon=4-1, .tm_mday=15};
+	if(vuodet_erikseen)
+	    tm1.tm_year = tm0.tm_year+2; // +2, koska päivämäärä on vuodenvaihteen jälkeen
 	aikapit = (mktime(&tm1)-t0) / 86400;
 	if(aikapit > maxpit) {
 	    puts("liikaa aikaa");
 	    aikapit = maxpit;
 	}
 	vuosia = aikapit / 365;
+	if(vuodet_erikseen) assert(vuosia == 1);
 
 	size_t kauden_kapasit_arr[kausia];
 	kauden_kapasit = kauden_kapasit_arr;
@@ -437,17 +444,19 @@ int main(int argc, char** argv) {
 	    assert((l_args.cdf[i]     = malloc(kauden_kapasit[i] * sizeof(float))));
 	}
 
-	for(lajinum=0; lajinum<lajeja; lajinum++) {
-	    alusta_lajin_laskenta(&l_args);
-	    l_args.lajinimi = luoknimet[luokenum][lajinum];
-	    l_args.lajinum = lajinum;
-	    switch(luokenum) {
-	    case wetl_e: täytä_kosteikkodata(&l_args); break;
-	    case kopp_e: täytä_köppendata(&l_args);    break;
-	    case ikir_e: täytä_ikirdata(&l_args);      break;
-	    }
-	    kirjoita_data(&l_args);
-	}
+	int v=0;
+	for(lajinum=0; lajinum<lajeja; lajinum++)
+	    do {
+		alusta_lajin_laskenta(&l_args);
+		l_args.lajinimi = luoknimet[luokenum][lajinum];
+		l_args.lajinum = lajinum;
+		switch(luokenum) {
+		case wetl_e: täytä_kosteikkodata(&l_args); break;
+		case kopp_e: täytä_köppendata(&l_args);    break;
+		case ikir_e: täytä_ikirdata(&l_args);      break;
+		}
+		kirjoita_data(&l_args);
+	    } while(vuodet_erikseen && ++v<vuosi1-(tm0.tm_year+1+1900));
 
 	nct_free_vset(kausivset);
 	kausivset = NULL;
