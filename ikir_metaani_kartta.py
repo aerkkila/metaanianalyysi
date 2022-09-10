@@ -8,8 +8,8 @@ from matplotlib.pyplot import *
 from matplotlib.colors import ListedColormap as lcmap
 from multiprocessing import Process
 
-varoitusvari = '\033[1;33m'
-vari0        = '\033[0m'
+varoitusväri = '\033[1;33m'
+väri0        = '\033[0m'
 ikir_ind     = 0
 
 def argumentit(argv):
@@ -23,7 +23,7 @@ def argumentit(argv):
         elif a == '-v':
             verbose = True
         else:
-            print("%sVaroitus:%s tuntematon argumentti \"%s\"" %(varoitusvari,vari0,a))
+            print("%sVaroitus:%s tuntematon argumentti \"%s\"" %(varoitusväri,väri0,a))
         i+=1
 
 def luo_varikartta(ch4data):
@@ -35,28 +35,28 @@ def luo_varikartta(ch4data):
         print('suurin, prosenttipiste: ', ch4data.max().data, suurin)
     N = 1024
     cmap = matplotlib.cm.get_cmap('coolwarm',N)
-    varit = np.empty(N,object)
+    värit = np.empty(N,object)
     kanta = 10
 
     #negatiiviset vuot lineaarisesti
     for i in range(0,N//2):
-        varit[i] = cmap(i)
+        värit[i] = cmap(i)
 
     #positiiviset vuot logaritmisesti
     cmaplis=np.logspace(np.log(0.5)/np.log(kanta),0,N//2)
     for i in range(N//2,N):
-        varit[i] = cmap(cmaplis[i-N//2])
-    return lcmap(varit)
+        värit[i] = cmap(cmaplis[i-N//2])
+    return lcmap(värit)
 
-ulkovari = '#d0e0c0'
-harmaavari = '#c0c0c0'
+ulkoväri = '#d0e0c0'
+harmaaväri = '#c0c0c0'
 
-def piirra():
+def piirrä():
     ax = gca()
     ax.set_extent(kattavuus,platecarree)
     ax.coastlines()
     #Tämä asettaa maskin ulkopuolisen alueen eri väriseksi
-    harmaa = lcmap(ulkovari)
+    harmaa = lcmap(ulkoväri)
     muu = xr.DataArray(data=np.zeros([kattavuus[3]-kattavuus[2],kattavuus[1]-kattavuus[0]]),
                        coords={ 'lat':np.arange(kattavuus[2]+0.5,kattavuus[3],1),
                                 'lon':np.arange(kattavuus[0]+0.5,kattavuus[1],1), },
@@ -64,28 +64,28 @@ def piirra():
     muu.plot.pcolormesh(transform=platecarree, ax=gca(), cmap=harmaa, add_colorbar=False)
     #Varsinainen data
     ch4data.where(ikirouta==ikir_ind,np.nan).plot.\
-        pcolormesh(transform=platecarree, cmap=vkartta, norm=mcolors.DivergingNorm(0,max(pienin*6,-suurin),suurin),
+        pcolormesh(transform=platecarree, cmap=vkartta, norm=mcolors.TwoSlopeNorm(0,max(pienin*6,-suurin),suurin),
                    add_colorbar=False)
     #Tämä asettaa muut ikiroutaluokka-alueet harmaaksi.
-    harmaa = lcmap(harmaavari)
+    harmaa = lcmap(harmaaväri)
     ch4data.where(~(ikirouta==ikir_ind),np.nan).plot.\
         pcolormesh( transform=platecarree, ax=gca(), add_colorbar=False, cmap=harmaa )
 
 def varipalkki():
     cbar_nimio = r'$\frac{\mathrm{mol}}{\mathrm{m}^2\mathrm{s}}$'
-    norm = mcolors.DivergingNorm(0,max(pienin*6,-suurin),suurin)
+    norm = mcolors.TwoSlopeNorm(0,max(pienin*6,-suurin),suurin)
     ax = axes((0.87,0.031,0.03,0.92))
     cbar = gcf().colorbar(matplotlib.cm.ScalarMappable(cmap=vkartta,norm=norm), cax=ax)
     ax.get_yaxis().labelpad = 15
-    ylabel(cbar_nimio, rotation=0, fontsize=25)
+    #cbar.set_label(cbar_nimio, rotation=0, fontsize=25) # Tämä aiheuttaa nyt yhtäkkiä virheen, vaikka ennen ei
     #väripalkki ulkoalueista
-    harmaa = lcmap([ulkovari,harmaavari])
+    harmaa = lcmap([ulkoväri,harmaaväri])
     norm = matplotlib.colors.Normalize(vmin=-2, vmax=2)
     ax = axes((0.78,0.031,0.03,0.92), frameon=False)
     cbar = gcf().colorbar(matplotlib.cm.ScalarMappable(cmap=harmaa,norm=norm), cax=ax, drawedges=False)
     cbar.ax.yaxis.set_ticks([])
     for i,s in enumerate(['undefined', 'other\ncategories']):
-        cbar.ax.text(-5, -1+2*i, s)
+        cbar.ax.text(-1.8, -1+2*i, s)
     cbar.outline.set_visible(False)
 
 def tee_alikuva(subplmuoto, subpl, **axes_kwargs):
@@ -116,7 +116,7 @@ def aja(ppind, ftnum):
 
         for ikir_ind in range(len(luokat.ikir)):
             sca(tee_alikuva([1,1], 0, projection=projektio))
-            piirra()
+            piirrä()
             title("%s, %s, data %i" %(luokat.ikir[ikir_ind],
                                       luokat.kaudet[k].replace('_', ' '), ftnum))
             varipalkki()
@@ -128,9 +128,15 @@ def aja(ppind, ftnum):
             savefig("./kuvia/yksittäiset/%s_%s.png" %(sys.argv[0][:-3], tunniste))
             clf()
 
+def aja_(*args):
+    try:
+        aja(*args)
+    except KeyboardInterrupt:
+        sys.exit()
+
 def main():
     global projektio,platecarree,kattavuus,ikirouta,ch4data0
-    rcParams.update({'font.size':18,'figure.figsize':(10,7.8), 'text.usetex':True})
+    rcParams.update({'font.size':18,'figure.figsize':(10,7.8)})
     argumentit(sys.argv[1:])
 
     ch4data0 = xr.open_dataset('./flux1x1.nc')
@@ -147,11 +153,15 @@ def main():
     i=0
     for ppind in range(2):
         for ftnum in range(3):
-            pr[i] = Process(target=aja, args=(ppind,ftnum))
+            pr[i] = Process(target=aja_, args=(ppind,ftnum))
             pr[i].start()
             i+=1
     for p in pr:
         p.join()
 
-if __name__ == '__main__':
-    main()
+if __name__=='__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print('')
+        exit()

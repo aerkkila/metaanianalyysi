@@ -13,7 +13,7 @@ def tee_data(kausi='whole_year', priori=False):
     k = xr.open_dataset('kaudet.nc')
     t0 = max(k.time[0],  dsvuo.time[0])
     t1 = min(k.time[-1], dsvuo.time[-1])
-    dsvuo = vuo.sel(time=slice(t0, t1))
+    dsvuo = dsvuo.sel(time=slice(t0, t1))
     if kausi != 'whole_year':
         kausien_pituudet = xr.open_dataset('kausien_pituudet.nc')[kausi].mean(dim='vuosi').data.flatten()
         num = 1 if kausi=='summer' else 2 if kausi=='freezing' else 3 if kausi=='winter' else 0

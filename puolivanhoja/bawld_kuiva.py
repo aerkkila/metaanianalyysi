@@ -39,7 +39,7 @@ def piirra(data:xr.DataArray, subpl:int):
               projection=projektio)
     ax.coastlines()
     ax.set_extent(kattavuus,platecarree)
-    data.plot.pcolormesh(transform=platecarree, cmap=cmap, norm=matplotlib.colors.DivergingNorm(0,max(pienin*4,-suurin),suurin))
+    data.plot.pcolormesh(transform=platecarree, cmap=cmap, norm=matplotlib.colors.TwoSlopeNorm(0,max(pienin*4,-suurin),suurin))
     return
 
 def main():
