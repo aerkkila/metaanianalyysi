@@ -42,6 +42,7 @@ int       ppnum, kausia, aikapit, lajinum;
 float *restrict vuoptr;
 char  *restrict kausiptr, *restrict luok_c;
 float *restrict kpitptr;
+char* aluemaski;
 int ikirvuosi0, ikirvuosia, vuosia, k_alku, v_alku, lajeja;
 int verbose;
 struct tm tm0 = {.tm_mon=8-1, .tm_mday=15};
@@ -147,6 +148,7 @@ void tee_data(int luokitusnum, float** vuoulos, float** cdf, double* summa, int 
 	double *restrict osuus1ptr = NCTVAR(*luok_vs, wetlnimet[lajinum]).data;
 	for(int r=0; r<resol; r++) {
 	    if(osuus0ptr[r] < 0.05) continue;
+	    if(!aluemaski[r]) continue;
 	    int t;
 	    for(t=0; t<aikapit; t++) {
 		int ind_t = t*resol + r;
@@ -176,6 +178,7 @@ void tee_data(int luokitusnum, float** vuoulos, float** cdf, double* summa, int 
     else if (luokitusnum == kopp_e) {
 	for(int r=0; r<resol; r++) {
 	    if(luok_c[r] != lajinum) continue;
+	    if(!aluemaski[r]) continue;
 	    int t;
 	    for(t=0; t<aikapit; t++) {
 		int ind_t = t*resol + r;
@@ -205,6 +208,7 @@ void tee_data(int luokitusnum, float** vuoulos, float** cdf, double* summa, int 
     }
     else if (luokitusnum == ikir_e)
 	for(int r=0; r<resol; r++) {
+	    if(!aluemaski[r]) continue;
 	    int t;
 	    for(t=0; t<aikapit; t++) {
 		int ind_t = t*resol + r;
@@ -325,18 +329,14 @@ int main(int argc, char** argv) {
 
     nct_read_ncfile_gd0(&vuo, "./flux1x1.nc");
     nct_var* vuovar = &NCTVAR(vuo, pripost_sisaan[ppnum]);
-    if(vuovar->xtype != NC_FLOAT) {
-	printf("Vuodatan tyyppi ei täsmää koodissa ja datassa.\n");
-	return 1;
-    }
-
-    if(!lue_luokitus()) {
-	printf("Luokitusta ei luettu\n");
-	return 1;
-    }
+    assert(vuovar->xtype == NC_FLOAT);
+    assert(lue_luokitus());
 
     for(int i=0; i<LATPIT; i++)
 	alat[i] = SUHT_ALA(29.5+i, 1);
+
+    nct_vset *maski = nct_read_ncfile("aluemaski.nc");
+    aluemaski = maski->vars[nct_next_truevar_i(maski, 0)]->data;
 
     putchar('\n');
     int ftnum0=1, ftnum1=3;
@@ -421,5 +421,6 @@ int main(int argc, char** argv) {
     free(luok_c);
     nct_free_vset(luok_vs);
     nct_free_vset(&vuo);
+    nct_free_vset(maski);
     return 0;
 }
