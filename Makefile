@@ -73,9 +73,9 @@ vuotaul_yleinen.target: vuotaul_köppen_pri.csv vuotaul_köppen_post.csv vuotaul
 	cat vuotaulukot/*_post_*ft2.csv > vuotaul_post.csv
 
 vuotaul_latex.out: vuotaul_latex.c #vuotaul_yleinen.target
-	gcc vuotaul_latex.c -o $@ -g -Wall
+	gcc vuotaul_latex.c -o $@ -g -Wall -O2
 
-vuosummat_tiivistelmä_post.tex: vuotaul_latex.out
+vuotaul_csv: vuotaul_latex.out
 	./vuotaul_latex.out
 
 FT2kaudet.out: FT2kaudet.c

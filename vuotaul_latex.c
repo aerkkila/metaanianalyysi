@@ -4,10 +4,16 @@
 #include <string.h>
 #include <assert.h>
 
+#define TIIVISTELMÄ 0
+#define NCOL (2+!TIIVISTELMÄ)
 const char* pripost[] = {"pri", "post"};
 const char* kaudet[] = {"summer", "freezing", "winter"};
 const char* ylänimet[] = {"wetland", "köppen", "ikir"};
-const char* wetlnimet[] = {"bog", "fen", "marsh", "permafrost_bog", "tundra_wetland", "dryland"};
+#if TIIVISTELMÄ
+const char* wetlnimet[] = {"bog", "fen", "marsh", "permafrost_bog", "tundra_wetland"};
+#else
+const char* wetlnimet[] = {"bog", "fen", "marsh", "permafrost_bog", "tundra_wetland", "wetland", "dryland"};
+#endif
 const char* ikirnimet[] = {"non_permafrost", "sporadic", "discontinuous", "continuous"};
 const char* köppnimet[] = {"D.b", "D.c", "D.d", "ET"};
 int pit_pripost, pit_kaudet, pit_wetl, pit_köpp, pit_ikir, ind_jää;
@@ -105,43 +111,57 @@ float jäätymisarvo(float* taul) {
 }
 
 #define K(...) fprintf(f, __VA_ARGS__)
-void laita_arvot(FILE* f, float* taul) {
+#define A if(!TIIVISTELMÄ) K(" & %.4f", taul[k*2])
+#define B K(" & %.0f & %.3f", taul[k*2]/summa*1000, taul[k*2+1])
+void kirjoita_rivi(FILE* f, float* taul) {
     float jä = jäätymisarvo(taul);
     float r = (jä-0.5)*2 * (jä>0.5);
     float b = (1-jä*2) * (jä<0.5);
     float summa = 0;
     int k;
     for(int k=0; k<pit_kaudet; k++) summa+=taul[k*2];
-    for(k=0; k<ind_jää; k++) K(" & %.0f & %.3f", taul[k*2]/summa*1000, taul[k*2+1]);
+    for(k=0; k<ind_jää; k++) { A; B; }
+    A;
     K(" & %.0f & \\colorbox[rgb]{%.2f, %.2f, %.2f}{%.3f}",
       taul[k*2]/summa*1000, 1-b, 1-r-b, 1-r, taul[k*2+1]);
-    for(int k=ind_jää+1; k<pit_kaudet; k++) K(" & %.0f & %.3f", taul[k*2]/summa*1000, taul[k*2+1]);
+    for(int k=ind_jää+1; k<pit_kaudet; k++) { A; B; }
     K(" \\\\\n");
 }
+#undef A
+#undef B
 
 void kirjoita_data(int ppnum, float* taul) {
-    FILE *f = fopen(aprintf("vuosummat_tiivistelmä_%s.tex", pripost[ppnum]), "w");
+    FILE *f = fopen(aprintf("vuosummat%s_%s.tex", TIIVISTELMÄ? "_tiivistelmä": "", pripost[ppnum]), "w");
     K("\\begin{tabular}{l");
+#if TIIVISTELMÄ
     for(int i=0; i<pit_kaudet; i++) K("|rr");
+#else
+    for(int i=0; i<pit_kaudet; i++) K("|rrr");
+#endif
     K("}\n");
-    for(int i=0; i<pit_kaudet; i++) K(" & \\multicolumn{2}{r}{%s}", kaudet[i]);
+    for(int i=0; i<pit_kaudet; i++) K(" & \\multicolumn{%i}{r}{%s}", 2+!TIIVISTELMÄ, kaudet[i]);
     K(" \\\\\n");
+#if TIIVISTELMÄ
     for(int i=0; i<pit_kaudet; i++) K(" & {‰} & {nmol/m$^2$/s}");
+#else
+    for(int i=0; i<pit_kaudet; i++) K(" & {Tg} & {‰} & {nmol/m$^2$/s}");
+#endif
     K(" \\\\\n\\midrule\n");
+    
     for(int i=0; i<pit_ikir; i++) {
 	K("%s", korvaa(ikirnimet[i], '_', ' '));
-	laita_arvot(f, taul);
+	kirjoita_rivi(f, taul);
 	taul += pit_kaudet*2;
     }
     for(int i=0; i<pit_köpp; i++) {
 	K("%s", köppnimet[i]);
-	laita_arvot(f, taul);
+	kirjoita_rivi(f, taul);
 	taul += pit_kaudet*2;
     }
     K("\\\\\n");
     for(int i=0; i<pit_wetl; i++) {
 	K("%s", korvaa(wetlnimet[i], '_', ' '));
-	laita_arvot(f, taul);
+	kirjoita_rivi(f, taul);
 	taul += pit_kaudet*2;
     }
     K("\\end{tabular}\n");
