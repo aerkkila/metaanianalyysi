@@ -2,7 +2,7 @@ tehoisa_kosteikko.out: tehoisa_kosteikko.c
 	gcc -Wall tehoisa_kosteikko.c -o $@ `pkg-config --libs nctietue2 gsl` -g -Og
 
 vuojakaumadata.out: vuojakaumadata.c
-	gcc -Wall vuojakaumadata.c -o $@ `pkg-config --libs nctietue2 gsl` -g -O3
+	gcc -Wall vuojakaumadata.c -o $@ `pkg-config --libs nctietue2 gsl` -g -O3 -DVUODET_ERIKSEEN=0
 vuojakauma_ikir: vuojakaumadata.out
 	./vuojakaumadata.out ikir post
 vuojakauma_köpp: vuojakaumadata.out
@@ -19,8 +19,8 @@ vuojakauma_pri_wetl: vuojakaumadata.out
 	./vuojakaumadata.out wetl pri
 vuojakaumadata_pri.target: vuojakauma_pri_ikir vuojakauma_pri_köpp vuojakauma_pri_wetl
 
-vuojakaumadata_vuosittain.out: vuojakaumadata_vuosittain.c
-	gcc -Wall vuojakaumadata_vuosittain.c -o $@ `pkg-config --libs nctietue2 gsl` -g -O3
+vuojakaumadata_vuosittain.out: vuojakaumadata.c
+	gcc -Wall vuojakaumadata.c -o $@ `pkg-config --libs nctietue2 gsl` -g -O3 -DVUODET_ERIKSEEN=1
 vuojakauma_vuosittain_ikir: vuojakaumadata_vuosittain.out
 	./vuojakaumadata_vuosittain.out ikir post
 vuojakauma_vuosittain_köpp: vuojakaumadata_vuosittain.out
@@ -28,8 +28,19 @@ vuojakauma_vuosittain_köpp: vuojakaumadata_vuosittain.out
 vuojakauma_vuosittain_wetl: vuojakaumadata_vuosittain.out
 	./vuojakaumadata_vuosittain.out wetl post
 vuojakaumadata_vuosittain.target: vuojakauma_vuosittain_ikir vuojakauma_vuosittain_köpp vuojakauma_vuosittain_wetl
-	cat vuojakaumadata_vuosittain/summat_ft[21]*.csv > summat_vuosittain_kaikki.csv
-	cat vuojakaumadata_vuosittain/summat_ft2*_post*.csv > summat_vuosittain.csv
+	cat vuojakaumadata/vuosittain/emissio_*_post.csv > emissio_vuosittain.csv
+
+#vuojakaumadata_vuosittain.out: vuojakaumadata_vuosittain.c
+#	gcc -Wall vuojakaumadata_vuosittain.c -o $@ `pkg-config --libs nctietue2 gsl` -g -O3
+#vuojakauma_vuosittain_ikir: vuojakaumadata_vuosittain.out
+#	./vuojakaumadata_vuosittain.out ikir post
+#vuojakauma_vuosittain_köpp: vuojakaumadata_vuosittain.out
+#	./vuojakaumadata_vuosittain.out köpp post
+#vuojakauma_vuosittain_wetl: vuojakaumadata_vuosittain.out
+#	./vuojakaumadata_vuosittain.out wetl post
+#vuojakaumadata_vuosittain.target: vuojakauma_vuosittain_ikir vuojakauma_vuosittain_köpp vuojakauma_vuosittain_wetl
+#	cat vuojakaumadata_vuosittain/summat_ft[21]*.csv > summat_vuosittain_kaikki.csv
+#	cat vuojakaumadata_vuosittain/summat_ft2*_post*.csv > summat_vuosittain.csv
 
 vuojakauma_vuosittain_pri_ikir: vuojakaumadata_vuosittain.out
 	./vuojakaumadata_vuosittain.out ikir pri

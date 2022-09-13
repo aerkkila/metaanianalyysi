@@ -22,9 +22,9 @@ They should be compiled with argument \`pkg-config --libs nctietue2\`
 2. **Following codes process data further from part 1**
    - **köppenmaski<area>.py** &rarr; köppenmaski<area>.npy, köppenmaski<area>.txt \
 	   Climate class for each grid cell.
-   - **vuojakaumadata<area>.c** &rarr; vuojakaumadata/\*.bin, vuojakaumadata/vuosittain/\*.bin \
-	   Calculate distribution of methane fluxes in different areas and seasons.
-   - **vuojakaumadata_vuosittain<area>.c** deprecated
+   - **vuojakaumadata<area>.c** &rarr; vuojakaumadata/\*.bin, vuojakaumadata/vuosittain/\*.bin, vuojakaumadata/vuosittain/*.csv \
+	   Calculate distribution of methane fluxes in different areas and seasons. \
+	   If compiled with -DVUODET_ERIKSEEN=1 calculates all years separately and makes csv-tables of yearly seasonal emission sums.
    - **vuotaul_yleinen.c** &rarr; vuotaulukot/\*.csv \
 	   Calculate average methane fluxes in different areas and seasons.
 
@@ -51,7 +51,9 @@ They should be compiled with argument \`pkg-config --libs nctietue2\`
 	   latex table about average fluxes and season part of whole year emission
    - **vuojakaumalaatikko<area>.py** &rarr; vuojakaumalaatikko_['pri','post']_[01].png \
 	   boxplot of methane fluxes in different areas and seasons
-   - **vuojakaumalaatikko_vuosittain.py** *(has to be updated)*
+   - **vuojakaumalaatikko_vuosittain.py** &rarr; jakaumat_vuosittain/['pri','post']\_{class}\_{season}.png
+	   Yearly boxplots of methane fluxex in different areas and seasons. \
+	   Years in same figure, areas and seasons separately.
 
 **Other**
 - **köppenpintaalat<area>.c** areas of climate classes
