@@ -18,6 +18,8 @@ They should be compiled with argument \`pkg-config --libs nctietue2\`
    - **muunna_shapefile.c** &rarr; köppen1x1maski<area>.nc \
 	   Reads shapefile of köppen classification and outputs netcdf file.
 	   Works also as a general converter from shapefile to netcdf.
+   - **yhteiskosteikko<area>.c** &rarr; yhteiskosteikko<area>.nc \
+	   Reads three wetland classes used in the model and creates a combination of them that that best explains the modelled flux.
 
 2. **Following codes process data further from part 1**
    - **köppenmaski<area>.py** &rarr; köppenmaski<area>.npy, köppenmaski<area>.txt \
@@ -60,4 +62,4 @@ They should be compiled with argument \`pkg-config --libs nctietue2\`
 - **köppenpintaalat<area>.c** areas of climate classes
 
 **Undocumented** \
-FT2kaudet<area>.c, onko_kausi_yhtenäinen.c tehoisa_kosteikko.c wetlandsumma<area>.c interpoloi_flux1x1.py, vuojakauman_piirtäjä.py, [Wwx]\*.py
+FT2kaudet<area>.c, onko_kausi_yhtenäinen.c wetlandsumma<area>.c interpoloi_flux1x1.py, vuojakauman_piirtäjä.py, [Wwx]\*.py

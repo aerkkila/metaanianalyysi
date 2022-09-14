@@ -1,5 +1,5 @@
-tehoisa_kosteikko.out: tehoisa_kosteikko.c
-	gcc -Wall tehoisa_kosteikko.c -o $@ `pkg-config --libs nctietue2 gsl` -g -Og
+yhteiskosteikko.out: yhteiskosteikko.c
+	gcc -Wall ${@:.out=.c} -o $@ `pkg-config --libs nctietue2 gsl` -g -O2
 
 vuojakaumadata.out: vuojakaumadata.c
 	gcc -Wall vuojakaumadata.c -o $@ `pkg-config --libs nctietue2 gsl` -g -O3 -DVUODET_ERIKSEEN=0
