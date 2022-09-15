@@ -10,7 +10,6 @@
 #include <gsl/gsl_statistics_double.h>
 
 const char* vuomuutt = "flux_bio_posterior";
-const float haluttu_maximi = 0.9;
 
 #define ASTE 0.017453293
 #define SUHT_ALA(lat, hila) (sin(((lat)+(hila)) * ASTE) - sin((lat) * ASTE)) * 100
@@ -33,8 +32,8 @@ int main() {
     nct_var* var0;
     nct_read_ncfile_gd(vset+0, "./flux1x1.nc");
     nct_read_ncfile_gd(vset+1, "../lpx_data/LPX_area_peat.nc");
-    nct_read_ncfile_gd(vset+2, "../lpx_data/LPX_area_inund.nc");
-    nct_read_ncfile_gd(vset+3, "../lpx_data/LPX_area_wetsoil.nc");
+    nct_read_ncfile_gd(vset+2, "../lpx_data/LPX_area_wetsoil.nc");
+    nct_read_ncfile_gd(vset+3, "../lpx_data/LPX_area_inund.nc");
 
     var0 = &NCTVAR(vset[0], vuomuutt);
     assert(var0->xtype == NC_FLOAT);
@@ -93,22 +92,19 @@ int main() {
     int dimids[] = {0,1};
     nct_add_var(vset, data, NC_FLOAT, "data", 2, dimids);
 
-    float max = -INFINITY;
+    double summa = 0;
+    for(int i=1; i<SEL; i++) summa += cvec->data[i];
+    for(int i=1; i<SEL; i++) cvec->data[i] /= summa;
+
     for(int i=0; i<pit; i++) {
 	float summa = 0;
 	for(int j=1; j<SEL; j++) // ei oteta vakioa
 	    summa += gsl_matrix_get(xmatrix, i, j)*cvec->data[j];
 	data[i] = summa;
-	if(summa > max)
-	    max = summa;
     }
-    max = haluttu_maximi / max;
-    for(int i=0; i<pit; i++)
-	data[i] *= max;
-    
-    nct_write_ncfile(vset, "yhteiskosteikko.nc");
 
-    nct_free_vset(vset);
+    nct_write_ncfile(vset, "yleiskosteikko.nc");
+
     gsl_multifit_linear_free(work);
     gsl_matrix_free(xmatrix);
     gsl_vector_free(yvec);

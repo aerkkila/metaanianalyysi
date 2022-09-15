@@ -1,4 +1,4 @@
-yhteiskosteikko.out: yhteiskosteikko.c
+yleiskosteikko.out: yleiskosteikko.c
 	gcc -Wall ${@:.out=.c} -o $@ `pkg-config --libs nctietue2 gsl` -g -O2
 
 vuojakaumadata.out: vuojakaumadata.c

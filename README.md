@@ -18,7 +18,7 @@ They should be compiled with argument \`pkg-config --libs nctietue2\`
    - **muunna_shapefile.c** &rarr; köppen1x1maski<area>.nc \
 	   Reads shapefile of köppen classification and outputs netcdf file.
 	   Works also as a general converter from shapefile to netcdf.
-   - **yhteiskosteikko<area>.c** &rarr; yhteiskosteikko<area>.nc \
+   - **yleiskosteikko<area>.c** &rarr; yleiskosteikko<area>.nc \
 	   Reads three wetland classes used in the model and creates a combination of them that that best explains the modelled flux.
 
 2. **Following codes process data further from part 1**

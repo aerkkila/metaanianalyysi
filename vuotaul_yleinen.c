@@ -8,9 +8,7 @@
 #include <assert.h>
 
 /* Kääntäjä tarvitsee argumentit `pkg-config --libs nctietue2` -lm
-   nctietue2-kirjasto on osoitteessa https://github.com/aerkkila/nctietue2.git
-   Jos kääntäminen ei onnistu, päivitettäköön gcc uudempaan versioon
-   tai vaihdettakoon muuttujien nimet ascii-merkeiksi, kun nyt siellä on utf-8:a. */
+   nctietue2-kirjasto on osoitteessa https://github.com/aerkkila/nctietue2.git */
 
 #define ARRPIT(a) sizeof(a)/sizeof(*(a))
 #define MIN(a,b) (a)<(b)? (a): (b)
@@ -32,12 +30,14 @@ const char* pripost_ulos[]   = {"pri", "post"};
 enum luokitus_e {kopp_e, ikir_e, wetl_e, kart_e} luokenum;
 int ppnum;
 
-static float *restrict vuoptr, *restrict lat;
+static float *restrict vuoptr, *restrict lat, *restrict yleiskosteikko;
 static char *restrict luok_c;
 static double *restrict alat;
 static nct_vset *luok_vs;
 static int latpit, ikirvuosi0, ikirvuosia, aikapit, vuosia, luokkia;
 static struct tm tm0 = {.tm_year=2011-1900, .tm_mon=8-1, .tm_mday=15};
+
+void lue_yleiskosteikko();
 
 char aprintapu[256];
 char* aprintf(const char* muoto, ...) {
@@ -54,7 +54,7 @@ int argumentit(int argc, char** argv) {
 	    luokenum = kart_e;
 	    return 0;
 	}
-	printf("Käyttö: %s (kartta) TAI (köpp/ikir/wetl pri/post)\n", argv[0]);
+	printf("Käyttö: %s (kartta) TAI (köpp/ikir/wetl pri/post) [y]\n", argv[0]);
 	return 1;
     }
     if(!strcmp(argv[1], "köpp"))
@@ -75,7 +75,18 @@ int argumentit(int argc, char** argv) {
 	printf("Ei luettu pri/post-argumenttia\n");
 	return 1;
     }
+    if(argc > 3 && !strcmp(argv[3], "y"))
+	lue_yleiskosteikko();
     return 0;
+}
+
+void lue_yleiskosteikko() {
+    nct_vset v = {0};
+    nct_read_ncfile_gd(&v, "yleiskosteikko.nc");
+    nct_var *vv = nct_next_truevar(v.vars[0], 0);
+    yleiskosteikko = vv->data;
+    vv->nonfreeable_data = 1;
+    nct_free_vset(&v);
 }
 
 void* lue_kopp() {
@@ -245,30 +256,37 @@ void tee_kartta(struct laskenta* args) {
     nct_free_vset(&v);
 }
 
+#define ALKUUN(t,ala,ala_kost)				\
+    int t;						\
+    for(t=0; t<aikapit; t++)				\
+	if(kausiptr[t*resol+r] == 0)			\
+	    goto seuraava;				\
+    for(t=0; t<aikapit; t++)				\
+	if(kausiptr[t*resol + r] == freezing_e) break;	\
+    alusta_lasku(args);					\
+    double ala = alat[r/360];				\
+    double ala_kost = ala;				\
+    if(yleiskosteikko)	{				\
+	if(yleiskosteikko[r] < 0.03) continue;		\
+	ala_kost *= yleiskosteikko[r];			\
+    }
+
 void laske_köpp(struct laskenta* args) {
     char* kausiptr = args->kausiptr;
     for(int r=0; r<resol; r++) {
 	if(luok_c[r] != args->lajinum) continue;
 
-	/* Kopioitu ja liitetty kaikkiin funktioihin */
-	int t;
-	for(t=0; t<aikapit; t++)
-	    if(kausiptr[t*resol+r] == 0)
-		goto seuraava;
-	for(t=0; t<aikapit; t++)
-	    if(kausiptr[t*resol + r] == freezing_e) break;
-	
-	alusta_lasku(args);
-	double ala = alat[r/360];
+	ALKUUN(t,ala,ala_kost);
+
 	for(; t<aikapit; t++) {
 	    int ind_t = t*resol + r;
 	    switch(tarkista_kausi(args, ind_t)) {
 	    case 0: data_välitilaan(args); goto pois_aikasilmukasta;
 	    case 2: data_välitilaan(args); break;
 	    }
-	    double vuo1 = vuoptr[ind_t] * ala;
-	    args->ainemäärä1  [(int)kausiptr[ind_t]] += vuo1; // *86400 kerrotaan lopussa: mol/s * s -> mol
-	    args->ala_ja_aika1[(int)kausiptr[ind_t]] += ala;  // *86400 kerrotaan lopussa: m²*d -> m²*s
+	    double virtaama = vuoptr[ind_t] * ala;
+	    args->ainemäärä1  [(int)kausiptr[ind_t]] += virtaama; // *86400 kerrotaan lopussa: mol/s * s -> mol
+	    args->ala_ja_aika1[(int)kausiptr[ind_t]] += ala_kost; // *86400 kerrotaan lopussa: m²*d -> m²*s
 	}
     pois_aikasilmukasta:
 	hyväksy_data_välitilasta(args);
@@ -282,25 +300,17 @@ void laske_kuiva(struct laskenta* args) {
     for(int r=0; r<resol; r++) {
 	if(osuusptr[r] >= wraja) continue;
 
-	/* Kopioitu ja liitetty kaikkiin funktioihin */
-	int t;
-	for(t=0; t<aikapit; t++)
-	    if(kausiptr[t*resol+r] == 0)
-		goto seuraava;
-	for(t=0; t<aikapit; t++)
-	    if(kausiptr[t*resol + r] == freezing_e) break;
+	ALKUUN(t,ala,ala_kost);
 
-	alusta_lasku(args);
-	double ala = alat[r/360];
 	for(; t<aikapit; t++) {
 	    int ind_t = t*resol + r;
 	    switch(tarkista_kausi(args, ind_t)) {
 	    case 0: data_välitilaan(args); goto pois_aikasilmukasta;
 	    case 2: data_välitilaan(args); break;
 	    }
-	    double vuo1 = vuoptr[ind_t] * ala;
-	    args->ainemäärä1  [(int)kausiptr[ind_t]] += vuo1; // *86400 kerrotaan lopussa: mol/s * s -> mol
-	    args->ala_ja_aika1[(int)kausiptr[ind_t]] += ala;  // *86400 kerrotaan lopussa: m²*d -> m²*s
+	    double virtaama = vuoptr[ind_t] * ala;
+	    args->ainemäärä1  [(int)kausiptr[ind_t]] += virtaama; // *86400 kerrotaan lopussa: mol/s * s -> mol
+	    args->ala_ja_aika1[(int)kausiptr[ind_t]] += ala_kost;  // *86400 kerrotaan lopussa: m²*d -> m²*s
 	}
     pois_aikasilmukasta:
 	hyväksy_data_välitilasta(args);
@@ -310,23 +320,17 @@ void laske_kuiva(struct laskenta* args) {
 
 void laske_kosteikko(struct laskenta* args) {
     char* kausiptr = args->kausiptr;
+    free(yleiskosteikko); yleiskosteikko=NULL; // varmuuden vuoksi
     double* osuus0ptr = NCTVAR(*luok_vs, "wetland").data;
     double* osuus1ptr = NCTVAR(*luok_vs, wetlnimet[args->lajinum]).data;
     args->pintaala = 0;
     for(int r=0; r<resol; r++) {
 	if(osuus0ptr[r] < wraja) continue;
 
-	/* Kopioitu ja liitetty kaikkiin funktioihin */
-	int t;
-	for(t=0; t<aikapit; t++)
-	    if(kausiptr[t*resol+r] == 0)
-		goto seuraava;
-	for(t=0; t<aikapit; t++)
-	    if(kausiptr[t*resol + r] == freezing_e) break;
+	ALKUUN(t,ala,osuusala);
+	ala *= osuus1ptr[r];      // vain kyseisen luokan pinta-ala
+	osuusala /= osuus0ptr[r]; // koko ruudun pinta-ala jaettuna osuuden mukaan eri luokille
 
-	alusta_lasku(args);
-	double ala = alat[r/360] * osuus1ptr[r]; // luokan pinta-ala
-	double Ala = ala / osuus0ptr[r];         // ruudun pinta-ala jaettuna osuuden mukaan eri luokille
 	args->pintaala += ala;
 	for(; t<aikapit; t++) {
 	    int ind_t = t*resol + r;
@@ -334,8 +338,8 @@ void laske_kosteikko(struct laskenta* args) {
 	    case 0: data_välitilaan(args); goto pois_aikasilmukasta;
 	    case 2: data_välitilaan(args); break;
 	    }
-	    args->ainemäärä1  [(int)kausiptr[ind_t]] += vuoptr[ind_t] * Ala; // *86400 kerrotaan lopussa: mol/s * s -> mol
-	    args->ala_ja_aika1[(int)kausiptr[ind_t]] += ala;  // *86400 kerrotaan lopussa: m²*d -> m²*s
+	    args->ainemäärä1  [(int)kausiptr[ind_t]] += vuoptr[ind_t] * osuusala; // *86400 kerrotaan lopussa: mol/s * s -> mol
+	    args->ala_ja_aika1[(int)kausiptr[ind_t]] += ala;                      // *86400 kerrotaan lopussa: m²*d -> m²*s
 	}
     pois_aikasilmukasta:
 	hyväksy_data_välitilasta(args);
@@ -354,16 +358,8 @@ void laske_ikir(struct laskenta* args) {
 	continue;
     piste_kelpaa2:
 
-	/* Kopioitu ja liitetty kaikkiin funktioihin */
-	int t;
-	for(t=0; t<aikapit; t++)
-	    if(kausiptr[t*resol+r] == 0)
-		goto seuraava;
-	for(t=0; t<aikapit; t++)
-	    if(kausiptr[t*resol + r] == freezing_e) break;
+	ALKUUN(t,ala,ala_kost);
 
-	alusta_lasku(args);
-	double ala = alat[r/360];
 	struct tm tma = tm0; // Tällä tarkistetaan, minkä vuoden ikiroutadataa käytetään.
 	tma.tm_mday += t;
 	int lukitse_ikirvuosi = 0;
@@ -388,9 +384,9 @@ void laske_ikir(struct laskenta* args) {
 	    }
 	    args->lukitse = 0;
 
-	    double vuo1 = vuoptr[ind_t] * ala;
-	    args->ainemäärä1  [(int)kausiptr[ind_t]] += vuo1; // *86400 kerrotaan lopussa: mol/s * s -> mol
-	    args->ala_ja_aika1[(int)kausiptr[ind_t]] += ala;  // *86400 kerrotaan lopussa: m²*d -> m²*s
+	    double virtaama = vuoptr[ind_t] * ala;
+	    args->ainemäärä1  [(int)kausiptr[ind_t]] += virtaama; // *86400 kerrotaan lopussa: mol/s * s -> mol
+	    args->ala_ja_aika1[(int)kausiptr[ind_t]] += ala_kost; // *86400 kerrotaan lopussa: m²*d -> m²*s
 	}
     pois_aikasilmukasta:
 	hyväksy_data_välitilasta(args);
@@ -513,9 +509,9 @@ int main(int argc, char** argv) {
 
 	    switch(luokenum) {
 	    case wetl_e: laske_kosteikko(&l_args); break;
-	    case ikir_e: laske_ikir   (&l_args); break;
-	    case kopp_e: laske_köpp   (&l_args); break;
-	    case kart_e: tee_kartta (&l_args); goto vapauta;
+	    case ikir_e: laske_ikir     (&l_args); break;
+	    case kopp_e: laske_köpp     (&l_args); break;
+	    case kart_e: tee_kartta     (&l_args); goto vapauta;
 	    }
 
 	    kirjoita_csv(&l_args, tallenn, ulos);
@@ -557,6 +553,7 @@ int main(int argc, char** argv) {
 	kausivset = (nct_vset){0};
     }
     free(luok_c);
+    free(yleiskosteikko);
     nct_free_vset(luok_vs);
     nct_free_vset(&vuo);
     return 0;
