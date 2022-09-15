@@ -1,3 +1,5 @@
+kosteikko = 0
+
 yleiskosteikko.out: yleiskosteikko.c
 	gcc -Wall ${@:.out=.c} -o $@ `pkg-config --libs nctietue2 gsl` -g -O2
 
@@ -30,18 +32,6 @@ vuojakauma_vuosittain_wetl: vuojakaumadata_vuosittain.out
 vuojakaumadata_vuosittain.target: vuojakauma_vuosittain_ikir vuojakauma_vuosittain_köpp vuojakauma_vuosittain_wetl
 	cat vuojakaumadata/vuosittain/emissio_*_post.csv > emissio_vuosittain.csv
 
-#vuojakaumadata_vuosittain.out: vuojakaumadata_vuosittain.c
-#	gcc -Wall vuojakaumadata_vuosittain.c -o $@ `pkg-config --libs nctietue2 gsl` -g -O3
-#vuojakauma_vuosittain_ikir: vuojakaumadata_vuosittain.out
-#	./vuojakaumadata_vuosittain.out ikir post
-#vuojakauma_vuosittain_köpp: vuojakaumadata_vuosittain.out
-#	./vuojakaumadata_vuosittain.out köpp post
-#vuojakauma_vuosittain_wetl: vuojakaumadata_vuosittain.out
-#	./vuojakaumadata_vuosittain.out wetl post
-#vuojakaumadata_vuosittain.target: vuojakauma_vuosittain_ikir vuojakauma_vuosittain_köpp vuojakauma_vuosittain_wetl
-#	cat vuojakaumadata_vuosittain/summat_ft[21]*.csv > summat_vuosittain_kaikki.csv
-#	cat vuojakaumadata_vuosittain/summat_ft2*_post*.csv > summat_vuosittain.csv
-
 vuojakauma_vuosittain_pri_ikir: vuojakaumadata_vuosittain.out
 	./vuojakaumadata_vuosittain.out ikir pri
 vuojakauma_vuosittain_pri_köpp: vuojakaumadata_vuosittain.out
@@ -50,12 +40,11 @@ vuojakauma_vuosittain_pri_wetl: vuojakaumadata_vuosittain.out
 	./vuojakaumadata_vuosittain.out wetl pri
 vuojakaumadata_vuosittain_pri.target: vuojakauma_vuosittain_pri_ikir vuojakauma_vuosittain_pri_köpp vuojakauma_vuosittain_pri_wetl
 
-
 wetlandsumma.out: wetlandsumma.c
 	gcc -Wall wetlandsumma.c -o $@ `pkg-config --libs nctietue` -lm -O3
 
 vuotaul_yleinen.out: vuotaul_yleinen.c
-	gcc -Wall -g -O3 vuotaul_yleinen.c -o $@ `pkg-config --libs nctietue2` -lm
+	gcc -Wall -g -O3 vuotaul_yleinen.c -o $@ `pkg-config --libs nctietue2` -lm -DKOSTEIKKO=${kosteikko}
 vuotaul_wetland_post.csv: vuotaul_yleinen.out
 	./vuotaul_yleinen.out wetl post
 vuotaul_wetland_pri.csv: vuotaul_yleinen.out
@@ -69,11 +58,11 @@ vuotaul_ikir_post.csv: vuotaul_yleinen.out
 vuotaul_ikir_pri.csv: vuotaul_yleinen.out
 	./vuotaul_yleinen.out ikir pri
 vuotaul_yleinen.target: vuotaul_köppen_pri.csv vuotaul_köppen_post.csv vuotaul_ikir_pri.csv vuotaul_ikir_post.csv vuotaul_wetland_pri.csv vuotaul_wetland_post.csv
-	cat vuotaulukot/*_pri_*ft2.csv > vuotaul_pri.csv
-	cat vuotaulukot/*_post_*ft2.csv > vuotaul_post.csv
+	cat vuotaulukot/*_pri_*.csv > vuotaul_pri.csv
+	cat vuotaulukot/*_post_*.csv > vuotaul_post.csv
 
 vuotaul_latex.out: vuotaul_latex.c #vuotaul_yleinen.target
-	gcc vuotaul_latex.c -o $@ -g -Wall -O2
+	gcc vuotaul_latex.c -o $@ -g -Wall -O2 -DKOSTEIKKO=${kosteikko}
 
 vuotaul_csv: vuotaul_latex.out
 	./vuotaul_latex.out

@@ -13,8 +13,11 @@ pripost  = ['pri', 'post']
 def taulukko(tulos, luokka, textied):
     avg = np.sort(tulos['avg'])
     suht = np.std(avg)/np.mean(avg[1:-1])
-    siirto=0.25
-    arvo = lambda x: np.log((x+siirto)/(1+siirto))/np.log(siirto)
+
+    siirto = 0.55
+    jyrkkyys = 0.5
+    arvo = lambda x: np.log((x+siirto)*jyrkkyys)/np.log(siirto*jyrkkyys)
+
     suht1 = arvo(suht) if 0<suht and suht<1 else 0 if suht>=1 else 1
     textied.write(' & \\colorbox[rgb]{1.00, %.3f, %.3f}{%.3f}' %(suht1,suht1,suht))
 

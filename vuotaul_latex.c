@@ -5,7 +5,9 @@
 #include <assert.h>
 
 #define TIIVISTELMÄ 0
-#define NCOL (2+!TIIVISTELMÄ)
+#ifndef KOSTEIKKO
+#define KOSTEIKKO 0
+#endif
 const char* pripost[] = {"pri", "post"};
 const char* kaudet[] = {"summer", "freezing", "winter"};
 const char* ylänimet[] = {"wetland", "köppen", "ikir"};
@@ -19,6 +21,8 @@ const char* köppnimet[] = {"D.b", "D.c", "D.d", "ET"};
 int pit_pripost, pit_kaudet, pit_wetl, pit_köpp, pit_ikir, ind_jää;
 
 #define ARRPIT(a) sizeof(a)/sizeof(*(a))
+#define _STR(s) #s
+#define STR2(s1,s2) (_STR(s1) _STR(s2))
 
 void pituudet() {
     pit_pripost = ARRPIT(pripost);
@@ -71,7 +75,8 @@ kelpaa:
 int lue_data(int ppnum, const char* ylänimi, const char** nimet, int pit, float* taul) {
     static int vuo_ind=-1, tg_ind=-1;
     for(int k=0; k<pit_kaudet; k++) {
-	FILE* f = fopen(aprintf("vuotaulukot/%svuo_%s_%s_ft2.csv", ylänimi, pripost[ppnum], kaudet[k]), "r");
+	FILE* f = fopen(aprintf("vuotaulukot/%svuo_%s_%s_k%i.csv",
+				ylänimi, pripost[ppnum], kaudet[k], KOSTEIKKO*(!!strcmp(ylänimi,"wetland"))), "r");
 	if(!f) return 1;
 	while(fgetc(f) != '\n'); // 1. rivi on kommentti
 
@@ -131,7 +136,8 @@ void kirjoita_rivi(FILE* f, float* taul) {
 #undef B
 
 void kirjoita_data(int ppnum, float* taul) {
-    FILE *f = fopen(aprintf("vuosummat%s_%s.tex", TIIVISTELMÄ? "_tiivistelmä": "", pripost[ppnum]), "w");
+    FILE *f = fopen(aprintf("vuosummat%s_%s%s.tex",
+			    TIIVISTELMÄ? "_tiivistelmä": "", pripost[ppnum], KOSTEIKKO? STR2(_k,KOSTEIKKO): ""), "w");
     K("\\begin{tabular}{l");
 #if TIIVISTELMÄ
     for(int i=0; i<pit_kaudet; i++) K("|rr");
@@ -158,12 +164,14 @@ void kirjoita_data(int ppnum, float* taul) {
 	kirjoita_rivi(f, taul);
 	taul += pit_kaudet*2;
     }
+#if !KOSTEIKKO
     K("\\\\\n");
     for(int i=0; i<pit_wetl; i++) {
 	K("%s", korvaa(wetlnimet[i], '_', ' '));
 	kirjoita_rivi(f, taul);
 	taul += pit_kaudet*2;
     }
+#endif
     K("\\end{tabular}\n");
 }
 #undef K
