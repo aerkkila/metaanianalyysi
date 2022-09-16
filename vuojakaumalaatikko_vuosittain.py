@@ -14,11 +14,13 @@ def taulukko(tulos, luokka, textied):
     avg = np.sort(tulos['avg'])
     suht = np.std(avg)/np.mean(avg[1:-1])
 
-    siirto = 0.55
-    jyrkkyys = 0.5
-    arvo = lambda x: np.log((x+siirto)*jyrkkyys)/np.log(siirto*jyrkkyys)
+    yläraja = 0.45
+    alaraja = 0.05
+    jyrkkyys = 5
+    #arvo = lambda x: np.log((x+siirto)*jyrkkyys)/np.log(siirto*jyrkkyys)
+    arvo = lambda a: (np.exp(-(a-alaraja)*jyrkkyys)-np.exp(-yläraja*jyrkkyys)) / (1-np.exp(-yläraja*jyrkkyys))
 
-    suht1 = arvo(suht) if 0<suht and suht<1 else 0 if suht>=1 else 1
+    suht1 = 1 if suht<alaraja else arvo(suht) if suht<yläraja else 0
     textied.write(' & \\colorbox[rgb]{1.00, %.3f, %.3f}{%.3f}' %(suht1,suht1,suht))
 
 def aja2(luokka, kausi, textied):

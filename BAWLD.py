@@ -33,18 +33,18 @@ tunnisteet = {
     # 'river'          : 'RIV',
 }
 
-def hae_tiednimi(luokka, hakemisto):
+def hae_tiednimi(luokka, hakemisto, jatke):
     for tied in os.listdir(hakemisto):
-        if f'_{tunnisteet_kaikki[luokka]}.nc' in tied:
+        if '_%s%s.nc' %(tunnisteet_kaikki[luokka],jatke) in tied:
             return hakemisto+tied
     print("Ei löytynyt %s" %luokka)
     sys.exit()
 
-def luo_data(luokat, alkup=True, muunnos=True):
+def luo_data(luokat, alkup=True, muunnos=True, jatke=''):
     alkup_data = None
     muunn_data = None
     if alkup:
-        ds0 = Dataset('BAWLD05x05.nc', 'w')
+        ds0 = Dataset('BAWLD05x05%s.nc' %jatke, 'w')
         lat0 = np.arange(29.25, 83.9, 0.5)
         lon0 = np.arange(-179.75, 179.9, 0.5)
         ds0.createDimension('lat', lat0.size)
@@ -54,7 +54,7 @@ def luo_data(luokat, alkup=True, muunnos=True):
         ds0['lat'][:] = lat0
         ds0['lon'][:] = lon0
     if muunnos:
-        ds1 = Dataset('BAWLD1x1.nc', 'w')
+        ds1 = Dataset('BAWLD1x1%s.nc' %jatke, 'w')
         lat1 = np.arange(29.5, 84, 1)
         lon1 = np.arange(-179.5, 180, 1)
         ds1.createDimension('lat', lat1.size)
@@ -64,7 +64,7 @@ def luo_data(luokat, alkup=True, muunnos=True):
         ds1['lat'][:] = lat1
         ds1['lon'][:] = lon1
     for luokka in luokat:
-        ds = Dataset(hae_tiednimi(luokka, config.tyotiedostot+'MethEOWP730/BAWLD/'), 'r')
+        ds = Dataset(hae_tiednimi(luokka, config.tyotiedostot+'MethEOWP730/BAWLD/', jatke), 'r')
         lat = ds['lat'][:]
         liite = np.zeros([np.searchsorted(lat0,lat[0]), lon0.size])
         data0 = ds['Band1'][:].filled(0)
@@ -81,9 +81,10 @@ def luo_data(luokat, alkup=True, muunnos=True):
     return ds0, ds1
 
 def main():
-    ds0, ds1 = luo_data(tunnisteet_kaikki.keys())
-    ds0.close()
-    ds1.close()
+    for jatke in ['','_H','_L']:
+        ds0, ds1 = luo_data(tunnisteet_kaikki.keys(), jatke=jatke)
+        ds0.close()
+        ds1.close()
 
 if __name__=='__main__':
     try:

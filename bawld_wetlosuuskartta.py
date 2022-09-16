@@ -18,6 +18,7 @@ def tee_alikuva(subplmuoto, subpl, **axes_kwargs):
     return ax
 
 def main():
+    liite = '_H' if 'h' in sys.argv else '_L' if 'l' in sys.argv else ''
     rcParams.update({'font.size': 15,
                      'figure.figsize': (14,8)})
     platecarree = ccrs.PlateCarree()
@@ -25,7 +26,8 @@ def main():
     kattavuus   = [-180,180,45,90]
     lajit       = ['bog','fen','marsh','permafrost_bog','tundra_wetland']
     cmap        = 'gnuplot2_r'
-    ds          = Dataset('BAWLD1x1.nc', 'r', format="NETCDF4_CLASSIC")
+
+    ds          = Dataset('BAWLD1x1%s.nc' %liite, 'r', format="NETCDF4_CLASSIC")
     mx,my       = np.meshgrid(ds['lon'][:], ds['lat'][:], sparse=True)
     a           = np.empty([len(lajit),ds['bog'].shape[0],ds['bog'].shape[1]], np.float32)
     wl          = ds['wetland'][:,:]
@@ -33,6 +35,7 @@ def main():
 
     for i,laji in enumerate(lajit):
         a[i,...] = ds[laji][:,:] / wl
+
     maxmuu   = np.max(a[[True,True,False,True,True], ...])
 
     for i,laji in enumerate(lajit):
@@ -52,7 +55,7 @@ def main():
     colorbar()
 
     if('-s' in sys.argv):
-        savefig('kuvia/%s.png' %sys.argv[0][:-3])
+        savefig('kuvia/%s%s.png' %(sys.argv[0][:-3],liite))
     else:
         show()
 
