@@ -1,8 +1,12 @@
 #!/usr/bin/python3
-from wetlandtyypin_pisteet import valitse_painottaen
+#from wetlandtyypin_pisteet import valitse_painottaen
 from matplotlib.pyplot import *
 import matplotlib as mpl
 import sys
+from netCDF4 import Dataset
+from sklearn.linear_model import LinearRegression
+from copy import copy
+import config
 
 def aja(x0, y0, hyppy, xnimio=''):
     rajat = np.arange(0, max(x0)+hyppy, hyppy)
@@ -42,51 +46,55 @@ def aja(x0, y0, hyppy, xnimio=''):
     ax.add_collection(pc)
     xticks(rajat)
     ax.set_xlim(rajat[0]-lev/2-0.02, rajat[-2]+lev/2+0.02)
-    ylabel('CH$_4$ flux')
+    ylabel('nmol m$^{-2}$ s$^{-1}$')
     return {'rajat':rajat, 'laatikot':laatikot, 'luokat':luokat, 'avgs':avgs}
 
-def hilan_korjaus(x, y, lat, monistus):
-    indeksit = valitse_painottaen(lat, monistus)
-    return x[indeksit], y[indeksit]
-
 def lpx(laji):
-    da = xr.open_dataarray(config.lpx_dir + 'LPX_area_%s.nc' %laji).mean(dim='time')
-    return da.data.flatten() #tämä ja vuo pitäisi yhdistää ennen keskiarvoa
+    da = Dataset(config.lpx_dir + 'LPX_area_%s.nc' %laji, 'r')
+    d = np.mean(da['data'][:], axis=0)
+    da.close()
+    return d.flatten()
 
 def main():
-    rcParams.update({'figure.figsize':(12,10), 'font.size':15})
+    rcParams.update({'figure.figsize':(13,6), 'font.size':15})
     kausi = 'whole_year'
+    s = Dataset('BAWLD1x1.nc','r')
+    dt = {'x':s['wetland'][:].flatten(), 'lon':s['lon'][:].flatten(), 'lat':s['lat'][:].flatten()}
+    dt['lon'],dt['lat'] = np.meshgrid(dt['lon'],dt['lat'])
+    dt['lon'] = dt['lon'].flatten()
+    dt['lat'] = dt['lat'].flatten()
+    s.close()
+    s = Dataset('flux1x1.nc', 'r')
     if '--priori' in sys.argv:
-        dt = wld.tee_data2(kausi, priori=True)
+        dt.update({'y':np.mean(s['flux_bio_prior'][:], axis=0).flatten()*1e9})
         nimipaate = '_prior'
     else:
-        dt = wld.tee_data2(kausi)
+        dt.update({'y':np.mean(s['flux_bio_posterior'][:], axis=0).flatten()*1e9})
         nimipaate = ''
+    s.close()
     laji = sys.argv[1]
-    monistus = 8
     if laji=='wetland':
-        x0 = dt['x'][:,dt['wlnimet'].index(laji)]
+        x0 = dt['x']
     elif laji=='peat' or laji=='wetsoil' or laji=='inund':
         x0 = lpx(laji)
-        x0 = x0[dt['maski']]
     else:
-        exit()
-    for j in range(3):
+        print('tuntematon: %s' %laji)
+        sys.exit()
+    for j in range(2):
         alue = (dt['lon']<0) if j==0 else (dt['lon']>=0 if j==1 else dt['lon']<np.inf) #erikseen itäinen ja läntinen alue
         x = copy(x0[alue])
         y = copy(dt['y'][alue])
         lat = copy(dt['lat'][alue])
-        x,y = hilan_korjaus(x,y,lat,monistus)
-        aluenimi = ['west','east','all'][j]
+        aluenimi = ['west','east'][j]
         for i,hyppy in enumerate([0.1]):
-            subplot(2,2,j+i*2+1)
+            subplot(1,2,j+i*2+1)
             data = aja(x, y, hyppy=hyppy, xnimio=aluenimi)
             y1 = np.max(y)+1
             rajat = data['rajat']
             laatikot = data['laatikot']
             luokat = data['luokat']
             for i in range(laatikot.shape[0]):
-                text(rajat[i], y1, "%.0f" %(np.ceil(len(luokat[i])/monistus)), rotation=90)
+                text(rajat[i], y1, "%.0f" %(len(luokat[i])), rotation=90)
             xlabel(laji + ' (%s)' %(aluenimi))
             if hyppy<0.1:
                 xticks(rotation=45)
@@ -98,9 +106,10 @@ def main():
         show()
 
 if __name__=='__main__':
-    import wetlandvuo_data as wld
-    import xarray as xr
-    from sklearn.linear_model import LinearRegression
-    from copy import copy
-    import config
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print('')
+        exit()
+
+        
