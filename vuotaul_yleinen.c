@@ -84,9 +84,11 @@ int argumentit(int argc, char** argv) {
 void lue_yleiskosteikko() {
 #define lue(nimi,var) (yleiskosteikko=nct_read_from_ncfile(nimi, var, nc_get_var_float, sizeof(float)))
     switch(KOSTEIKKO) {
-    case 1: lue("BAWLD1x1.nc", "wetland"); break;
-    case 2: lue("yleiskosteikko.nc", "data"); break;
-    case 3: lue("../lpx_data/LPX_area_peat.nc", "data"); break;
+    case 1:   lue("BAWLD1x1.nc", "wetland"); break;
+    case 'H': lue("BAWLD1x1_H.nc", "wetland"); break;
+    case 'L': lue("BAWLD1x1_L.nc", "wetland"); break;
+    case 2:   lue("yleiskosteikko.nc", "data"); break;
+    case 3:   lue("../lpx_data/LPX_area_peat.nc", "data"); break;
     }
 #undef lue
 }
