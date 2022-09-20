@@ -99,7 +99,7 @@ def pintaalat1x1(kokodata,darr,tarkk,alat):
         lukualat[(int(luku)-minluku)//tarkk] += alat[i]
     return np.arange(minluku,maxluku+1,tarkk), lukualat
 
-al_muuttuja = ['jaatym_alku','talven_alku','talven_loppu']
+al_muuttuja = ['jaatym_alku','talven_alku','kesan_alku']
 al_nimi = ['freezing_start', 'winter_start', 'summer_start']
 
 def aja(kaudet, ftnum, ikirdat, alat):

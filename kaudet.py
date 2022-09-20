@@ -25,15 +25,15 @@ def main():
         kansio = config.tyotiedostot+'../smos_uusi/data2/'
     jaatym_alku = avaa(kansio+'freezing_start_doy_*.nc').data
     talven_alku = avaa(kansio+'winter_start_doy_*.nc').autumn_end
-    talven_loppu = avaa(kansio+'winter_end_doy_*.nc').spring_start
+    kesan_alku = avaa(kansio+'winter_end_doy_*.nc').spring_start
     jaatym_alku = muokkaa_array(jaatym_alku)
     talven_alku = muokkaa_array(talven_alku)
-    talven_loppu = muokkaa_array(talven_loppu)
-    ajat = xr.Dataset({'jaatym_alku':jaatym_alku, 'talven_alku':talven_alku, 'talven_loppu':talven_loppu}).load()
-    tapahtumat = ['jaatym_alku', 'talven_alku', 'talven_loppu']
+    kesan_alku = muokkaa_array(kesan_alku)
+    ajat = xr.Dataset({'jaatym_alku':jaatym_alku, 'talven_alku':talven_alku, 'kesan_alku':kesan_alku}).load()
+    tapahtumat = ['jaatym_alku', 'talven_alku', 'kesan_alku']
     jaatym_alku.close()
     talven_alku.close()
-    talven_loppu.close()
+    kesan_alku.close()
     maski = xr.open_dataarray('aluemaski.nc').data # tämä nopeuttaa, mutta ei vaikuta tuloksiin
 
     alkuaika = pd.Period('%4i-08-01' %(int(ajat.vuosi[0])-1), freq='D')

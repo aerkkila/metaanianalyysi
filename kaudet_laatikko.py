@@ -8,7 +8,7 @@ import luokat, sys
 aste = 0.0174532925199
 SPINTAALA = lambda _lat: np.sin((_lat+1)*aste) - np.sin(_lat*aste)
 
-al_muuttuja = ['jaatym_alku','talven_alku','talven_loppu','freezing','winter','summer',]
+al_muuttuja = ['jaatym_alku','talven_alku','kesan_alku','freezing','winter','summer',]
 al_nimi = ['freezing_start', 'winter_start', 'summer_start','freezing_length','winter_length','summer_length']
 vuosi0 = 2012
 vuosi1 = 2021
