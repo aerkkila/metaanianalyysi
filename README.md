@@ -26,7 +26,8 @@ They should be compiled with argument \`pkg-config --libs nctietue2\`
 	   Climate class for each grid cell.
    - **vuojakaumadata<area>.c** &rarr; vuojakaumadata/\*.bin, vuojakaumadata/vuosittain/\*.bin, vuojakaumadata/vuosittain/*.csv \
 	   Calculate distribution of methane fluxes in different areas and seasons. \
-	   If compiled with -DVUODET_ERIKSEEN=1 calculates all years separately and makes csv-tables of yearly seasonal emission sums.
+	   If compiled with -DVUODET_ERIKSEEN=1 calculates all years separately \
+	   and makes csv-tables of yearly seasonal emission sums and average season start days.
    - **vuotaul_yleinen.c** &rarr; vuotaulukot/\*.csv \
 	   Calculate average methane fluxes in different areas and seasons.
 

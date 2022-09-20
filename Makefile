@@ -4,7 +4,7 @@ yleiskosteikko.out: yleiskosteikko.c
 	gcc -Wall ${@:.out=.c} -o $@ `pkg-config --libs nctietue2 gsl` -g -O2
 
 vuojakaumadata.out: vuojakaumadata.c
-	gcc -Wall vuojakaumadata.c -o $@ `pkg-config --libs nctietue2 gsl` -g -O3 -DVUODET_ERIKSEEN=0
+	gcc -Wall vuojakaumadata.c -o $@ `pkg-config --libs nctietue2 gsl` -g -O3
 vuojakauma_ikir: vuojakaumadata.out
 	./vuojakaumadata.out ikir post
 vuojakauma_köpp: vuojakaumadata.out
@@ -31,6 +31,7 @@ vuojakauma_vuosittain_wetl: vuojakaumadata_vuosittain.out
 	./vuojakaumadata_vuosittain.out wetl post
 vuojakaumadata_vuosittain.target: vuojakauma_vuosittain_ikir vuojakauma_vuosittain_köpp vuojakauma_vuosittain_wetl
 	cat vuojakaumadata/vuosittain/emissio_*_post.csv > emissio_vuosittain.csv
+	cat vuojakaumadata/vuosittain/alkupäivät_*_post.csv > alkupäivät_vuosittain.csv
 
 vuojakauma_vuosittain_pri_ikir: vuojakaumadata_vuosittain.out
 	./vuojakaumadata_vuosittain.out ikir pri

@@ -9,9 +9,10 @@
 #include <gsl/gsl_statistics.h>
 #include <assert.h>
 #include <time.h>
+#include <errno.h>
 
 // kääntäjä tarvitsee argumentit `pkg-config --libs nctietue2 gsl`
-// lisäksi -DVUODET_ERIKSEEN=0 tai -DVUODET_ERIKSEEN=1
+// lisäksi tarvittaessa -DVUODET_ERIKSEEN=1
 // nctietue2-kirjasto on osoitteessa https://github.com/aerkkila/nctietue2.git
 
 #define ARRPIT(a) (sizeof(a)/sizeof(*(a)))
@@ -20,6 +21,10 @@
 const double r2 = 6371229.0*6371229.0;
 #define SUHT_ALA(lat, hila) (sin(((lat)+(hila)*0.5) * ASTE) - sin(((lat)-(hila)*0.5) * ASTE))
 #define SUHT2ABS_KERR(hila) (r2 * ASTE * (hila))
+
+#ifndef VUODET_ERIKSEEN
+#define VUODET_ERIKSEEN 0
+#endif
 
 const int resol = 19800;
 
@@ -54,10 +59,29 @@ static struct tm tm1 = {.tm_mon=8-1, .tm_mday=1};
 #define vuosi0 2012
 #if VUODET_ERIKSEEN
 #define vuosi1 2021
+static const int vuosi0_var = vuosi0;
 #else
 #define vuosi1 2020
 #endif
-static const int vuosi0_var = vuosi0;
+
+typedef struct {
+    time_t t;
+    struct tm tm;
+} tmt;
+
+struct laskenta {
+    char* kausiptr;
+    float* vuoptr;
+    int kuluva_kausi, kuluneita_kausia[kausia], sijainti1[kausia], sijainti[kausia], lajinum, lukitse, vuosi;
+    const char* lajinimi;
+    float *vuoulos[kausia], *cdf[kausia];
+    tmt kesän_alku;
+    /* vuodet erikseen */
+    double emissio1[kausia], emissio[vuosi1-vuosi0][kausia];
+    double päiv0sum[vuosi1-vuosi0][kausia], n_päiv0[vuosi1-vuosi0][kausia]; // painotettuina pinta-alalla
+};
+
+tmt* tee_päivä(tmt *aika, int ind_t);
 
 char aprintapu[256];
 char* aprintf(const char* muoto, ...) {
@@ -146,71 +170,79 @@ double* jaa(double* a, double* b, int pit) {
     return c;
 }
 
-typedef struct {
-    time_t t;
-    struct tm tm;
-} tmt;
-
-struct laskenta {
-    char* kausiptr;
-    float* vuoptr;
-    int kuluva_kausi, kuluneita_kausia[kausia], sijainti1[kausia], sijainti[kausia], lajinum, lukitse, vuosi;
-    const char* lajinimi;
-    tmt alkuhetki, kesän_alku;
-    float *vuoulos[kausia], *cdf[kausia];
-    double emissio1[kausia], emissio[vuosi1-vuosi0][kausia];
-};
-
 void alusta_lajin_laskenta(struct laskenta* args) {
     for(int i=0; i<kausia; i++) {
-	args->kuluneita_kausia[i]         =
-	    args->sijainti1[i]            =
-	    args->sijainti[i]             =
-	    args->emissio[args->vuosi][i] =
-	    args->emissio1[i]             = 0;
+	args->kuluneita_kausia[i]          =
+	    args->sijainti1[i]             =
+	    args->sijainti[i]              =
+	    args->emissio[args->vuosi][i]  =
+	    args->emissio1[i]              =
+	    args->päiv0sum[args->vuosi][i] =
+	    args->n_päiv0[args->vuosi][i]  = 0;
     }
     args->lukitse = 0;
 }
 
-void alusta_hilaruutu(struct laskenta* args, int t) {
-    args->kuluva_kausi = freezing_e;
+void päivä_keskiarvoon(struct laskenta* args, double ala, int kausi, int ind_t) {
+    tmt aputmt;
+    args->päiv0sum[args->vuosi][kausi] += tee_päivä(&aputmt, ind_t)->t * ala;
+    args->n_päiv0[args->vuosi][kausi] += ala;
+}
+
+void päivä_keskiarvoon_w(struct laskenta* args, double ala, int kausi, int ind_t, double paino) {
+    tmt aputmt;
+    args->päiv0sum[args->vuosi][kausi] += tee_päivä(&aputmt, ind_t)->t * ala * paino;
+    args->n_päiv0[args->vuosi][kausi] += ala * paino;
+}
+
+void alusta_hilaruutu(struct laskenta* args, int t, int kausi) {
+    args->kuluva_kausi = kausi;
     args->kuluneita_kausia[0] = t/365;
     memset(args->kuluneita_kausia+1, 0, (kausia-1)*sizeof(int));
 }
 
-tmt tee_päivä(struct laskenta* args, int ind_t) {
-    tmt aika = {.tm=args->alkuhetki.tm};
-    aika.tm.tm_mday += ind_t / resol;
-    aika.t = mktime(&aika.tm);
+tmt* tee_päivä(tmt *aika, int ind_t) {
+    aika->tm = tm0;
+    aika->tm.tm_mday += ind_t / resol;
+    aika->t = mktime(&aika->tm);
     return aika;
 }
 
 void hyväksy_kausi(struct laskenta* args) {
     /* Jos tähän lisätään jokin esim. maksimiarvon ottaminen kaudelta,
        täytyy käsitellä erikseen monivuotiset kesät. */
-    for(int i=0; i<kausia; i++) {
-	args->sijainti[i] = args->sijainti1[i];
-	args->emissio[args->vuosi][i] += args->emissio1[i];
-	args->emissio1[i] = 0;
+    int i;
+    switch(args->kuluva_kausi) {
+    case freezing_e: i=summer_e;   break;
+    case winter_e:   i=freezing_e; break;
+    case summer_e:   i=winter_e;   break;
+    default: i=0; asm("int $3");
     }
+    args->sijainti[i] = args->sijainti1[i];
+    args->sijainti[0] = args->sijainti1[0];
+    if(!VUODET_ERIKSEEN) return;
+    args->emissio[args->vuosi][i] += args->emissio1[i];
+    args->emissio[args->vuosi][0] += args->emissio1[0];
+    args->emissio1[i] = args->emissio1[0] = 0;
 }
 
 int tarkista_kausi(struct laskenta* args, int ind_t) {
     if(args->kausiptr[ind_t] == args->kuluva_kausi) return 1; // samaa kautta
-    assert(args->kausiptr[ind_t] != 0);
+    assert(args->kausiptr[ind_t]);
     int lisäys = 1;
     if(args->kuluva_kausi == summer_e) { // kesässä voi olla monta vuotta kerralla
 #if !VUODET_ERIKSEEN
-	tmt kesän_loppu = tee_päivä(args, ind_t);
-	if(args->kesän_alku.tm.tm_year != kesän_loppu.tm.tm_year) {
+	tmt aputmt;
+	tee_päivä(&aputmt, ind_t);
+	if(args->kesän_alku.tm.tm_year != aputmt.tm.tm_year) {
 	    struct tm apu = {.tm_year = args->kesän_alku.tm.tm_year, .tm_mon=8-1, .tm_mday=15};
 	    time_t p15_8 = mktime(&apu);
 	    lisäys = 0;
 	    lisäys += args->kesän_alku.t < p15_8; // onko 15.8. ensimmäisenä vuonna
-	    apu = (struct tm){.tm_year = kesän_loppu.tm.tm_year, .tm_mon=8-1, .tm_mday=15};
+	    apu = (struct tm){.tm_year=aputmt.tm.tm_year, .tm_mon=8-1, .tm_mday=15};
 	    p15_8 = mktime(&apu);
-	    lisäys += p15_8 < kesän_loppu.t;      // onko 15.8. viimeisenä vuonna
-	    int keskivuosia = kesän_loppu.tm.tm_year - args->kesän_alku.tm.tm_year - 2;
+	    lisäys += p15_8 < aputmt.t;           // onko 15.8. viimeisenä vuonna
+	    int keskivuosia = aputmt.tm.tm_year - args->kesän_alku.tm.tm_year - 2;
 	    lisäys += keskivuosia>0? keskivuosia: 0; // keskivuosissa on aina 15.8.
 	}
 #endif
@@ -222,22 +254,26 @@ int tarkista_kausi(struct laskenta* args, int ind_t) {
 #if VUODET_ERIKSEEN
 	aikapit = MIN(ind_t+365, aikapit);
 #else
-	args->kesän_alku = tee_päivä(args, ind_t);
+	tee_päivä(&args->kesän_alku, ind_t);
 #endif
     if(args->kuluneita_kausia[0] == vuosia)
 	return 0; // vuosien määrä täyttyi
+    if(VUODET_ERIKSEEN && luokenum!=wetl_e) päivä_keskiarvoon(args, alat[ind_t%resol/360], args->kuluva_kausi, ind_t);
     return 2; // kausi vaihtui
 }
 
-#define ALKUUN(t,ala)					\
-    int t;						\
-    for(t=0; t<aikapit; t++)				\
-	if(kausiptr[t*resol+r] == 0)			\
-	    goto seuraava;				\
-    for(t=0; t<aikapit; t++)				\
-	if(kausiptr[t*resol + r] == freezing_e) break;	\
-    alusta_hilaruutu(args, t);				\
-    double ala = alat[r/360]
+#define ALKUUN(t,ala)							\
+    int t;								\
+    args->kuluva_kausi = 0;						\
+    for(t=0; t<aikapit; t++)						\
+	if(kausiptr[t*resol+r] == 0)					\
+	    goto seuraava;						\
+    for(t=0; t<aikapit; t++)						\
+	if(kausiptr[t*resol + r] == freezing_e				\
+	   || kausiptr[t*resol + r] == winter_e) break;			\
+    alusta_hilaruutu(args, t, kausiptr[t*resol+r]);			\
+    double ala = alat[r/360];						\
+    if(VUODET_ERIKSEEN && luokenum!=wetl_e) päivä_keskiarvoon(args, ala, kausiptr[t*resol+r], t*resol+r)
 
 void täytä_kosteikkodata(struct laskenta* args) {
     char* kausiptr = args->kausiptr;
@@ -252,12 +288,13 @@ void täytä_kosteikkodata(struct laskenta* args) {
 	if(osuus0ptr[r] < wraja) continue;
 	//if(osuus1ptr[r]/osuus0ptr[r] < rajaosuus) continue;
 	ALKUUN(t,ala);
+	päivä_keskiarvoon_w(args, ala, kausiptr[t*resol+r], t*resol+r, osuus1ptr[r]);
 
 	for(; t<aikapit; t++) {
 	    int ind_t = t*resol + r;
 	    switch(tarkista_kausi(args, ind_t)) {
 	    case 0: hyväksy_kausi(args); goto seuraava;
-	    case 2: hyväksy_kausi(args); break;
+	    case 2: hyväksy_kausi(args); päivä_keskiarvoon_w(args, ala, args->kuluva_kausi, t*resol+r, osuus1ptr[r]); break;
 	    }
 	    int kausi = kausiptr[ind_t];
 	    args->vuoulos[kausi][args->sijainti1[kausi]]   = vuoptr[ind_t] / osuus0ptr[r];
@@ -269,6 +306,7 @@ void täytä_kosteikkodata(struct laskenta* args) {
 	    args->emissio1[0    ] += vuoptr[ind_t] * osuus1ptr[r]/osuus0ptr[r] * ala;
 #endif
 	}
+	if(VUODET_ERIKSEEN && args->kuluva_kausi) hyväksy_kausi(args);
     seuraava:;
     }
 }
@@ -296,9 +334,7 @@ void täytä_köppendata(struct laskenta* args) {
 	    args->emissio1[0    ] += vuoptr[ind_t] * ala;
 #endif
 	}
-#if VUODET_ERIKSEEN
-	hyväksy_kausi(args);
-#endif
+	if(VUODET_ERIKSEEN && args->kuluva_kausi) hyväksy_kausi(args);
     seuraava:;
     }
 }
@@ -349,6 +385,7 @@ void täytä_ikirdata(struct laskenta* args) {
 	    args->emissio1[0    ] += vuoptr[ind_t] * ala;
 #endif
 	}
+	if(VUODET_ERIKSEEN && args->kuluva_kausi) hyväksy_kausi(args);
     seuraava:;
     }
 }
@@ -363,43 +400,6 @@ float* pintaaloista_kertymäfunktio(float* data, float* cdfptr, int pit) {
 	cdfptr[i] = (cdfptr[i]-tmp0) / tmp1;
     return cdfptr;
 }
-
-#if 0
-void kirjoita_data(struct laskenta* args) {
-    if(access(kansio, F_OK))
-	if(system(aprintf("mkdir %s", kansio))) {
-	    register int eax asm("eax");
-	    printf("system(mkdir)-komento palautti arvon %i", eax);
-	}
-
-    for(int kausi=0; kausi<kausia; kausi++) {
-	float* data   = args->vuoulos [kausi];
-	float* cdfptr = args->cdf     [kausi]; // alussa sisältää pinta-alat
-	int    pit    = args->sijainti[kausi];
-	
-	pintaaloista_kertymäfunktio(data, cdfptr, pit);
-
-	FILE *f = fopen(VUODET_ERIKSEEN ?
-			aprintf("./%s/%s_%s_%s_%i.bin", kansio, args->lajinimi, kaudet[kausi], pripost_ulos[ppnum], args->vuosi) :
-			aprintf("./%s/%s_%s_%s.bin", kansio, args->lajinimi, kaudet[kausi], pripost_ulos[ppnum]), "w");
-	assert(f);
-
-	int kirjpit = 1000;
-	if(pit < kirjpit)
-	    printf("liian vähän dataa %i %s, %s\n", pit, args->lajinimi, kaudet[kausi]);
-	float kirj[kirjpit];
-	fwrite(&kirjpit, 4, 1, f);
-	fwrite(&pit, 4, 1, f);
-	int ind = 0;
-	for(int i=0; i<kirjpit; i++) {
-	    ind = binsearch(cdfptr, (float)i/kirjpit, ind, pit);
-	    kirj[i] = data[ind]*1e9;
-	}
-	fwrite(kirj, 4, kirjpit, f);
-	fclose(f);
-    }
-}
-#endif
 
 void tallenna(struct laskenta* args, void* data, int kirjpit, int kausi) {
     if(access(kansio, F_OK))
@@ -466,6 +466,26 @@ void laita_ja_nollaa_emissio(struct laskenta* args) {
 	for(int v=0; v<vuosi1-vuosi0; v++) {
 	    fprintf(f, ",%.4lf", args->emissio[v][kausi] * SUHT2ABS_KERR(1) * 86400 * 16.0416 * 1e-12);
 	    args->emissio[v][kausi] = 0;
+	}
+	fputc('\n', f);
+    }
+    fclose(f);
+}
+
+void laita_alkupäivä(struct laskenta* args) {
+    FILE* f = fopen(aprintf("%s/alkupäivät_%s_%s.csv", kansio, args->lajinimi, pripost_ulos[ppnum]), "w");
+    fprintf(f, "#%s\n", args->lajinimi);
+    for(int v=vuosi0; v<vuosi1; v++)
+	fprintf(f, ",%i", v);
+    fputc('\n', f);
+    struct tm ttt = {.tm_mon=1-1, .tm_mday=1};
+    for(int kausi=1; kausi<kausia; kausi++) {
+	fprintf(f, "%s", kaudet[kausi]);
+	for(int v=0; v<vuosi1-vuosi0; v++) {
+	    ttt.tm_year = v+vuosi0-1900;
+	    time_t tavg = args->päiv0sum[v][kausi] / args->n_päiv0[v][kausi];
+	    double päivä = (tavg - mktime(&ttt)) / 86400;
+	    fprintf(f, ",%i", (int)päivä);
 	}
 	fputc('\n', f);
     }
@@ -559,7 +579,6 @@ int main(int argc, char** argv) {
 		    laita_data(&l_args, apu, kirjpit, k, -1);
 		    tallenna  (&l_args, apu, kirjpit, k);
 		}
-		//kirjoita_data(&l_args);
 		goto seuraava_laji;
 	    }
 	    for(int k=0; k<kausia; k++)
@@ -572,6 +591,7 @@ int main(int argc, char** argv) {
 	    l2 -= vuoden_päivät;
 	}
 	laita_ja_nollaa_emissio(&l_args);
+	laita_alkupäivä(&l_args);
 	for(int k=0; k<kausia; k++)
 	    tallenna(&l_args, apu+k*vuosia_yht*kirjpit, kirjpit, k);
 	l_args.kausiptr = kausiptr;
