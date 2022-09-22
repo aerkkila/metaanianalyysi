@@ -47,13 +47,11 @@ const char* kansio =
 #define kausia 4
 #define wraja 0.05
 
-static size_t   *kauden_kapasit;
 static nct_vset *luok_vs;
 static int       ppnum, aikapit;
-static float *restrict lat;
 static char  *restrict luok_c;
 static double *restrict alat;
-static int latpit, ikirvuosi0, ikirvuosia, vuosia, k_alku, v_alku;
+static int ikirvuosi0, ikirvuosia, vuosia;
 static struct tm tm0 = {.tm_mon=8-1, .tm_mday=15};
 static struct tm tm1 = {.tm_mon=8-1, .tm_mday=1};
 #define vuosi0 2012
@@ -463,7 +461,7 @@ int main(int argc, char** argv) {
     time_t t0 = mktime(&tm0); // haluttu alkuhetki
 
     nct_read_ncfile_gd0(&vuo, "./flux1x1.nc");
-    v_alku = hae_alku(&vuo, t0);
+    int v_alku = hae_alku(&vuo, t0);
     assert(v_alku >= 0);
     apuvar = &NCTVAR(vuo, pripost_sisaan[ppnum]);
     assert(apuvar->xtype == NC_FLOAT);
@@ -472,10 +470,10 @@ int main(int argc, char** argv) {
     assert(lue_luokitus());
 
     int lonpit = NCTVARDIM(*apuvar,2).len;
-    latpit = NCTVARDIM(*apuvar,1).len;
+    int latpit = NCTVARDIM(*apuvar,1).len;
     assert(lonpit*latpit == resol);
     assert((apuvar=&NCTVAR(vuo, "lat"))->xtype == NC_FLOAT);
-    lat = apuvar->data;
+    float* lat = apuvar->data;
     double _alat[latpit];
     alat = _alat;
     for(int i=0; i<latpit; i++)
@@ -486,7 +484,7 @@ int main(int argc, char** argv) {
     apuvar = &NCTVAR(*kausivset, "kausi");
     assert(apuvar->xtype == NC_BYTE || apuvar->xtype == NC_UBYTE);
 
-    k_alku = hae_alku(kausivset, t0);
+    int k_alku = hae_alku(kausivset, t0);
     if(k_alku < 0) {
 	printf("k_alku = %i\n", k_alku);
 	return 1;
@@ -498,8 +496,7 @@ int main(int argc, char** argv) {
     tee_aikapit(l1, l2, 0);
     int L1=l1, L2=l2;
     int vuosia_yht = vuosi1-vuosi0;
-    size_t kauden_kapasit_arr[kausia];
-    kauden_kapasit = kauden_kapasit_arr;
+    size_t kauden_kapasit[kausia];
     kauden_kapasit[whole_year_e] = (size_t)(aikapit*1.0 * resol*0.9);
     kauden_kapasit[summer_e]     = (size_t)(aikapit*0.7 * resol*0.9);
     kauden_kapasit[winter_e]     = (size_t)(aikapit*0.5 * resol*0.9);
@@ -562,7 +559,6 @@ int main(int argc, char** argv) {
 	free(l_args.vuoulos[i]);
 	free(l_args.cdf[i]);
     }
-    kauden_kapasit = NULL;
     free(luok_c);
     nct_free_vset(luok_vs);
     nct_free_vset(&vuo);

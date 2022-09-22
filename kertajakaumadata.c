@@ -43,7 +43,7 @@ static nct_vset *luok_vs;
 static int       aikapit;
 static char  *restrict luok_c;
 static double *restrict alat;
-static int ikirvuosi0, ikirvuosia, vuosia, k_alku;
+static int ikirvuosi0, ikirvuosia, vuosia;
 static struct tm tm0 = {.tm_mon=8-1, .tm_mday=15};
 static struct tm tm1 = {.tm_mon=7-1, .tm_mday=25};
 #define vuosi0 2012
@@ -446,7 +446,7 @@ int main(int argc, char** argv) {
     apuvar = &NCTVAR(*kausivset, "kausi");
     assert(apuvar->xtype == NC_BYTE || apuvar->xtype == NC_UBYTE);
 
-    k_alku = hae_alku(kausivset, t0);
+    int k_alku = hae_alku(kausivset, t0);
     if(k_alku < 0) {
 	printf("k_alku = %i\n", k_alku);
 	return 1;
