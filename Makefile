@@ -31,7 +31,6 @@ vuojakauma_vuosittain_wetl: vuojakaumadata_vuosittain.out
 	./vuojakaumadata_vuosittain.out wetl post
 vuojakaumadata_vuosittain.target: vuojakauma_vuosittain_ikir vuojakauma_vuosittain_köpp vuojakauma_vuosittain_wetl
 	cat vuojakaumadata/vuosittain/emissio_*_post.csv > emissio_vuosittain.csv
-	cat vuojakaumadata/vuosittain/alkupäivät_*_post.csv > alkupäivät_vuosittain.csv
 
 vuojakauma_vuosittain_pri_ikir: vuojakaumadata_vuosittain.out
 	./vuojakaumadata_vuosittain.out ikir pri
@@ -40,6 +39,17 @@ vuojakauma_vuosittain_pri_köpp: vuojakaumadata_vuosittain.out
 vuojakauma_vuosittain_pri_wetl: vuojakaumadata_vuosittain.out
 	./vuojakaumadata_vuosittain.out wetl pri
 vuojakaumadata_vuosittain_pri.target: vuojakauma_vuosittain_pri_ikir vuojakauma_vuosittain_pri_köpp vuojakauma_vuosittain_pri_wetl
+
+alkupäivät_vuosittain.out: kertajakaumadata.c
+	gcc -Wall kertajakaumadata.c -o $@ `pkg-config --libs nctietue2 gsl` -lm -g -O3 -DVUODET_ERIKSEEN=1
+alkupäivät_vuosittain_ikir: alkupäivät_vuosittain.out
+	./alkupäivät_vuosittain.out ikir post
+alkupäivät_vuosittain_köpp: alkupäivät_vuosittain.out
+	./alkupäivät_vuosittain.out köpp post
+alkupäivät_vuosittain_wetl: alkupäivät_vuosittain.out
+	./alkupäivät_vuosittain.out wetl post
+alkupäivät_vuosittain.target: alkupäivät_vuosittain_ikir alkupäivät_vuosittain_köpp alkupäivät_vuosittain_wetl
+	cat kausijakaumadata/alkupäivät_*.csv > alkupäivät_vuosittain.csv
 
 wetlandsumma.out: wetlandsumma.c
 	gcc -Wall wetlandsumma.c -o $@ `pkg-config --libs nctietue` -lm -O3

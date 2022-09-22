@@ -27,7 +27,10 @@ They should be compiled with argument \`pkg-config --libs nctietue2\`
    - **vuojakaumadata<area>.c** &rarr; vuojakaumadata/\*.bin, vuojakaumadata/vuosittain/\*.bin, vuojakaumadata/vuosittain/*.csv \
 	   Calculate distribution of methane fluxes in different areas and seasons. \
 	   If compiled with -DVUODET_ERIKSEEN=1 calculates all years separately \
-	   and makes csv-tables of yearly seasonal emission sums and average season start days.
+	   and makes csv-tables of yearly seasonal emission sums.
+   - **kertajakaumadata<area>.c** &rarr; kausijakaumadata/* \
+	   Like vuojakaumadata<area>.c but for season start days or similar with only 1 value per season in a cell. \
+	   Only tested with -DVUODET_ERIKSEEN=1.
    - **vuotaul_yleinen.c** &rarr; vuotaulukot/\*.csv \
 	   Calculate average methane fluxes in different areas and seasons.
 

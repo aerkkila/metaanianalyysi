@@ -12,6 +12,7 @@ muunna_shapefile
 *.out
 tmp*
 vuojakaumadata/
+kausijakaumadata/
 vuojakaumadata_vuosittain/
 talteen_vuojakaumadata/
 *.tex
