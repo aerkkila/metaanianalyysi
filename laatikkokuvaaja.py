@@ -2,22 +2,6 @@ import matplotlib as mpl
 from matplotlib.pyplot import *
 import numpy as np
 
-#tämä korvattiin np.searchsorted-funktiolla
-def search_ind(num, limits):
-    length = len(limits)
-    lower = 0
-    upper = length-1
-    while True:
-        if upper-lower <= 1:
-            return lower if num<limits[lower] else upper if num<limits[upper] else upper+1
-        mid = (lower+upper)//2
-        if num<limits[mid]:
-            upper = mid-1
-        elif num>limits[mid]:
-            lower = mid+1
-        else:
-            return mid
-
 def wpercentile(arr, painot, lista, on_valmis=False):
     ret = np.empty(len(lista))
     if on_valmis:
@@ -41,13 +25,26 @@ def wpercentile(arr, painot, lista, on_valmis=False):
         ret[i] = alaraja_arr + (ylaraja_arr-alaraja_arr)*valin_osuus
     return ret
 
-def laatikkokuvaaja(lista, xsij=None, fliers='.', painostot=None, valmis=False, vari='b', avgmarker=False):
+def laatikkokuvaaja(lista, xsij=None, fliers='.', painostot=None, valmis=False, vari='b', avgmarker=False, sijainti='0'):
     laatikoita = len(lista)
     if xsij is None:
         xsij = np.linspace(0,1,laatikoita+1)
+
+    xsij0 = xsij[:]
+    xsij = xsij.copy()
+    if sijainti=='-':
+        for i in range(1,len(xsij)):
+            xsij[i] = (xsij0[i-1]+xsij0[i]) / 2
+        xsij[0] = xsij[1] - (xsij[2]-xsij[1])
+    elif sijainti=='+':
+        for i in range(len(xsij)-1):
+            xsij[i] = (xsij0[i+1]+xsij0[i]) / 2
+        xsij[-1] = xsij[-2] + (xsij[-2]-xsij[-3])
+
     suor = np.empty(laatikoita, object)
     laatikot = np.empty([laatikoita, 4], np.float32)
     mediaanit = np.empty([laatikoita], np.float32)
+    levtaul = np.empty([laatikoita], np.float32)
     yerr_a = np.zeros([2,laatikoita], np.float32)
     yerr_y = np.zeros([2,laatikoita], np.float32)
     for i in range(laatikoita):
@@ -63,9 +60,10 @@ def laatikkokuvaaja(lista, xsij=None, fliers='.', painostot=None, valmis=False, 
         else:
             laatikot[i,:] = np.nan
             mediaanit[i] = np.nan
-        xalue = xsij[i+1]-xsij[i]
+        xalue = xsij0[i+1]-xsij0[i]
         lev = xalue/2
-        x = xalue*i-lev/2
+        levtaul[i] = lev
+        x = xsij[i] - lev/2
         y = laatikot[i,1]
         w = lev
         h = laatikot[i,2]-laatikot[i,1]
@@ -75,7 +73,7 @@ def laatikkokuvaaja(lista, xsij=None, fliers='.', painostot=None, valmis=False, 
     ax = gca()
     errorbar(xsij[:-1], laatikot[:,1], yerr=yerr_a, fmt='none', ecolor=vari)
     errorbar(xsij[:-1], laatikot[:,2], yerr=yerr_y, fmt='none', ecolor=vari)
-    errorbar(xsij[:-1], mediaanit, xerr=lev/2, fmt='none', ecolor=vari, linewidth=2)
+    errorbar(xsij[:-1], mediaanit, xerr=levtaul/2, fmt='none', ecolor=vari, linewidth=2)
     if(avgmarker):
         avg = [np.mean(l) for l in lista]
         scatter(xsij[:-1], avg, marker=avgmarker, c=vari)
@@ -85,9 +83,9 @@ def laatikkokuvaaja(lista, xsij=None, fliers='.', painostot=None, valmis=False, 
             plot(np.tile(xsij[[i]], len(y)), y, fliers, color='r')
     pc = mpl.collections.PatchCollection(suor, facecolor="#00000000", edgecolor=vari)
     ax.add_collection(pc)
-    xticks(xsij)
+    xticks(xsij0)
     ax.set_xlim(xsij[0]-lev/2-0.02, xsij[-2]+lev/2+0.02)
-    ret = {'xsij':xsij[:-1], 'laatikot':laatikot, 'mediaanit':mediaanit}
+    ret = {'xsij':xsij0[:-1], 'xsij1':xsij[:-1], 'laatikot':laatikot, 'mediaanit':mediaanit}
     if avgmarker:
         ret.update({'avg':avg})
     return ret

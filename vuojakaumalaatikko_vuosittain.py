@@ -25,8 +25,13 @@ def taulukko(tulos, luokka, textied):
 
 def aja2(luokka, kausi, textied):
     ppnum = 0 if 'pri' in sys.argv else 1
-    with open('vuojakaumadata/vuosittain/%s_%s_%s.bin' %(luokka,kausi,pripost[ppnum]), "r") as f:
-        raaka = f.buffer.read()
+    #with open('vuojakaumadata/vuosittain/%s_%s_%s.bin' %(luokka,kausi,pripost[ppnum]), "r") as f:
+    if päivä:
+        with open('kausijakaumadata/%s_%s.bin' %(luokka,kausi), "r") as f:
+            raaka = f.buffer.read()
+    else:
+        with open('vuojakaumadata/vuosittain/%s_%s_%s.bin' %(luokka,kausi,pripost[ppnum]), "r") as f:
+            raaka = f.buffer.read()
     (pit,vuosi0) = struct.unpack("ii", raaka[:8])
     vuosi1 = vuosi0 + (len(raaka)-8)//4 // pit
     vuosia = vuosi1-vuosi0
@@ -42,19 +47,28 @@ def aja2(luokka, kausi, textied):
     xticks(tulos['xsij'], labels=nimet, rotation=0, ha='center')
     ax = gca()
     grid('on', axis='y')
-    ylabel('nmol m$^{-2}$ s$^{-1}$')
-    title("%s, %s" %(luokka, kausi))
+    if not päivä:
+        ylabel('nmol m$^{-2}$ s$^{-1}$')
+        title("%s, %s" %(luokka, kausi))
+    else:
+        ylabel('%s start' %kausi)
+        title(luokka)
     tight_layout()
     if '-s' in sys.argv:
-        nimi = 'kuvia/jakaumat_vuosittain/%s_%s_%s.png' %(pripost[ppnum], luokka, kausi)
+        if päivä:
+            nimi = 'kuvia/kaudet_vuosittain/%s_%s.png' %(luokka, kausi)
+        else:
+            nimi = 'kuvia/jakaumat_vuosittain/%s_%s_%s.png' %(pripost[ppnum], luokka, kausi)
         savefig(nimi)
         clf()
     else:
         show()
 
 def main():
+    global päivä
+    päivä = 1 if 'päivä' in sys.argv else 0
     rcParams.update({'figure.figsize':(7,11), 'font.size':14})
-    textied_ = 'vuosittaisvaihtelu.tex' if '-s' in sys.argv else '/dev/null'
+    textied_ = 'vuosittaisvaihtelu.tex' if '-s' in sys.argv and not päivä else '/dev/null'
     textied = open(textied_, 'w')
     textied.write("\\begin{tabular}{l|rrr}\n")
     for kausi in kaudet:
