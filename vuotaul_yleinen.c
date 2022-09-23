@@ -529,7 +529,7 @@ int main(int argc, char** argv) {
 				  .ainemäärä2=ainemäärä2, .ala_ja_aika2=ala_ja_aika2,
 				  .kausiptr=kausiptr,
 				  .alkuhetki=(tmt){.t=t0, .tm=tm0},
-				  .lajinum=luokkia, .kausiptr=kausiptr, .lajinimi="dryland"};
+				  .lajinum=luokkia, .kausiptr=kausiptr, .lajinimi="non-wetland"};
 	laske_kuiva(&l_args);
 	kirjoita_csv(&l_args, tallenn, ulos);
 

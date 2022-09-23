@@ -11,8 +11,10 @@ kaudet   = ['summer','freezing','winter']
 pripost  = ['pri', 'post']
 
 def taulukko(tulos, luokka, textied):
-    avg = np.sort(tulos['avg'])
-    suht = np.std(avg)/np.mean(avg[1:-1])
+    #avg = np.sort(tulos['avg'])
+    #suht = np.std(avg)/np.mean(avg[1:-1])
+    avg = np.array(tulos['avg'])
+    suht = np.std(avg)/np.mean(avg)
 
     yläraja = 0.45
     alaraja = 0.05

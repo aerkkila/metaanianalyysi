@@ -98,7 +98,7 @@ def main():
         #tulos = laatikkokuvaaja(pdatastot_köpp.flatten(), fliers='', painostot=painostot_köpp.flatten())
         #viimeistele(tulos, "köpp", xnimet_köpp, al_nimi[i_muutt])
         tulos = laatikkokuvaaja(np.concatenate([pdatastot_ikir.flatten(), pdatastot_köpp.flatten()]),
-                                fliers='',
+                                fliers='', avgmarker='o',
                                 painostot = np.concatenate([painostot_ikir.flatten(), painostot_köpp.flatten()]))
         viimeistele(tulos, "ikirköpp", np.concatenate([xnimet_ikir, xnimet_köpp]), al_nimi[i_muutt].replace('_',' '))
 

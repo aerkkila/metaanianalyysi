@@ -4,7 +4,9 @@
 #include <string.h>
 #include <assert.h>
 
+#ifndef TIIVISTELMÄ
 #define TIIVISTELMÄ 0
+#endif
 #ifndef KOSTEIKKO
 #define KOSTEIKKO 0
 #endif
@@ -12,9 +14,9 @@ const char* pripost[] = {"pri", "post"};
 const char* kaudet[] = {"summer", "freezing", "winter"};
 const char* ylänimet[] = {"wetland", "köppen", "ikir"};
 #if TIIVISTELMÄ
-const char* wetlnimet[] = {"bog", "fen", "marsh", "permafrost_bog", "tundra_wetland"};
+const char* wetlnimet[] = {"bog", "fen", "marsh", "permafrost_bog", "tundra_wetland", "non-wetland"};
 #else
-const char* wetlnimet[] = {"bog", "fen", "marsh", "permafrost_bog", "tundra_wetland", "wetland", "dryland"};
+const char* wetlnimet[] = {"bog", "fen", "marsh", "permafrost_bog", "tundra_wetland", "wetland", "non-wetland"};
 #endif
 const char* ikirnimet[] = {"non_permafrost", "sporadic", "discontinuous", "continuous"};
 const char* köppnimet[] = {"D.b", "D.c", "D.d", "ET"};
@@ -92,8 +94,11 @@ int lue_data(int ppnum, const char* ylänimi, const char** nimet, int pit, float
 	unsigned maski = 0;
 	/* Maskin ensimmäinen bitti jätetään käyttämättä, koska funktio palauttaa -1:n,
 	   kun riviltä ei löytynyt haluttua nimeä ja tällöin maski |= 1<<(-1+1) */
-	while(maski>>1 != (1<<pit)-1)
+	do
 	    maski |= 1<<(1+ota_rivi(f, taul+k*2, tg_ind, vuo_ind, nimet, pit));
+	while(maski>>1 != (1<<pit)-1 && !feof(f));
+	if(maski>>1 != (1<<pit)-1)
+	    puts("kaikkia rivejä ei löytynyt");
 	fclose(f);
     }
     return 0;

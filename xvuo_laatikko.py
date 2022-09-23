@@ -13,9 +13,9 @@ def lpx(laji):
     return d.flatten()
 
 def main():
-    hyppy = 0.1
+    #hyppy = 0.1
     rcParams.update({'figure.figsize':(6,6), 'font.size':15})
-    kausi = 'whole_year'
+    argv1 = sys.argv[1] if len(sys.argv)>1 and sys.argv[1]!='-s' else 'wetland'
     s = Dataset('BAWLD1x1.nc','r')
     x = s['wetland'][:].flatten()
     lon,lat = (np.ma.getdata(s['lon'][:]), np.ma.getdata(s['lat'][:]))
@@ -34,7 +34,7 @@ def main():
         y = np.mean(np.ma.getdata(s['flux_bio_posterior'][:]), axis=0).flatten()*1e9
         nimipaate = ''
     s.close()
-    laji = sys.argv[1]
+    laji = argv1
     if laji=='peat' or laji=='wetsoil' or laji=='inund':
         x1 = x
     for j in range(1):
@@ -70,8 +70,8 @@ def main():
         '''
 
         xticks(rotation=90)
-        xlabel('%s' %(sys.argv[1]))#, aluenimi))
-        ylabel('flux (nmol m$^{-2}$ s${-1}$)')
+        xlabel('fraction of %s' %(argv1))#, aluenimi))
+        ylabel('flux (nmol m$^{-2}$ s$^{-1}$)')
         ax = gca()
         xsij = tulos['xsij1']
         _y0 = ax.transAxes.transform((0,1.01))[1]
