@@ -25,6 +25,31 @@ def taulukko(tulos, luokka, textied):
     suht1 = 1 if suht<alaraja else arvo(suht) if suht<yläraja else 0
     textied.write(' & \\colorbox[rgb]{1.00, %.3f, %.3f}{%.3f}' %(suht1,suht1,suht))
 
+def lisää_kausien_keskiarvot(tulos, luokka, kausi):
+    with open('kausijakaumadata/%s_%s.bin' %(luokka,kausi), "r") as f:
+        raaka = f.buffer.read()
+    pit,a = struct.unpack("ii", raaka[:8])
+    koko = (len(raaka)-8) // 4
+    dt = np.ndarray(koko, dtype=np.float32, buffer=raaka[8:])
+    avgs = np.empty(koko//pit)
+    #meds = np.empty_like(avgs)
+    kars = np.empty_like(avgs)
+    ind1 = 0
+    pit_per_2 = pit//2
+    pit_per_i = pit//20
+    for i in range(len(avgs)):
+        ind2 = ind1+pit
+        avgs[i] = np.mean(dt[ind1:ind2])
+        #meds[i] = dt[ind1+pit_per_2]
+        kars[i] = np.mean(dt[ind1+pit_per_i : ind2-pit_per_i])
+        ind1 = ind2
+    gca().twinx()
+    plot(tulos['xsij1'], kars, 'o', color='r', markersize=7)
+    ylabel('%s start' %kausi)
+    pienin = min(kars)
+    erotus = (max(kars)-pienin)*0.6
+    ylim([pienin-erotus, max(kars)+erotus])
+
 def aja2(luokka, kausi, textied):
     ppnum = 0 if 'pri' in sys.argv else 1
     #with open('vuojakaumadata/vuosittain/%s_%s_%s.bin' %(luokka,kausi,pripost[ppnum]), "r") as f:
@@ -55,6 +80,7 @@ def aja2(luokka, kausi, textied):
     else:
         ylabel('%s start' %kausi)
         title(luokka)
+    lisää_kausien_keskiarvot(tulos, luokka, kausi)
     tight_layout()
     if '-s' in sys.argv:
         if päivä:

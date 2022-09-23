@@ -57,10 +57,11 @@ They should be compiled with argument \`pkg-config --libs nctietue2\`
 	   latex table about average fluxes and season part of whole year emission
    - **vuojakaumalaatikko<area>.py** &rarr; vuojakaumalaatikko_['pri','post']_[01].png \
 	   boxplot of methane fluxes in different areas and seasons
-   - **vuojakaumalaatikko_vuosittain.py** &rarr; jakaumat_vuosittain/['pri','post']\_{class}\_{season}.png, vuosittaisvaihtelu.tex
+   - **vuojakaumalaatikko_vuosittain.py** &rarr; jakaumat_vuosittain/*, vuosittaisvaihtelu.tex, kaudet_vuosittain/*
 	   Yearly boxplots of methane fluxex in different areas and seasons. \
 	   Years in same figure, areas and seasons separately. \
 	   Makes also a table about relative standard deviation of annual averages.
+	   Can be run with argument päivä to make similar figures of season start days.
 
 **Other**
 - **köppenpintaalat<area>.c** areas of climate classes
