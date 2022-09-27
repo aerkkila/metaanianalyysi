@@ -30,13 +30,14 @@ def main():
     ds          = Dataset('BAWLD1x1%s.nc' %liite, 'r', format="NETCDF4_CLASSIC")
     mx,my       = np.meshgrid(ds['lon'][:], ds['lat'][:], sparse=True)
     a           = np.empty([len(lajit),ds['bog'].shape[0],ds['bog'].shape[1]], np.float32)
-    wl          = ds['wetland'][:,:]
+    wl          = np.ma.getdata(ds['wetland'][:,:])
     wl[wl<0.05] = np.nan
 
     for i,laji in enumerate(lajit):
-        a[i,...] = ds[laji][:,:] / wl
+        a[i,...] = np.ma.getdata(ds[laji][:,:]) / wl
+    ds.close()
 
-    maxmuu   = np.max(a[[True,True,False,True,True], ...])
+    maxmuu   = np.nanmax(a[[True,True,False,True,True], ...])
 
     for i,laji in enumerate(lajit):
         ax = tee_alikuva([2,3], i, projection=projektio)
