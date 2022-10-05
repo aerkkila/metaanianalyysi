@@ -1,11 +1,3 @@
-#if 0
-'''#';
-#endif
-/* Tämä tiedosto on pätevää lähdekoodia sekä C:lle, että pythonille.
-   Alussa on datan tuottava C-koodi, joka pythonin tapauksessa on kommentoitu ulos.
-   Lopussa on datan piirtävä python-koodi, jota kutsutaan tästä C-ohjelmasta, ja joka C:n tapauksessa on kommentoitu ulos.
-*/
-
 #include <nctietue2.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -40,12 +32,12 @@ const char* pripost_ulos[]   = {"pri", "post"};
 #define ncdir "../"
 
 #ifndef menetelmä
-#define menetelmä keskiarvo_e
+#define menetelmä keskiarvo_e // kaikki_e ja huipparvo_e eivät käsittele vuorajaa oikein
 #endif
 #ifndef kausi
 #define kausi 1
 #endif
-//#define BOOTSTRAP
+#define BOOTSTRAP
 const int nboot_vakio = 150;
 
 typedef struct data_t data_t;
@@ -88,25 +80,13 @@ double laske_virtaama(const data_t* dt, double *kertoimet) {
     return laske_virtaama_(dt, kertoimet, 0, dt->pit);
 }
 
-/*
-int puolitushaku(const double* a, double f, int alempi, int ylempi) {
-alku:
-    int keski = (alempi+ylempi)/2;
-    if(ylempi-alempi <= 1) return f<alempi? alempi: f<ylempi? ylempi: ylempi+1;
-    if(f<a[keski])         ylempi = keski-1;
-    else if(f>a[keski])    alempi = keski+1;
-    else                   return keski;
-    goto alku;
-}
-*/
-
 double summa(double* dt, int n) {
     double s = 0;
     for(int i=0; i<n; i++) s += dt[i];
     return s;
 }
 
-void luo_data_kaikki(const data_t* dt, data_t* dt1, char* kausic, double wraja, double vuoraja) {
+int luo_data_kaikki(const data_t* dt, data_t* dt1, char* kausic, double wraja, double vuoraja) {
     char r_ei_kelpaa[dt->resol];
     memset(r_ei_kelpaa, 2, dt->resol);
     dt1->pit = dt1->virtaama = 0;
@@ -137,9 +117,10 @@ void luo_data_kaikki(const data_t* dt, data_t* dt1, char* kausic, double wraja, 
 	}
     }
     dt1->virtaama *= SUHT2ABS_KERR;
+    return 0;
 }
 
-void luo_data(const data_t* dt, data_t* dt1, char* kausic, double wraja, double vuoraja) {
+int luo_data(const data_t* dt, data_t* dt1, char* kausic, double wraja, double vuoraja) {
     dt1->pit = dt1->virtaama = 0;
     if(menetelmä == kaikki_e) return luo_data_kaikki(dt, dt1, kausic, wraja, vuoraja);
     /* Tässä on nyt keskitytty saamaan keskiarvomenetelmä oikein ja huippuarvoa ei ole tarkoituksena käyttää.
@@ -216,6 +197,7 @@ void luo_data(const data_t* dt, data_t* dt1, char* kausic, double wraja, double 
 	dt1->pit++;
     }
     /* Tässä lopussa vasta jätetään pois yhtä monta pienintä arvoa kuin suuria arvoja on jätetty. */
+    if(dt1->pit - poistettuja < 20) return 1;
     if(poistettuja) {
 	järjestä_vuon_mukaan(dt1, virtaamat);
 	poista_alusta(dt1, poistettuja);
@@ -223,6 +205,7 @@ void luo_data(const data_t* dt, data_t* dt1, char* kausic, double wraja, double 
     dt1->virtaama = summa(virtaamat+poistettuja, dt1->pit-poistettuja);
     dt1->virtaama *= SUHT2ABS_KERR;
     free(virtaamat);
+    return 0;
 }
 
 typedef struct {
@@ -574,47 +557,21 @@ int main(int argc, char** argv) {
     FILE* f = NULL;
     int pit __attribute__((unused)) = ARRPIT(wetlnimet);
 
-#ifdef BOOTSTRAP
-    f = popen(aprintf("python ./wregressio.c %s", pyth_arg), "w");
-    assert(f);
-    assert(fwrite(&pit, 4, 1, f) == 1);
-    assert(fwrite(&nboot_vakio, 4, 1, f) == 1);
-    fprintf(f, "%s\n%s\n", kaudet[kausi], menetelmät[menetelmä]);
-    double kertoimet[pit*(nboot_vakio+1) + 1];
-    double kirj[pit + 1];
-
+// #ifndef BOOTSTRAP
     data_t dt1 = dt;
     alusta_dt1(&dt1);
-    const double vuorajat[] = {NAN, 150, 120, 100, 90, 80, 75, 70, 65, 63, 60, 57, 55, 52, 50, 48, 45, 43, 40, 35, 30, 25};
-    int rajapit = ARRPIT(vuorajat);
-    for(int a=0; a<rajapit; a++) {
-	luo_data(&dt, &dt1, kausic, 0.05, vuorajat[a]);
-	sovita_monta(&dt1, kertoimet, kertoimet+pit, nboot_vakio);
-	for(int i=1; i<pit; i++) {
-	    kirj[i-1] = kertoimet[i]+kertoimet[0];
-	    printf("%.4lf\t", kirj[i-1]);
-	}
-	printf("%.0lf, %i\n", vuorajat[a], dt1.pit);
-	kirj[pit-1] = (double)dt1.pit;
-	kirj[pit] = vuorajat[a];
-	assert(fwrite(kirj, sizeof(double), pit+1, f) == pit+1);
-	assert(fwrite(kertoimet+pit+1, sizeof(double), (pit-1)*nboot_vakio, f) == (pit-1)*nboot_vakio);
-    }
-
-#else
-    data_t dt1 = dt;
-    alusta_dt1(&dt1);
-    const double vuorajat[] = {NAN, 100, 90, 80, 70, 60, 50, 40, 30, 20};
+    const double vuorajat[] = {NAN, 100, 90, 80, 70, 60, 50, 40, 30, 20, 11};
     int rajapit = ARRPIT(vuorajat);
     double paras_d = INFINITY;
     int paras_i = -1;
     /* Haetaan ristivalidoinnilla suurinpiirtein paras vuoraja käyttäen ennalta määritettyjä yritteitä */
     for(int i=0; i<rajapit; i++) {
-	luo_data(&dt, &dt1, kausic, 0.05, vuorajat[i]);
+	if(luo_data(&dt, &dt1, kausic, 0.05, vuorajat[i]))
+	    break;
 	sekoita(&dt1);
 	double v = ristivalidoi(&dt1, 30);
-	double yrite = (v-dt1.virtaama)/dt1.virtaama;
-	if(yrite < 0) yrite=-yrite;
+	double yrite = v / dt1.virtaama;
+	yrite = yrite<1? 1-yrite: yrite-1;
 	if(yrite < paras_d) {
 	    paras_i = i;
 	    paras_d = yrite;
@@ -627,10 +584,11 @@ int main(int argc, char** argv) {
     putchar('\n');
     paras_d = INFINITY;
     double paras_raja = NAN;
-    double alaraja = NAN;
+    double __attribute__((unused)) alaraja = NAN;
     for(double d=-5; d<=5; d+=1) {
 	double raja = vuorajat[paras_i]+d;
-	luo_data(&dt, &dt1, kausic, 0.05, raja);
+	if(luo_data(&dt, &dt1, kausic, 0.05, raja))
+	    continue;
 	double _alaraja = dt1.vuo[0];
 	sekoita(&dt1);
 	double v = ristivalidoi(&dt1, 250); // Tarkempi ristivalidointi kuin edellä
@@ -647,9 +605,11 @@ int main(int argc, char** argv) {
 	if(raja - paras_raja > 2) break;
     }
 
+#ifndef BOOTSTRAP // piirretään tulokset
     double vuorajat1[] = {NAN, paras_raja};
     for(int i=0; i<2; i++) {
-	luo_data(&dt, &dt1, kausic, 0.05, vuorajat1[i]);
+	if(luo_data(&dt, &dt1, kausic, 0.05, vuorajat1[i]))
+	    continue;
 	if(!f)
 	    assert((f = popen(aprintf("./piirrä.py %s", pyth_arg), "w")));
 	assert(fwrite(&dt1.pit, 4, 1, f) == 1);
@@ -671,6 +631,33 @@ int main(int argc, char** argv) {
 	pclose(f); f=NULL;
     }
 
+#else // #ifdef BOOTSTRAP
+    f = popen(aprintf("./piirrä_bootstrap.py %s", pyth_arg), "w");
+    assert(f);
+    assert(fwrite(&pit, 4, 1, f) == 1);
+    assert(fwrite(&nboot_vakio, 4, 1, f) == 1);
+    fprintf(f, "%s\n%s\n", kaudet[kausi], menetelmät[menetelmä]);
+    double kertoimet[pit*(nboot_vakio+1) + 1];
+    double kirj[pit + 1];
+
+    putchar('\n');
+    for(int i=1; i<pit; i++)
+	printf("%-14s ", wetlnimet[i]);
+    putchar('\n');
+
+    for(int a=0; a<rajapit; a++) {
+	luo_data(&dt, &dt1, kausic, 0.05, vuorajat[a]);
+	sovita_monta(&dt1, kertoimet, kertoimet+pit, nboot_vakio);
+	for(int i=1; i<pit; i++) {
+	    kirj[i-1] = kertoimet[i]+kertoimet[0];
+	    printf("%-15.3lf", kirj[i-1]);
+	}
+	printf("%.0lf, %i\n", vuorajat[a], dt1.pit);
+	kirj[pit-1] = (double)dt1.pit;
+	kirj[pit] = vuorajat[a];
+	assert(fwrite(kirj, sizeof(double), pit+1, f) == pit+1);
+	assert(fwrite(kertoimet+pit+1, sizeof(double), (pit-1)*nboot_vakio, f) == (pit-1)*nboot_vakio);
+    }
 #endif
     if(f)
 	pclose(f);
@@ -682,75 +669,3 @@ int main(int argc, char** argv) {
     nct_free_vset(vuovs);
     free(dt.alat);
 }
-
-#if 0
-'''#'
-from matplotlib.pyplot import *
-import numpy as np
-import sys, struct
-
-# sys.stdin.readline() ei toimi, koska myöhemmin tulee binääridataa, mistä Python ei ole iloinen.
-def lue_rivi():
-    lista = bytearray(b'')
-    while True:
-        a = sys.stdin.buffer.read(1)
-        if len(a) == 0 or struct.unpack("b", a)[0] == 10:
-            break
-        lista.append(a[0])
-    return lista.decode('UTF-8')
-
-def main():
-    global tehtiin, datastot, rajastot, nimet
-    rcParams.update({'figure.figsize':(12,10), 'font.size':13})
-    raaka = sys.stdin.buffer.read(8)
-    pit,nboot = struct.unpack("ii", raaka)
-    if nboot == 0:
-        return
-    kausi = lue_rivi()
-    menetelmä = lue_rivi()
-    ax = axes()
-    data = np.empty([pit+1, 0], np.float64)
-    alue = np.empty([0, 2, pit-1], np.float64)
-    while(True):
-        raaka = sys.stdin.buffer.read((pit+1)*8)
-        if(len(raaka)==0):
-            break
-        dt = np.ndarray([pit+1,1], dtype=np.float64, buffer=raaka)
-        data = np.concatenate([data, dt], axis=1)
-
-        raaka = sys.stdin.buffer.read((pit-1)*nboot*8)
-        dt = np.ndarray([nboot, pit-1], dtype=np.float64, buffer=raaka)
-        dt = np.percentile(dt, [5,95], axis=0).reshape([1,2,pit-1])
-        alue = np.concatenate([alue, dt], axis=0)
-        #alue = np.concatenate([alue, np.concatenate([np.min(dt, axis=1).reshape([1,pit-1,1]),
-        #                                             np.max(dt, axis=1).reshape([1,pit-1,1])], axis=2)], axis=0)
-
-    värit = ['#ff0000', '#00ff00', '#0000ff']
-    (nimet,tunniste) = (['bog', 'fen', 'marsh'],'bfm') if pit == 4 else (['permafrost_bog', 'tundra_wetland'],'pt')
-    for i in range(pit-1):
-        ax.plot(data[-1,:], data[i,:], c=värit[i], linewidth=2.5, label=nimet[i])
-        ax.plot(data[-1,:], alue[:,0,i], c=värit[i], linestyle='--')
-        ax.plot(data[-1,:], alue[:,1,i], c=värit[i], linestyle='--')
-    #for i in range(pit-2):
-    #    ax.fill_between(data[-1,:], alue[:,i,0], alue[:,i,1], color=värit[i], alpha=0.2)
-    #ax.fill_between(data[:,-1], alue[:,0,0], alue[:,0,1], color='#ff000058')
-    #ax.fill_between(data[:,-1], alue[:,1,0], alue[:,1,1], color='#00ff0058')
-    #ax.fill_between(data[:,-1], alue[:,2,0], alue[:,2,1], color='#0000ff58')
-    xlabel('upper flux limit')
-    ylabel('flux')
-    title(kausi)
-    legend(loc='upper right')
-    ax.twinx()
-    plot(data[-1,:], data[-2,:], color='k')
-    if '-s' in sys.argv:
-        savefig('kuvia/erottelu_%s_%s_%s.png' %(tunniste,kausi,menetelmä))
-    show()
-
-if __name__=='__main__':
-    try:
-        main()
-    except KeyboardInterrupt:
-        print('')
-        exit()
-
-#endif
