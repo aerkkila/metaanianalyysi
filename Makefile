@@ -1,7 +1,7 @@
 kosteikko = 0
 
 wetlregressio_jatkuva.out: wetlregressio_jatkuva.c
-	gcc -Wall ${@:.out=.c} -o $@ `pkg-config --libs nctietue2 gsl` -g
+	gcc -Wall ${@:.out=.c} -o $@ `pkg-config --libs nctietue2 gsl` -pthread -g3 -gdwarf-2 -O0
 
 yleiskosteikko.out: yleiskosteikko.c
 	gcc -Wall ${@:.out=.c} -o $@ `pkg-config --libs nctietue2 gsl` -g -O2
