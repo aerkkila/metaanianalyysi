@@ -13,20 +13,26 @@
 #include <pthread.h>
 #include <unistd.h>
 
-#ifdef IKIROUTA
-const char* wetlnimet[]      = {"wetland", "permafrost_bog", "tundra_wetland"};
-const char* wetlandnimi      = "wetland_prf";
-#else
-const char* wetlnimet[]      = {"wetland", "bog", "fen", "marsh"};
-const char* wetlandnimi      = "wetland";
-#endif
+/* Bootstrap-käyrän piirtäjä ei toimi oikein, jos osa yritetetyistä raja-arvoista on ollut toimimattomia. */
+
+const char* wetlnimet_0[]    = {"wetland", "bog", "fen", "marsh"};
+const char* wetlandnimi_0    = "wetland";
+const char* wetlnimet_1[]    = {"wetland", "permafrost_bog", "tundra_wetland"};
+const char* wetlandnimi_1    = "wetland_prf";
+const char *wetlandnimi, **wetlnimet;
+int wpit;
 const char* kaudet[]         = {"whole_year", "summer", "freezing", "winter"};
 enum                           {whole_year_e, summer_e, freezing_e, winter_e};
 const char* menetelmät[]     = {"keskiarvo", "huippuarvo", "kaikki"};
 enum			       {keskiarvo_e, huippuarvo_e, kaikki_e};
 const char* pripost_sisään[] = {"flux_bio_prior", "flux_bio_posterior"};
 const char* pripost_ulos[]   = {"pri", "post"};
+
 #define ARRPIT(a) (sizeof(a)/sizeof(*(a)))
+#define vapauta(fun, ptr) do { fun(ptr); ptr=NULL; } while(0)
+#define korosta do { if(tty) printf("\033[1;93m"); } while(0)
+#define perusväri do { if(tty) printf("\033[0m"); } while(0)
+int tty;
 
 #define SUHT2ABS_KERR 6371229.0*6371229.0 * 0.017453293 * 1 // r2 * ASTE * hila
 #define ncdir "../"
@@ -34,27 +40,7 @@ const char* pripost_ulos[]   = {"pri", "post"};
 #ifndef menetelmä
 #define menetelmä keskiarvo_e // kaikki_e ja huipparvo_e eivät käsittele vuorajaa oikein
 #endif
-#ifndef kausi
-#define kausi 1
-#endif
 #define BOOTSTRAP
-const int nboot_vakio = 150;
-
-typedef struct data_t data_t;
-
-void poista_alusta(data_t*, int);
-void järjestä_vuon_mukaan(data_t*, double*);
-
-struct data_t {
-    double *vuo;
-    double *wdata[ARRPIT(wetlnimet)];
-    double virtaama; // emissio / m²
-    int resol;
-    int aikaa;
-    int pit;
-    double *alat;
-};
-
 char aprintapu[256];
 char* aprintf(const char* muoto, ...) {
     va_list args;
@@ -64,13 +50,75 @@ char* aprintf(const char* muoto, ...) {
     return aprintapu;
 }
 
+const int nboot_vakio = 150;
+
+typedef struct data_t data_t;
+
+void poista_alusta(data_t*, int);
+void järjestä_vuon_mukaan(data_t*, double*);
+
+struct data_t {
+    double *vuo;
+    double *wdata[8]; // luku on tarkoituksella tarvittavaa suurempi
+    double virtaama; // emissio / m²
+    int resol;
+    int aikaa;
+    int pit;
+    double *alat;
+};
+
+int kausi=1, tallenna=0, ikir=0, töitä=1;
+char *python_arg = "";
+struct Sidonta { char* arg; int lue; void* var; char* muoto; } sidonta[] = {
+    {"-p", 1, &python_arg,     },
+    {"-s", 0, &tallenna,       },
+    {"-k", 1, &kausi,      "%i"},
+    {"-i", 0, &ikir,           },
+    {"-j", 1, &töitä,      "%i"},
+};
+void argumentit(int argc, char** argv) {
+    int pit = ARRPIT(sidonta);
+    for(int i=1; i<argc; i++)
+	for(int j=0; j<pit; j++) {
+	    if(strcmp(sidonta[j].arg, argv[i])) continue;
+	    if(!sidonta[j].lue)
+		*((int*)sidonta[j].var) = 1;
+	    else
+		for(int k=0; k<sidonta[j].lue; k++) {
+		    assert(i+1 < argc);
+		    if(sidonta[j].muoto)
+			sscanf(argv[++i], sidonta[j].muoto, sidonta[j].var+k*4); // jos on monta, koon pitää olla 4
+		    else
+			*((char**)sidonta[j].var) = argv[++i];
+		}
+	    break;
+	}
+    /* Globaalit asiat, jotka ovat seurausta argumenteista. */
+    if(ikir) {
+	wpit = ARRPIT(wetlnimet_1);
+	wetlnimet = wetlnimet_1;
+	wetlandnimi = wetlandnimi_1;
+    }
+    else {
+	wpit = ARRPIT(wetlnimet_0);
+	wetlnimet = wetlnimet_0;
+	wetlandnimi = wetlandnimi_0;
+    }
+    if(tallenna) {
+	stdout = freopen(aprintf("tallenteet/%s_%i.txt", kaudet[kausi], ikir), "w", stdout);
+	printf("# %s\n", aprintapu);
+	assert(stdout);
+	tty = 0;
+    }
+}
+
 double laske_virtaama_(const data_t* dt, double *kertoimet, int alku, int loppu) {
     double v = 0;
-    double vuot[ARRPIT(wetlnimet)];
-    for(int i=1; i<ARRPIT(wetlnimet); i++)
+    double vuot[wpit];
+    for(int i=1; i<wpit; i++)
 	vuot[i] = (kertoimet[i] + kertoimet[0]) * 1e-9;
     for(int i=alku; i<loppu; i++)
-	for(int w=1; w<ARRPIT(wetlnimet); w++)
+	for(int w=1; w<wpit; w++)
 	    v += vuot[w] * dt->wdata[w][i] * dt->alat[i] * dt->wdata[0][i];
     v *= SUHT2ABS_KERR;
     return v;
@@ -97,7 +145,7 @@ int luo_data_kaikki(const data_t* dt, data_t* dt1, char* kausic, double wraja, d
 
 	    if(r_ei_kelpaa[r] == 2) {
 		double summa=0;
-		for(int i=1; i<ARRPIT(wetlnimet); i++)
+		for(int i=1; i<wpit; i++)
 		    summa += dt->wdata[i][r] / dt->wdata[0][r];
 		r_ei_kelpaa[r] = summa < 0.97;
 	    }
@@ -110,7 +158,7 @@ int luo_data_kaikki(const data_t* dt, data_t* dt1, char* kausic, double wraja, d
 	    dt1->virtaama       += dt->vuo[tdt+r] * dt->alat[r];
 	    dt1->alat[dt1->pit] = dt->alat[r];
 	    dt1->wdata[0][dt1->pit] = dt->wdata[0][r];
-	    for(int i=1; i<ARRPIT(wetlnimet); i++)
+	    for(int i=1; i<wpit; i++)
 		dt1->wdata[i][dt1->pit] = dt->wdata[i][r] / dt->wdata[0][r];
 	    dt1->wdata[0][dt1->pit] = dt->wdata[0][r];
 	    dt1->pit++;
@@ -132,7 +180,7 @@ int luo_data(const data_t* dt, data_t* dt1, char* kausic, double wraja, double v
 	if(!kausic[r]) continue;
 	if(dt->wdata[0][r] < wraja) continue;
 	double summa=0;
-	for(int i=1; i<ARRPIT(wetlnimet); i++)
+	for(int i=1; i<wpit; i++)
 	    summa += dt->wdata[i][r] / dt->wdata[0][r];
 	if(summa < 0.97) continue;
 
@@ -191,7 +239,7 @@ int luo_data(const data_t* dt, data_t* dt1, char* kausic, double wraja, double v
 	}
 
 	dt1->alat[dt1->pit] = dt->alat[r];
-	for(int i=1; i<ARRPIT(wetlnimet); i++)
+	for(int i=1; i<wpit; i++)
 	    dt1->wdata[i][dt1->pit] = dt->wdata[i][r] / dt->wdata[0][r];
 	dt1->wdata[0][dt1->pit] = dt->wdata[0][r];
 	dt1->pit++;
@@ -215,8 +263,8 @@ typedef struct {
 } Arg;
 int arg_luettu = 0;
 
-#define joo_alusta_koko_touhu						\
-    int nmuutt = ARRPIT(wetlnimet);					\
+#define joo_alusta_kaikki_jutut						\
+    int nmuutt = wpit;          					\
     gsl_matrix *xmatrix = gsl_matrix_alloc(dt->pit, nmuutt);		\
     gsl_vector *yvec = gsl_vector_alloc(dt->pit);			\
     gsl_vector *wvec = gsl_vector_alloc(dt->pit);			\
@@ -225,7 +273,7 @@ int arg_luettu = 0;
     gsl_matrix *covm = gsl_matrix_alloc(nmuutt, nmuutt);		\
     double sum2
 
-#define joo_vapauta_koko_touhu			\
+#define joo_vapauta_kaikki_jutut		\
     gsl_multifit_linear_free(work);		\
     gsl_matrix_free(xmatrix);			\
     gsl_vector_free(yvec);			\
@@ -237,7 +285,7 @@ void* sovita_monta_säie(void* varg) {
     Arg* arg = varg;
     const data_t* dt=arg->dt; double* kertoimet=arg->kertoimet; int nboot=arg->nboot, plus=arg->plus;
     arg_luettu = 1;
-    int nmuutt = ARRPIT(wetlnimet);
+    int nmuutt = wpit;
     gsl_matrix *xmatrix = gsl_matrix_alloc(dt->pit, nmuutt);
     gsl_vector *yvec = gsl_vector_alloc(dt->pit);
     gsl_vector *wvec = gsl_vector_alloc(dt->pit);
@@ -246,9 +294,10 @@ void* sovita_monta_säie(void* varg) {
     gsl_matrix *covm = gsl_matrix_alloc(nmuutt, nmuutt);
     double sum2;
     /* rand() lukitsee aina tilan, joten rinnakkaislaskenta ei nopeuta, jos rand()-funktiota käytetään.
+       Lisäksi tulokset vaihtelisivat riippuen eri säikeitten nopeuksista.
        rand48_r-funktioitten pitäisi toimia hyvin. */
     struct drand48_data randbuff;
-    srand48_r(plus, &randbuff);
+    srand48_r(plus, &randbuff); // Plus ei ole mikään taikaluku. Jotain pitää vain valita random-siemeneksi.
 
     for(int nb=0; nb<nboot; nb++) {
 	for(size_t i=0; i<dt->pit; i++) {
@@ -262,9 +311,9 @@ void* sovita_monta_säie(void* varg) {
 		gsl_matrix_set(xmatrix, i, j, dt->wdata[j][ind]);
 	}
 	gsl_multifit_wlinear(xmatrix, wvec, yvec, cvec, covm, &sum2, work);
-	/* Tallennetaan vain haluttu lopullinen arvo. Alussa nmuutt+1 kpl on varattuja. */
+	/* Tallennetaan vain haluttu lopullinen arvo. Alussa nmuutt kpl on varattuja. */
 	for(int i=0; i<nmuutt-1; i++)
-	    kertoimet[i+nmuutt+1+(nb+plus)*(nmuutt-1)] = cvec->data[i+1] + cvec->data[0];
+	    kertoimet[i+nmuutt+(nb+plus)*(nmuutt-1)] = cvec->data[i+1] + cvec->data[0];
     }
     gsl_multifit_linear_free(work);
     gsl_matrix_free(xmatrix);
@@ -275,7 +324,6 @@ void* sovita_monta_säie(void* varg) {
     return NULL;
 }
 
-#define töitä 4
 void sovita_monta(const data_t* dt, double* kertoimet, double* r2, int nboot) {
     pthread_t säikeet[töitä-1];
     int nboot1 = nboot/töitä, plus=0;
@@ -292,7 +340,7 @@ void sovita_monta(const data_t* dt, double* kertoimet, double* r2, int nboot) {
     for(int i=0; i<töitä-1; i++)
 	pthread_join(säikeet[i], NULL);
 
-    int nmuutt = ARRPIT(wetlnimet);
+    int nmuutt = wpit;
     gsl_matrix *xmatrix = gsl_matrix_alloc(dt->pit, nmuutt);
     gsl_vector *yvec = gsl_vector_alloc(dt->pit);
     gsl_vector *wvec = gsl_vector_alloc(dt->pit);
@@ -322,7 +370,8 @@ void sovita_monta(const data_t* dt, double* kertoimet, double* r2, int nboot) {
 }
 
 double ristivalidoi(const data_t* dt, int määrä) {
-    joo_alusta_koko_touhu;
+    if(määrä >= dt->pit) return NAN;
+    joo_alusta_kaikki_jutut;
 
     /* Olisi parempi siirtää tämä funktio ulkopuolelle ja antaa vektorit argumenttina tietueena. */
     void kopioi_vektoreihin(int b1, int b2) {
@@ -358,17 +407,18 @@ double ristivalidoi(const data_t* dt, int määrä) {
     gsl_multifit_wlinear(xmatrix, wvec, yvec, cvec, covm, &sum2, work);
     virtaama += laske_virtaama_(dt, cvec->data, väli1, väli2);
 
-    joo_vapauta_koko_touhu;
+    joo_vapauta_kaikki_jutut;
     return virtaama;
 }
 
 void sovittaminen_kerralla(data_t* dt, double kertoimet[]) {
-    sovita_monta(dt, kertoimet, kertoimet+ARRPIT(wetlnimet), 0);
-    printf("r² = %.4lf\n", kertoimet[ARRPIT(wetlnimet)]);
-    for(int i=0; i<ARRPIT(wetlnimet); i++)
+    double r2;
+    sovita_monta(dt, kertoimet, &r2, 0);
+    printf("r² = %.4lf\n", r2);
+    for(int i=0; i<wpit; i++)
 	printf("%-12.4lf", kertoimet[i]);
     putchar('\n');
-    for(int i=1; i<ARRPIT(wetlnimet); i++)
+    for(int i=1; i<wpit; i++)
 	printf("%-12.4lf", kertoimet[i]+kertoimet[0]);
     putchar('\n');
 }
@@ -380,15 +430,16 @@ void sovita_1(data_t* dt, int num, double* vakio, double* kulma, double* r2) {
 }
 
 void sovittaminen_erikseen(data_t* dt) {
-    double vakio[ARRPIT(wetlnimet)], kulma[ARRPIT(wetlnimet)], r2;
-    for(int i=1; i<ARRPIT(wetlnimet); i++) {
+    double vakio[wpit], kulma[wpit], r2;
+    for(int i=1; i<wpit; i++) {
 	sovita_1(dt, i, vakio+i, kulma+i, &r2);
 	printf("vakio = %7.4lf\tkulma = %8.4lf\tyksi = %.4lf\tr² = %.5lf (%s)\n",
 	       vakio[i], kulma[i], vakio[i]+kulma[i], r2, wetlnimet[i]);
     }
-    double alat[ARRPIT(wetlnimet)] = {0};
+    double alat[wpit];
+    memset(alat, 0, wpit*sizeof(double));
     double summa = 0, ala = 0;
-    for(int i=1; i<ARRPIT(wetlnimet); i++) {
+    for(int i=1; i<wpit; i++) {
 	for(int r=0; r<dt->pit; r++)
 	    alat[i] += dt->alat[r]*dt->wdata[i][r];
 	summa += alat[i] * (vakio[i]+kulma[i]);
@@ -421,14 +472,14 @@ void alusta_dt1(data_t* dt) {
     int rt = dt->resol*(menetelmä==kaikki_e ? dt->aikaa : 1);
     dt->vuo = malloc(rt*sizeof(double));
     dt->alat = malloc(rt*sizeof(double));
-    for(int i=0; i<ARRPIT(wetlnimet); i++)
+    for(int i=0; i<wpit; i++)
 	dt->wdata[i] = malloc(rt*sizeof(double));
 }
 
 void vapauta_dt1(data_t* dt) {
     free(dt->vuo);
     free(dt->alat);
-    for(int i=0; i<ARRPIT(wetlnimet); free(dt->wdata[i++]));
+    for(int i=0; i<wpit; free(dt->wdata[i++]));
 }
 
 #define vaihda(a,b) { apu=a; a=b; b=apu; }
@@ -438,7 +489,7 @@ void sekoita(data_t* dt) {
 	int ind = rand() % (dt->pit-i);
 	vaihda(dt->alat[i], dt->alat[i+ind]);
 	vaihda(dt->vuo[i], dt->vuo[i+ind]);
-	for(int j=0; j<ARRPIT(wetlnimet); j++)
+	for(int j=0; j<wpit; j++)
 	    vaihda(dt->wdata[j][i], dt->wdata[j][i+ind]);
     }
 }
@@ -447,7 +498,7 @@ void sekoita(data_t* dt) {
 void poista_alusta(data_t* dt, int n) { // Tämä ei pienennä varatun muistin kokoa.
     dt->pit -= n;
     memmove(dt->vuo, dt->vuo+n, dt->pit*sizeof(double));
-    for(int i=0; i<ARRPIT(wetlnimet); i++)
+    for(int i=0; i<wpit; i++)
 	memmove(dt->wdata[i], dt->wdata[i]+n, dt->pit*sizeof(double));
     memmove(dt->alat, dt->alat+n, dt->pit*sizeof(double));
 }
@@ -506,7 +557,7 @@ void järjestä_vuon_mukaan(data_t* dt, double* d2) {
     int *järj = malloc(dt->pit*sizeof(int));
     for(int i=0; i<dt->pit; i++) järj[i] = i;
     lomituslajittele2(dt->vuo, järj, dt->pit);
-    for(int i=0; i<ARRPIT(wetlnimet); i++)
+    for(int i=0; i<wpit; i++)
 	järjestä_d(dt->wdata[i], järj, dt->pit);
     järjestä_d(dt->alat, järj, dt->pit);
     järjestä_d(d2, järj, dt->pit);
@@ -521,12 +572,18 @@ double maksimi(const data_t* dt) {
     return max;
 }
 
+int vertaa_double(const void* a, const void* b) {
+    double d = *(double*)a - *(double*)b;
+    return d<0? -1: d==0? 0: 1;
+}
+
 int main(int argc, char** argv) {
     nct_vset wetlset = {0};
-    nct_var *var;
+    nct_var *var = NULL;
     int ppnum = 1;
     data_t dt;
-    const char* __attribute__((unused)) pyth_arg = argc>1? argv[1]: "";
+    tty = isatty(STDOUT_FILENO);
+    argumentit(argc, argv);
 
     struct tm tm0 = {.tm_year=2012-1900, .tm_mon=8-1, .tm_mday=15};
     struct tm tm1 = tm0;
@@ -534,7 +591,7 @@ int main(int argc, char** argv) {
     dt.aikaa = (mktime(&tm1) - mktime(&tm0)) / 86400;
 
     nct_read_ncfile_gd(&wetlset, ncdir "BAWLD1x1.nc");
-    for(int i=0; i<ARRPIT(wetlnimet); i++) {
+    for(int i=0; i<wpit; i++) {
 	assert((var = nct_get_var(&wetlset, wetlnimet[i])));
 	dt.wdata[i] = var->data;
     }
@@ -555,7 +612,7 @@ int main(int argc, char** argv) {
     char* kausic = var->data + alku*dt.resol;
 
     FILE* f = NULL;
-    int pit __attribute__((unused)) = ARRPIT(wetlnimet);
+    int pit = wpit;
 
 // #ifndef BOOTSTRAP
     data_t dt1 = dt;
@@ -564,45 +621,50 @@ int main(int argc, char** argv) {
     int rajapit = ARRPIT(vuorajat);
     double paras_d = INFINITY;
     int paras_i = -1;
-    /* Haetaan ristivalidoinnilla suurinpiirtein paras vuoraja käyttäen ennalta määritettyjä yritteitä */
+    /* Haetaan ristivalidoinnilla suurin piirtein paras vuoraja käyttäen ennalta määritettyjä yritteitä */
     for(int i=0; i<rajapit; i++) {
 	if(luo_data(&dt, &dt1, kausic, 0.05, vuorajat[i]))
 	    break;
 	sekoita(&dt1);
 	double v = ristivalidoi(&dt1, 30);
+	if(v!=v) break; // syöte oli liian lyhyt
 	double yrite = v / dt1.virtaama;
 	yrite = yrite<1? 1-yrite: yrite-1;
 	if(yrite < paras_d) {
 	    paras_i = i;
 	    paras_d = yrite;
-	    printf("\033[1m");
+	    korosta;
 	}
+	if(tallenna) continue;
 	printf("%.0lf\t%.0lf\t%.0lf\t%.2lf\n", vuorajat[i], v, dt1.virtaama, yrite);
-	printf("\033[0m");
+	perusväri;
     }
+    if(!tallenna) putchar('\n');
+
     /* Tarkennetaan vuorajaa tarkemmalla ristivalidoinnilla. */
-    putchar('\n');
     paras_d = INFINITY;
     double paras_raja = NAN;
     double __attribute__((unused)) alaraja = NAN;
-    for(double d=-5; d<=5; d+=1) {
+    for(double d=-8; d<=8; d+=1) {
 	double raja = vuorajat[paras_i]+d;
 	if(luo_data(&dt, &dt1, kausic, 0.05, raja))
 	    continue;
 	double _alaraja = dt1.vuo[0];
 	sekoita(&dt1);
 	double v = ristivalidoi(&dt1, 250); // Tarkempi ristivalidointi kuin edellä
+	if(v!=v) continue;
 	double yrite = (v-dt1.virtaama)/dt1.virtaama;
 	if(yrite < 0) yrite=-yrite;
 	if(yrite < paras_d) {
 	    paras_raja = raja;
 	    alaraja = _alaraja;
 	    paras_d = yrite;
-	    printf("\033[1m");
+	    korosta;
 	}
-	printf("%.0lf\t%.0lf\t%.0lf\t%.2lf\n", raja, v, dt1.virtaama, yrite);
-	printf("\033[0m");
-	if(raja - paras_raja > 2) break;
+	if(tallenna) continue;
+	printf("%.0lf\t%.0lf\t%.0lf\t%.3lf\n", raja, v, dt1.virtaama, yrite);
+	perusväri;
+	if(raja - paras_raja > 3) break;
     }
 
 #ifndef BOOTSTRAP // piirretään tulokset
@@ -611,7 +673,7 @@ int main(int argc, char** argv) {
 	if(luo_data(&dt, &dt1, kausic, 0.05, vuorajat1[i]))
 	    continue;
 	if(!f)
-	    assert((f = popen(aprintf("./piirrä.py %s", pyth_arg), "w")));
+	    assert((f = popen(aprintf("./piirrä.py %s", python_arg), "w")));
 	assert(fwrite(&dt1.pit, 4, 1, f) == 1);
 	assert(fwrite(dt1.wdata[0], 8, dt1.pit, f) == dt1.pit);
 	assert(fwrite(dt1.vuo,      8, dt1.pit, f) == dt1.pit);
@@ -628,44 +690,77 @@ int main(int argc, char** argv) {
 		assert(fwrite(vuorajat1, 8, 1, f) == 1); // NAN
 		assert(fwrite(vuorajat1, 8, 1, f) == 1); // NAN
 	    }
-	pclose(f); f=NULL;
+	vapauta(pclose, f);
     }
 
 #else // #ifdef BOOTSTRAP
-    f = popen(aprintf("./piirrä_bootstrap.py %s", pyth_arg), "w");
+    /* Kertoimet-muuttujassa on alussa vakiotermi ja kertoimet.
+       Sitten jokaisesta bootstrap-sovituksesta tulos eli vakio+kerroin[i]. */
+    double kertoimet[pit*(nboot_vakio+2)]; // tässä on tarkoituksella vähän ylimääräistä
+    double kirj[pit + 1];
+    double r2;
+
+#if 0
+    f = popen(aprintf("./piirrä_bootstrap.py %s", python_arg), "w");
     assert(f);
     assert(fwrite(&pit, 4, 1, f) == 1);
     assert(fwrite(&nboot_vakio, 4, 1, f) == 1);
     fprintf(f, "%s\n%s\n", kaudet[kausi], menetelmät[menetelmä]);
-    double kertoimet[pit*(nboot_vakio+1) + 1];
-    double kirj[pit + 1];
 
     putchar('\n');
+    korosta;
     for(int i=1; i<pit; i++)
 	printf("%-14s ", wetlnimet[i]);
-    putchar('\n');
-
+    printf("%-6s pisteitä\n", "raja");
+    perusväri;
     for(int a=0; a<rajapit; a++) {
 	luo_data(&dt, &dt1, kausic, 0.05, vuorajat[a]);
-	sovita_monta(&dt1, kertoimet, kertoimet+pit, nboot_vakio);
+	sovita_monta(&dt1, kertoimet, &r2, nboot_vakio);
 	for(int i=1; i<pit; i++) {
 	    kirj[i-1] = kertoimet[i]+kertoimet[0];
 	    printf("%-15.3lf", kirj[i-1]);
 	}
-	printf("%.0lf, %i\n", vuorajat[a], dt1.pit);
+	printf("%-6.0lf %i\n", vuorajat[a], dt1.pit);
 	kirj[pit-1] = (double)dt1.pit;
 	kirj[pit] = vuorajat[a];
 	assert(fwrite(kirj, sizeof(double), pit+1, f) == pit+1);
-	assert(fwrite(kertoimet+pit+1, sizeof(double), (pit-1)*nboot_vakio, f) == (pit-1)*nboot_vakio);
+	assert(fwrite(kertoimet+pit, sizeof(double), (pit-1)*nboot_vakio, f) == (pit-1)*nboot_vakio);
     }
+    vapauta(pclose, f);
+    putchar('\n');
+#endif
+
+    assert(!luo_data(&dt, &dt1, kausic, 0.05, paras_raja));
+    sovita_monta(&dt1, kertoimet, &r2, nboot_vakio);
+    printf("raja: %.3lf\n", paras_raja);
+    printf("sovite:");
+    for(int i=0; i<pit; i++)
+	printf(" %-9.3lf", kertoimet[i]);
+    putchar('\n');
+    assert((f = popen(aprintf("./piirrä.py sovitteet %s", python_arg), "w")));
+    assert(fwrite(&dt1.pit, 4, 1, f) == 1);
+    assert(fwrite(dt1.wdata[0], 8, dt1.pit, f) == dt1.pit);
+    assert(fwrite(dt1.vuo,      8, dt1.pit, f) == dt1.pit);
+    fwrite(kertoimet+0, 8, 1, f);
+    for(int i=1; i<pit; i++) {
+	qsort(kertoimet+pit+i-1, nboot_vakio, 8*(pit-1), vertaa_double); // pit-1 eri kerrointa on aina peräkkäin
+	double matala = gsl_stats_quantile_from_sorted_data(kertoimet+pit+i-1, pit-1, nboot_vakio, 0.05);
+	double korkea = gsl_stats_quantile_from_sorted_data(kertoimet+pit+i-1, pit-1, nboot_vakio, 0.95);
+	fprintf(f, "%s\n%s\n", wetlnimet[i], kaudet[kausi]);
+	assert(fwrite(dt1.wdata[i], 8, dt1.pit, f) == dt1.pit);
+	fwrite(kertoimet+i, 8, 1, f);
+	printf("%-15s %-8.3lf %-8.3lf %.3lf\n", wetlnimet[i], kertoimet[i]+kertoimet[0], matala, korkea);
+    }
+    vapauta(pclose, f);
+
 #endif
     if(f)
-	pclose(f);
-    f = NULL;
+	vapauta(pclose, f);
 
     vapauta_dt1(&dt1);
     nct_free_vset(vvv);
     nct_free_vset(&wetlset);
     nct_free_vset(vuovs);
     free(dt.alat);
+    fclose(stdout); // voi olla vaihdettu tiedostoksi
 }

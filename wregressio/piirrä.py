@@ -69,6 +69,7 @@ def main():
     global wdata0, wd1, vuo, värit, ax, nimi, wraja, fraja, molemmista
     molemmista = True
     tallenna = '-s' in sys.argv
+    sov = 'sovitteet' in sys.argv
     rcParams.update({'figure.figsize':(12,11), 'font.size':15})
     raaka = sys.stdin.buffer.read(4)
     pit = struct.unpack("i", raaka)[0]
@@ -79,6 +80,9 @@ def main():
     wdata0 = wdata0[järjestys]
     värit  = luo_värit(wdata0)
     vuo = vuo[järjestys]
+
+    if sov:
+        vakio = lue_köntti(1)[0]
 
     wdata1 = []
     nimet = []
@@ -91,23 +95,37 @@ def main():
             break
         kaudet.append(lue_rivi())
         wdata1.append(lue_köntti(pit)[järjestys])
-        viivat.append(lue_köntti(2))
+        viivat.append(lue_köntti(1 + (not sov))) # viivat sisältää kertoimet, jos sov
 
     for i,nimi in enumerate(nimet):
         wd1 = wdata1[i]
         fig = figure()
+
+        if sov:
+            ax = axes()
+            wraja = np.nan
+            fraja = np.nan
+            päivitä_rajat()
+            nimeä()
+            ax.plot([0,1], [vakio, vakio+viivat[i][0]], 'k')
+            if tallenna:
+                clf()
+            else:
+                show()
+            continue
+
         if tallenna:
             ax = axes()
             wraja = np.nan
             fraja = np.nan
-            molemmista = True
             päivitä_rajat()
             nimeä()
-            x = xlim()
-            plot(x, [viivat[i][0],viivat[i][0]], color='b')
+            ax.axhline(viivat[i][0], color='k')
+            ax.axhline(viivat[i][1], color='k')
             tight_layout()
             savefig(kansio+'/vuopisteet_%s_%s.png' %(nimi,kaudet[i]))
             continue
+
         ax = axes([0.08, 0.05, 0.9, 0.87])
         liuku = Slider(
             ax      = axes([0.25, 0.96, 0.66, 0.02]),
