@@ -60,7 +60,7 @@ void järjestä_vuon_mukaan(data_t*, double*);
 struct data_t {
     double *vuo;
     double *wdata[8]; // luku on tarkoituksella tarvittavaa suurempi
-    double virtaama; // emissio / m²
+    double virtaama; // emissio / s
     int resol;
     int aikaa;
     int pit;
@@ -69,7 +69,7 @@ struct data_t {
 
 int kausi=1, tallenna=0, ikir=0, töitä=1;
 char *python_arg = "";
-struct Sidonta { char* arg; int lue; void* var; char* muoto; } sidonta[] = {
+struct Sidonta { char* arg; int lue; void* var; char* muoto; } ohjelm_arg[] = {
     {"-p", 1, &python_arg,     },
     {"-s", 0, &tallenna,       },
     {"-k", 1, &kausi,      "%i"},
@@ -77,19 +77,19 @@ struct Sidonta { char* arg; int lue; void* var; char* muoto; } sidonta[] = {
     {"-j", 1, &töitä,      "%i"},
 };
 void argumentit(int argc, char** argv) {
-    int pit = ARRPIT(sidonta);
+    int pit = ARRPIT(ohjelm_arg);
     for(int i=1; i<argc; i++)
 	for(int j=0; j<pit; j++) {
-	    if(strcmp(sidonta[j].arg, argv[i])) continue;
-	    if(!sidonta[j].lue)
-		*((int*)sidonta[j].var) = 1;
+	    if(strcmp(ohjelm_arg[j].arg, argv[i])) continue;
+	    if(!ohjelm_arg[j].lue)
+		*((int*)ohjelm_arg[j].var) = 1;
 	    else
-		for(int k=0; k<sidonta[j].lue; k++) {
+		for(int k=0; k<ohjelm_arg[j].lue; k++) {
 		    assert(i+1 < argc);
-		    if(sidonta[j].muoto)
-			sscanf(argv[++i], sidonta[j].muoto, sidonta[j].var+k*4); // jos on monta, koon pitää olla 4
+		    if(ohjelm_arg[j].muoto)
+			sscanf(argv[++i], ohjelm_arg[j].muoto, ohjelm_arg[j].var+k*4); // jos on monta, koon pitää olla 4
 		    else
-			*((char**)sidonta[j].var) = argv[++i];
+			*((char**)ohjelm_arg[j].var) = argv[++i];
 		}
 	    break;
 	}
@@ -291,8 +291,9 @@ void* sovita_monta_säie(void* varg) {
     /* rand() lukitsee aina tilan, joten rinnakkaislaskenta ei nopeuta, jos rand()-funktiota käytetään.
        Lisäksi tulokset vaihtelisivat riippuen eri säikeitten nopeuksista.
        rand48_r-funktioitten pitäisi toimia hyvin. */
+    static int siemen = 1;
     struct drand48_data randbuff;
-    srand48_r(plus, &randbuff); // Plus ei ole mikään taikaluku. Jotain pitää vain valita random-siemeneksi.
+    srand48_r(++siemen, &randbuff);
 
     for(int nb=0; nb<nboot; nb++) {
 	for(size_t i=0; i<dt->pit; i++) {

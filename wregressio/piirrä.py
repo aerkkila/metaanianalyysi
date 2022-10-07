@@ -74,18 +74,18 @@ def main():
     raaka = sys.stdin.buffer.read(4)
     pit = struct.unpack("i", raaka)[0]
 
-    wdata0 = lue_köntti(pit)
-    vuo    = lue_köntti(pit)
+    wdata0    = lue_köntti(pit)
+    vuo       = lue_köntti(pit)
     järjestys = np.argsort(vuo)
-    wdata0 = wdata0[järjestys]
-    värit  = luo_värit(wdata0)
-    vuo = vuo[järjestys]
+    wdata0    = wdata0[järjestys]
+    värit     = luo_värit(wdata0)
+    vuo       = vuo[järjestys]
 
     if sov:
         vakio = lue_köntti(1)[0]
 
     wdata1 = []
-    nimet = []
+    nimet  = []
     kaudet = []
     viivat = []
     while True:
@@ -97,6 +97,9 @@ def main():
         wdata1.append(lue_köntti(pit)[järjestys])
         viivat.append(lue_köntti(1 + (not sov))) # viivat sisältää kertoimet, jos sov
 
+    if sov:
+        viivat = [viivat[i][0] for i in range(len(viivat))] # poistetaan ylimääräinen ulottuvuus
+
     for i,nimi in enumerate(nimet):
         wd1 = wdata1[i]
         fig = figure()
@@ -107,9 +110,9 @@ def main():
             fraja = np.nan
             päivitä_rajat()
             nimeä()
-            ax.plot([0,1], [vakio, vakio+viivat[i][0]], 'k')
+            ax.plot([0,1], [vakio+viivat[int(not i)], vakio+viivat[i]], 'k')
             if tallenna:
-                clf()
+                savefig(kansio+'/wregressio_suora_%s_%s.png' %(kaudet[i],nimi))
             else:
                 show()
             continue
@@ -123,7 +126,7 @@ def main():
             ax.axhline(viivat[i][0], color='k')
             ax.axhline(viivat[i][1], color='k')
             tight_layout()
-            savefig(kansio+'/vuopisteet_%s_%s.png' %(nimi,kaudet[i]))
+            savefig(kansio+'/wregressio_%s_%s.png' %(kaudet[i],nimi))
             continue
 
         ax = axes([0.08, 0.05, 0.9, 0.87])
