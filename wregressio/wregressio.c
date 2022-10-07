@@ -285,14 +285,9 @@ void* sovita_monta_säie(void* varg) {
     Arg* arg = varg;
     const data_t* dt=arg->dt; double* kertoimet=arg->kertoimet; int nboot=arg->nboot, plus=arg->plus;
     arg_luettu = 1;
-    int nmuutt = wpit;
-    gsl_matrix *xmatrix = gsl_matrix_alloc(dt->pit, nmuutt);
-    gsl_vector *yvec = gsl_vector_alloc(dt->pit);
-    gsl_vector *wvec = gsl_vector_alloc(dt->pit);
-    gsl_vector *cvec = gsl_vector_alloc(nmuutt);
-    gsl_multifit_linear_workspace *work = gsl_multifit_linear_alloc(dt->pit, nmuutt);
-    gsl_matrix *covm = gsl_matrix_alloc(nmuutt, nmuutt);
-    double sum2;
+
+    joo_alusta_kaikki_jutut;
+
     /* rand() lukitsee aina tilan, joten rinnakkaislaskenta ei nopeuta, jos rand()-funktiota käytetään.
        Lisäksi tulokset vaihtelisivat riippuen eri säikeitten nopeuksista.
        rand48_r-funktioitten pitäisi toimia hyvin. */
@@ -315,12 +310,9 @@ void* sovita_monta_säie(void* varg) {
 	for(int i=0; i<nmuutt-1; i++)
 	    kertoimet[i+nmuutt+(nb+plus)*(nmuutt-1)] = cvec->data[i+1] + cvec->data[0];
     }
-    gsl_multifit_linear_free(work);
-    gsl_matrix_free(xmatrix);
-    gsl_vector_free(yvec);
-    gsl_vector_free(wvec);
-    gsl_vector_free(cvec);
-    gsl_matrix_free(covm);
+
+    joo_vapauta_kaikki_jutut;
+
     return NULL;
 }
 
@@ -340,14 +332,7 @@ void sovita_monta(const data_t* dt, double* kertoimet, double* r2, int nboot) {
     for(int i=0; i<töitä-1; i++)
 	pthread_join(säikeet[i], NULL);
 
-    int nmuutt = wpit;
-    gsl_matrix *xmatrix = gsl_matrix_alloc(dt->pit, nmuutt);
-    gsl_vector *yvec = gsl_vector_alloc(dt->pit);
-    gsl_vector *wvec = gsl_vector_alloc(dt->pit);
-    gsl_vector *cvec = gsl_vector_alloc(nmuutt);
-    gsl_multifit_linear_workspace *work = gsl_multifit_linear_alloc(dt->pit, nmuutt);
-    gsl_matrix *covm = gsl_matrix_alloc(nmuutt, nmuutt);
-    double sum2;
+    joo_alusta_kaikki_jutut;
 
     for(size_t i=0; i<dt->pit; i++) {
 	gsl_vector_set(yvec, i, dt->vuo[i]);
@@ -361,12 +346,7 @@ void sovita_monta(const data_t* dt, double* kertoimet, double* r2, int nboot) {
     for(int i=0; i<nmuutt; i++)
 	kertoimet[i] = cvec->data[i];
 
-    gsl_multifit_linear_free(work);
-    gsl_matrix_free(xmatrix);
-    gsl_vector_free(yvec);
-    gsl_vector_free(wvec);
-    gsl_vector_free(cvec);
-    gsl_matrix_free(covm);
+    joo_vapauta_kaikki_jutut;
 }
 
 double ristivalidoi(const data_t* dt, int määrä) {

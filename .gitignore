@@ -16,4 +16,7 @@ kausijakaumadata/
 vuojakaumadata_vuosittain/
 talteen_vuojakaumadata/
 wregressio/tallenteet/
+wregressio/virhepalkit.c
+*/build/
 *.tex
+*.so

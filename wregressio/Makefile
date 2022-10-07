@@ -5,3 +5,6 @@ wregressio.out: wregressio.c
 
 wregressio_debug.out: wregressio.c
 	gcc ${@:_debug.out=.c} -o $@ ${cflags}
+
+cython:
+	./setup.py build_ext --inplace

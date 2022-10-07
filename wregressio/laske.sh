@@ -15,7 +15,9 @@ for i in `seq 0 3`; do
     { eval $komento; echo $komento; } &
     pids="${pids}$! "
 done
+
 for pid in $pids; do
     wait $pid
 done
+
 cat tallenteet/* > sovitteet.txt
