@@ -678,38 +678,9 @@ int main(int argc, char** argv) {
     /* Kertoimet-muuttujassa on alussa vakiotermi ja kertoimet.
        Sitten jokaisesta bootstrap-sovituksesta tulos eli vakio+kerroin[i]. */
     double kertoimet[pit*(nboot_vakio+2)]; // tässä on tarkoituksella vähän ylimääräistä
-    double kirj[pit + 1];
     double r2;
 
-#if 0
-    f = popen(aprintf("./piirrä_bootstrap.py %s", python_arg), "w");
-    assert(f);
-    assert(fwrite(&pit, 4, 1, f) == 1);
-    assert(fwrite(&nboot_vakio, 4, 1, f) == 1);
-    fprintf(f, "%s\n%s\n", kaudet[kausi], menetelmät[menetelmä]);
-
-    putchar('\n');
-    korosta;
-    for(int i=1; i<pit; i++)
-	printf("%-14s ", wetlnimet[i]);
-    printf("%-6s pisteitä\n", "raja");
-    perusväri;
-    for(int a=0; a<rajapit; a++) {
-	luo_data(&dt, &dt1, kausic, 0.05, vuorajat[a]);
-	sovita_monta(&dt1, kertoimet, &r2, nboot_vakio);
-	for(int i=1; i<pit; i++) {
-	    kirj[i-1] = kertoimet[i]+kertoimet[0];
-	    printf("%-15.3lf", kirj[i-1]);
-	}
-	printf("%-6.0lf %i\n", vuorajat[a], dt1.pit);
-	kirj[pit-1] = (double)dt1.pit;
-	kirj[pit] = vuorajat[a];
-	assert(fwrite(kirj, sizeof(double), pit+1, f) == pit+1);
-	assert(fwrite(kertoimet+pit, sizeof(double), (pit-1)*nboot_vakio, f) == (pit-1)*nboot_vakio);
-    }
-    vapauta(pclose, f);
-    putchar('\n');
-#endif
+    // #include "poistettu_piirrä_bootstrap.h" // Käytöstä poistettu koodin pätkä on tuolla.
 
     assert(!luo_data(&dt, &dt1, kausic, 0.05, paras_raja));
     sovita_monta(&dt1, kertoimet, &r2, nboot_vakio);
