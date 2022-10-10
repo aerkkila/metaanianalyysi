@@ -40,7 +40,6 @@ int tty;
 #ifndef menetelmä
 #define menetelmä keskiarvo_e // kaikki_e ja huipparvo_e eivät käsittele vuorajaa oikein
 #endif
-#define BOOTSTRAP
 char aprintapu[256];
 char* aprintf(const char* muoto, ...) {
     va_list args;
@@ -246,11 +245,11 @@ int luo_data(const data_t* dt, data_t* dt1, char* kausic, double wraja, double v
     }
     /* Tässä lopussa vasta jätetään pois yhtä monta pienintä arvoa kuin suuria arvoja on jätetty. */
     if(dt1->pit - poistettuja < 20) return 1;
-    if(poistettuja) {
-	järjestä_vuon_mukaan(dt1, virtaamat);
-	poista_alusta(dt1, poistettuja);
-    }
-    dt1->virtaama = summa(virtaamat+poistettuja, dt1->pit-poistettuja);
+    /* Vaikka poistettuja ei olisi, osa rutiineista olettaa datan olevan järjestyksessä. */
+    järjestä_vuon_mukaan(dt1, virtaamat);
+    poista_alusta(dt1, poistettuja);
+    /* dt1->pit on nyt oikein, mutta virtaamat alkaa poisjätettävillä arvoilla. */
+    dt1->virtaama = summa(virtaamat+poistettuja, dt1->pit);
     dt1->virtaama *= SUHT2ABS_KERR;
     free(virtaamat);
     return 0;
@@ -595,7 +594,6 @@ int main(int argc, char** argv) {
     FILE* f = NULL;
     int pit = wpit;
 
-// #ifndef BOOTSTRAP
     data_t dt1 = dt;
     alusta_dt1(&dt1);
     const double vuorajat[] = {NAN, 100, 90, 80, 70, 60, 50, 40, 30, 20, 11};
@@ -648,33 +646,30 @@ int main(int argc, char** argv) {
 	if(raja - paras_raja > 3) break;
     }
 
-#ifndef BOOTSTRAP // piirretään tulokset
-    double vuorajat1[] = {NAN, paras_raja};
-    for(int i=0; i<2; i++) {
-	if(luo_data(&dt, &dt1, kausic, 0.05, vuorajat1[i]))
-	    continue;
-	if(!f)
-	    assert((f = popen(aprintf("./piirrä.py %s", python_arg), "w")));
-	assert(fwrite(&dt1.pit, 4, 1, f) == 1);
-	assert(fwrite(dt1.wdata[0], 8, dt1.pit, f) == dt1.pit);
-	assert(fwrite(dt1.vuo,      8, dt1.pit, f) == dt1.pit);
-	if(i==0) {
-	    fprintf(f, "%s\n%s\n", wetlandnimi, kaudet[kausi]);
-	    assert(fwrite(dt1.wdata[0], 8, dt1.pit, f) == dt1.pit);
-	    assert(fwrite(&paras_raja, 8, 1, f) == 1);
-	    assert(fwrite(&alaraja, 8, 1, f) == 1);
-	}
-	else
-	    for(int i=1; i<pit; i++) {
-		fprintf(f, "%s\n%s\n", wetlnimet[i], kaudet[kausi]);
-		assert(fwrite(dt1.wdata[i], 8, dt1.pit, f) == dt1.pit);
-		assert(fwrite(vuorajat1, 8, 1, f) == 1); // NAN
-		assert(fwrite(vuorajat1, 8, 1, f) == 1); // NAN
-	    }
-	vapauta(pclose, f);
-    }
+    /* Piirretään pisteet wetland-osuuden funktiona, ja valitut vuon ylä- ja alarajat. */
+    if(luo_data(&dt, &dt1, kausic, 0.05, NAN)) asm("int $3");
+    if(!f)
+	assert((f = popen(aprintf("./piirrä.py %s", python_arg), "w")));
+    assert(fwrite(&dt1.pit, 4, 1, f) == 1);
+    assert(fwrite(dt1.wdata[0], 8, dt1.pit, f) == dt1.pit);
+    assert(fwrite(dt1.vuo,      8, dt1.pit, f) == dt1.pit);
+    fprintf(f, "%s\n%s\n", wetlandnimi, kaudet[kausi]);
+    assert(fwrite(dt1.wdata[0], 8, dt1.pit, f) == dt1.pit);
+    assert(fwrite(&paras_raja, 8, 1, f) == 1);
+    assert(fwrite(&alaraja, 8, 1, f) == 1);
 
-#else // #ifdef BOOTSTRAP
+#ifdef RAJAUSKUVAAJA
+    if(luo_data(&dt, &dt1, kausic, 0.05, paras_raja)) asm("int $3");
+    for(int i=1; i<pit; i++) {
+	double epäluku = NAN;
+	fprintf(f, "%s\n%s\n", wetlnimet[i], kaudet[kausi]);
+	assert(fwrite(dt1.wdata[i], 8, dt1.pit, f) == dt1.pit);
+	assert(fwrite(&epäluku, 8, 1, f) == 1);
+	assert(fwrite(&epäluku, 8, 1, f) == 1);
+    }
+#endif
+    vapauta(pclose, f);
+
     /* Kertoimet-muuttujassa on alussa vakiotermi ja kertoimet.
        Sitten jokaisesta bootstrap-sovituksesta tulos eli vakio+kerroin[i]. */
     double kertoimet[pit*(nboot_vakio+2)]; // tässä on tarkoituksella vähän ylimääräistä
@@ -705,7 +700,6 @@ int main(int argc, char** argv) {
     }
     vapauta(pclose, f);
 
-#endif
     if(f)
 	vapauta(pclose, f);
 

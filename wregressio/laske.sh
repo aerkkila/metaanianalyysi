@@ -21,3 +21,4 @@ for pid in $pids; do
 done
 
 cat tallenteet/* > sovitteet.txt
+./virhepalkit.py -s
