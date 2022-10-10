@@ -18,7 +18,7 @@
 const char* wetlnimet_0[]    = {"wetland", "bog", "fen", "marsh"};
 const char* wetlandnimi_0    = "wetland";
 const char* wetlnimet_1[]    = {"wetland", "permafrost_bog", "tundra_wetland"};
-const char* wetlandnimi_1    = "wetland_prf";
+const char* wetlandnimi_1    = "wetland_permafrost";
 const char *wetlandnimi, **wetlnimet;
 int wpit;
 const char* kaudet[]         = {"whole_year", "summer", "freezing", "winter"};
@@ -109,6 +109,10 @@ void argumentit(int argc, char** argv) {
 	assert(stdout);
 	tty = 0;
     }
+}
+
+void __attribute__((cold)) varoita(const char* tiedosto, int rivi) {
+    printf("%s: Jotain outoa rivillä %i\n", tiedosto, rivi);
 }
 
 double laske_virtaama_(const data_t* dt, double *kertoimet, int alku, int loppu) {
@@ -258,7 +262,7 @@ int luo_data(const data_t* dt, data_t* dt1, char* kausic, double wraja, double v
 typedef struct {
     const data_t* dt;
     double* kertoimet;
-    int nboot, plus;
+    int nboot;
 } Arg;
 int arg_luettu = 0;
 
@@ -282,7 +286,7 @@ int arg_luettu = 0;
 
 void* sovita_monta_säie(void* varg) {
     Arg* arg = varg;
-    const data_t* dt=arg->dt; double* kertoimet=arg->kertoimet; int nboot=arg->nboot, plus=arg->plus;
+    const data_t* dt=arg->dt; double* kertoimet=arg->kertoimet; int nboot=arg->nboot;
     arg_luettu = 1;
 
     joo_alusta_kaikki_jutut;
@@ -306,9 +310,10 @@ void* sovita_monta_säie(void* varg) {
 		gsl_matrix_set(xmatrix, i, j, dt->wdata[j][ind]);
 	}
 	gsl_multifit_wlinear(xmatrix, wvec, yvec, cvec, covm, &sum2, work);
-	/* Tallennetaan vain haluttu lopullinen arvo. Alussa nmuutt kpl on varattuja. */
-	for(int i=0; i<nmuutt-1; i++)
-	    kertoimet[i+nmuutt+(nb+plus)*(nmuutt-1)] = cvec->data[i+1] + cvec->data[0];
+	/* Tallennetaan lopullinen arvo ja alkuun vakiotermi. */
+	kertoimet[nb*nmuutt] = cvec->data[0];
+	for(int i=1; i<nmuutt; i++)
+	    kertoimet[nb*nmuutt + i] = cvec->data[i] + cvec->data[0];
     }
 
     joo_vapauta_kaikki_jutut;
@@ -320,14 +325,14 @@ void sovita_monta(const data_t* dt, double* kertoimet, double* r2, int nboot) {
     pthread_t säikeet[töitä-1];
     int nboot1 = nboot/töitä, plus=0;
     for(int i=0; i<töitä-1; i++) {
-	Arg arg = {dt, kertoimet, nboot1, plus};
+	Arg arg = {dt, kertoimet+wpit+plus*wpit, nboot1};
 	arg_luettu = 0;
 	pthread_create(säikeet+i, NULL, sovita_monta_säie, &arg);
 	while(!arg_luettu) usleep(10);
 	arg_luettu = 0;
 	plus += nboot1;
     }
-    Arg arg = {dt, kertoimet, nboot-(töitä-1)*nboot1, plus};
+    Arg arg = { dt, kertoimet+wpit+plus*wpit, nboot-(töitä-1)*nboot1 };
     sovita_monta_säie(&arg);
     for(int i=0; i<töitä-1; i++)
 	pthread_join(säikeet[i], NULL);
@@ -389,43 +394,6 @@ double ristivalidoi(const data_t* dt, int määrä) {
 
     joo_vapauta_kaikki_jutut;
     return virtaama;
-}
-
-void sovittaminen_kerralla(data_t* dt, double kertoimet[]) {
-    double r2;
-    sovita_monta(dt, kertoimet, &r2, 0);
-    printf("r² = %.4lf\n", r2);
-    for(int i=0; i<wpit; i++)
-	printf("%-12.4lf", kertoimet[i]);
-    putchar('\n');
-    for(int i=1; i<wpit; i++)
-	printf("%-12.4lf", kertoimet[i]+kertoimet[0]);
-    putchar('\n');
-}
-
-void sovita_1(data_t* dt, int num, double* vakio, double* kulma, double* r2) {
-    double sum2, cov00, cov01, cov11;
-    gsl_fit_wlinear(dt->wdata[num], 1, dt->alat, 1, dt->vuo, 1, dt->pit, vakio, kulma, &cov00, &cov01, &cov11, &sum2);
-    *r2 = 1 - (sum2 / gsl_stats_wtss(dt->alat, 1, dt->vuo, 1, dt->pit));
-}
-
-void sovittaminen_erikseen(data_t* dt) {
-    double vakio[wpit], kulma[wpit], r2;
-    for(int i=1; i<wpit; i++) {
-	sovita_1(dt, i, vakio+i, kulma+i, &r2);
-	printf("vakio = %7.4lf\tkulma = %8.4lf\tyksi = %.4lf\tr² = %.5lf (%s)\n",
-	       vakio[i], kulma[i], vakio[i]+kulma[i], r2, wetlnimet[i]);
-    }
-    double alat[wpit];
-    memset(alat, 0, wpit*sizeof(double));
-    double summa = 0, ala = 0;
-    for(int i=1; i<wpit; i++) {
-	for(int r=0; r<dt->pit; r++)
-	    alat[i] += dt->alat[r]*dt->wdata[i][r];
-	summa += alat[i] * (vakio[i]+kulma[i]);
-	ala += alat[i];
-    }
-    printf("keskiarvo = %.5lf\n", summa/ala);
 }
 
 int hae_alku(nct_var* v, struct tm* aika) {
@@ -557,6 +525,68 @@ int vertaa_double(const void* a, const void* b) {
     return d<0? -1: d==0? 0: 1;
 }
 
+/* Näissä luku tarkoittaa wlajia:
+   3==marsh, 1==bog tai permafrost_bog, 2==fen tai tundra_wetland */
+double _laske_tulos_1(double d, const double* krt) {
+    return krt[0] + krt[1]*d + krt[2]*(1-d);
+}
+double _laske_tulos_2(double d, const double* krt) {
+    return krt[0] + krt[2]*d + krt[1]*(1-d);
+}
+double _laske_tulos_3(double d, const double* krt) {
+    return krt[0] + krt[3]*d + (krt[1] + krt[2])*(1-d)*0.5;
+}
+
+/* Prosessiin f on jo kirjoitettu data ja tässä kirjoitetaan sovitus ja luottamusväli. */
+void piirrä_sovitus(FILE *f, const double* kertoimet, int nboot, int wlaji) {
+    double (*laske_tulos)(double, const double*);
+    double krt[nboot][wpit];
+    double tulos[nboot];
+    int montako = 151;
+    double kerr = 1.0/(montako-1);
+    double kirjx[montako];
+    double kirj1[montako];
+    double kirj2[montako];
+    switch(wlaji) {
+    case 1:
+	laske_tulos = _laske_tulos_1; break;
+    case 2:
+	laske_tulos = _laske_tulos_2; break;
+    case 3:
+	laske_tulos = _laske_tulos_3; break;
+    default:
+	varoita(__FILE__, __LINE__);
+	abort();
+    }
+    /* Lasketaan oikeat kertoimet: tulos - vakio */
+    const double* bootkrt = kertoimet+wpit;
+    for(int i=0; i<nboot; i++) {
+	krt[i][0] = bootkrt[i*wpit];
+	for(int w=1; w<wpit; w++)
+	    krt[i][w] = bootkrt[i*wpit+w] - bootkrt[i*wpit];
+    }
+    /* Laitetaan sovitussuoran päät. */
+    kirj1[0] = 0;
+    kirj1[1] = 1;
+    kirj1[2] = laske_tulos(0, kertoimet);
+    kirj1[3] = laske_tulos(1, kertoimet);
+    fwrite(kirj1, sizeof(double), 4, f);
+    /* Laitetaan käyrä luottamusväleistä. */
+    fwrite(&montako, 4, 1, f);
+    for(int i=0; i<montako; i++) {
+	double d = kerr*i;
+	for(int i=0; i<nboot; i++)
+	    tulos[i] = laske_tulos(d, krt[i]);
+	qsort(tulos, nboot, sizeof(double), vertaa_double);
+	kirjx[i] = d;
+	kirj1[i] = gsl_stats_quantile_from_sorted_data(tulos, 1, nboot, 0.05);
+	kirj2[i] = gsl_stats_quantile_from_sorted_data(tulos, 1, nboot, 0.95);
+    }
+    fwrite(kirjx, sizeof(double), montako, f);
+    fwrite(kirj1, sizeof(double), montako, f);
+    fwrite(kirj2, sizeof(double), montako, f);
+}
+
 int main(int argc, char** argv) {
     nct_vset wetlset = {0};
     nct_var *var = NULL;
@@ -622,7 +652,7 @@ int main(int argc, char** argv) {
 
     /* Tarkennetaan vuorajaa tarkemmalla ristivalidoinnilla. */
     paras_d = INFINITY;
-    double paras_raja = NAN;
+    double paras_raja = NAN, paras_virhe = NAN;
     double __attribute__((unused)) alaraja = NAN;
     for(double d=-8; d<=8; d+=1) {
 	double raja = vuorajat[paras_i]+d;
@@ -632,12 +662,13 @@ int main(int argc, char** argv) {
 	sekoita(&dt1);
 	double v = ristivalidoi(&dt1, 250); // Tarkempi ristivalidointi kuin edellä
 	if(v!=v) continue;
-	double yrite = (v-dt1.virtaama)/dt1.virtaama;
-	if(yrite < 0) yrite=-yrite;
+	double virhe = (v-dt1.virtaama)/dt1.virtaama;
+	double yrite = virhe<0? -virhe: virhe;
 	if(yrite < paras_d) {
 	    paras_raja = raja;
 	    alaraja = _alaraja;
 	    paras_d = yrite;
+	    paras_virhe = virhe;
 	    korosta;
 	}
 	if(tallenna) continue;
@@ -647,7 +678,8 @@ int main(int argc, char** argv) {
     }
 
     /* Piirretään pisteet wetland-osuuden funktiona, ja valitut vuon ylä- ja alarajat. */
-    if(luo_data(&dt, &dt1, kausic, 0.05, NAN)) asm("int $3");
+    if(luo_data(&dt, &dt1, kausic, 0.05, NAN))
+	varoita(__FILE__, __LINE__);
     if(!f)
 	assert((f = popen(aprintf("./piirrä.py %s", python_arg), "w")));
     assert(fwrite(&dt1.pit, 4, 1, f) == 1);
@@ -659,7 +691,8 @@ int main(int argc, char** argv) {
     assert(fwrite(&alaraja, 8, 1, f) == 1);
 
 #ifdef RAJAUSKUVAAJA
-    if(luo_data(&dt, &dt1, kausic, 0.05, paras_raja)) asm("int $3");
+    if(luo_data(&dt, &dt1, kausic, 0.05, paras_raja))
+	varoita(__FILE__, __LINE__);
     for(int i=1; i<pit; i++) {
 	double epäluku = NAN;
 	fprintf(f, "%s\n%s\n", wetlnimet[i], kaudet[kausi]);
@@ -671,8 +704,8 @@ int main(int argc, char** argv) {
     vapauta(pclose, f);
 
     /* Kertoimet-muuttujassa on alussa vakiotermi ja kertoimet.
-       Sitten jokaisesta bootstrap-sovituksesta tulos eli vakio+kerroin[i]. */
-    double kertoimet[pit*(nboot_vakio+2)]; // tässä on tarkoituksella vähän ylimääräistä
+       Sitten jokaisesta bootstrap-sovituksesta vakio ja tulos eli vakio+kerroin[i]. */
+    double kertoimet[pit*(nboot_vakio+2)]; // +2, koska qsort vaihtaa aina pit kappaletta myös lopussa
     double r2;
 
     // #include "poistettu_piirrä_bootstrap.h" // Käytöstä poistettu koodin pätkä on tuolla.
@@ -680,6 +713,8 @@ int main(int argc, char** argv) {
     assert(!luo_data(&dt, &dt1, kausic, 0.05, paras_raja));
     sovita_monta(&dt1, kertoimet, &r2, nboot_vakio);
     printf("raja: %.3lf\n", paras_raja);
+    printf("virhe: %.3lf\n", paras_virhe);
+    printf("r²: %.4lf\n", r2);
     printf("sovite:");
     for(int i=0; i<pit; i++)
 	printf(" %-9.3lf", kertoimet[i]);
@@ -688,14 +723,15 @@ int main(int argc, char** argv) {
     assert(fwrite(&dt1.pit, 4, 1, f) == 1);
     assert(fwrite(dt1.wdata[0], 8, dt1.pit, f) == dt1.pit);
     assert(fwrite(dt1.vuo,      8, dt1.pit, f) == dt1.pit);
-    fwrite(kertoimet+0, 8, 1, f);
+    //fwrite(kertoimet+0, 8, 1, f);
     for(int i=1; i<pit; i++) {
-	qsort(kertoimet+pit+i-1, nboot_vakio, 8*(pit-1), vertaa_double); // pit-1 eri kerrointa on aina peräkkäin
-	double matala = gsl_stats_quantile_from_sorted_data(kertoimet+pit+i-1, pit-1, nboot_vakio, 0.05);
-	double korkea = gsl_stats_quantile_from_sorted_data(kertoimet+pit+i-1, pit-1, nboot_vakio, 0.95);
+	qsort(kertoimet+pit+i, nboot_vakio, 8*pit, vertaa_double); // pit kpl eri muuttujia on aina peräkkäin
+	double matala = gsl_stats_quantile_from_sorted_data(kertoimet+pit+i, pit, nboot_vakio, 0.05);
+	double korkea = gsl_stats_quantile_from_sorted_data(kertoimet+pit+i, pit, nboot_vakio, 0.95);
 	fprintf(f, "%s\n%s\n", wetlnimet[i], kaudet[kausi]);
-	assert(fwrite(dt1.wdata[i], 8, dt1.pit, f) == dt1.pit);
-	fwrite(kertoimet+i, 8, 1, f);
+	fwrite(dt1.wdata[i], 8, dt1.pit, f);
+	piirrä_sovitus(f, kertoimet, nboot_vakio, i);
+	//fwrite(kertoimet+i, 8, 1, f);
 	printf("%-15s %-8.3lf %-8.3lf %.3lf\n", wetlnimet[i], kertoimet[i]+kertoimet[0], matala, korkea);
     }
     vapauta(pclose, f);

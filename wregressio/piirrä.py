@@ -17,7 +17,7 @@ def lue_rivi():
     lista = bytearray(b'')
     while True:
         a = sys.stdin.buffer.read(1)
-        if len(a) == 0 or struct.unpack("b", a)[0] == 10:
+        if len(a) == 0 or struct.unpack("b", a)[0] == 10: # jälkimmäinen ehto tarkoittaa rivinvaihtoa
             break
         lista.append(a[0])
     return lista.decode('UTF-8')
@@ -31,9 +31,10 @@ def luo_värit(dt):
         r[i] = cmap(int((dt[i]-mi)*kerr))
     return r
 
-def nimeä():
-    ax.set_xlabel(nimi)
-    ax.set_ylabel('flux')
+def nimeä(kausi):
+    ax.set_xlabel(nimi.replace('_',' '))
+    ax.set_ylabel('nmol s$^{-1}$ m$^{-2}$')
+    title(kausi.replace('_',' '))
 
 def päivitä_rajat():
     ind = np.searchsorted(vuo, fraja)
@@ -45,7 +46,6 @@ def päivitä_rajat():
     else:
         maski = ~(wdata0[:ind] < wraja)
         ax.scatter(wd1[:ind][maski], vuo[:ind][maski], marker='.', c=värit[:ind][maski])
-    nimeä()
     draw()
 
 def päivitä_wraja(arvo):
@@ -65,6 +65,15 @@ def näppäin(tapaht):
     molemmista = not molemmista
     päivitä_rajat()
 
+def lue_sovitus():
+    xs = lue_köntti(2)
+    ys = lue_köntti(2)
+    pit = struct.unpack("i", sys.stdin.buffer.read(4))[0]
+    xb = lue_köntti(pit)
+    yb1 = lue_köntti(pit)
+    yb2 = lue_köntti(pit)
+    return dict(xs=xs, ys=ys, xb=xb, yb1=yb1, yb2=yb2)
+
 def main():
     global wdata0, wd1, vuo, värit, ax, nimi, wraja, fraja, molemmista
     molemmista = True
@@ -82,7 +91,7 @@ def main():
     vuo       = vuo[järjestys]
 
     if sov:
-        vakio = lue_köntti(1)[0]
+        pass#vakio = lue_köntti(1)[0]
 
     wdata1 = []
     nimet  = []
@@ -95,10 +104,10 @@ def main():
             break
         kaudet.append(lue_rivi())
         wdata1.append(lue_köntti(pit)[järjestys])
-        viivat.append(lue_köntti(1 + (not sov))) # viivat sisältää kertoimet, jos sov
-
-    if sov:
-        viivat = [viivat[i][0] for i in range(len(viivat))] # poistetaan ylimääräinen ulottuvuus
+        if sov:
+            viivat.append(lue_sovitus())
+        else:
+            viivat.append(lue_köntti(2))
 
     for i,nimi in enumerate(nimet):
         wd1 = wdata1[i]
@@ -109,8 +118,11 @@ def main():
             wraja = np.nan
             fraja = np.nan
             päivitä_rajat()
-            nimeä()
-            ax.plot([0,1], [vakio+viivat[int(not i)], vakio+viivat[i]], 'k')
+            nimeä(kaudet[i])
+            ax.plot(viivat[i]['xs'], viivat[i]['ys'], 'k') # suora
+            ax.plot(viivat[i]['xb'], viivat[i]['yb1'], 'k', linestyle='--') # matala
+            ax.plot(viivat[i]['xb'], viivat[i]['yb2'], 'k', linestyle='--') # korkea
+            tight_layout()
             if tallenna:
                 savefig(kansio+'/wregressio_suora_%s_%s.png' %(kaudet[i],nimi))
             else:
@@ -122,7 +134,7 @@ def main():
             wraja = np.nan
             fraja = np.nan
             päivitä_rajat()
-            nimeä()
+            nimeä(kaudet[i])
             ax.axhline(viivat[i][0], color='k')
             ax.axhline(viivat[i][1], color='k')
             tight_layout()
@@ -155,7 +167,7 @@ def main():
         päivitä_rajat()
         ax.axhline(viivat[i][0], color='k')
         ax.axhline(viivat[i][1], color='k')
-        nimeä()
+        nimeä(kaudet[i])
         show()
 
 if __name__=='__main__':
