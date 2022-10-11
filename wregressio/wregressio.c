@@ -13,8 +13,6 @@
 #include <pthread.h>
 #include <unistd.h>
 
-/* Bootstrap-käyrän piirtäjä ei toimi oikein, jos osa yritetetyistä raja-arvoista on ollut toimimattomia. */
-
 const char* wetlnimet_0[]    = {"wetland", "bog", "fen", "marsh"};
 const char* wetlandnimi_0    = "wetland";
 const char* wetlnimet_1[]    = {"wetland", "permafrost_bog", "tundra_wetland"};
@@ -707,8 +705,6 @@ int main(int argc, char** argv) {
        Sitten jokaisesta bootstrap-sovituksesta vakio ja tulos eli vakio+kerroin[i]. */
     double kertoimet[pit*(nboot_vakio+2)]; // +2, koska qsort vaihtaa aina pit kappaletta myös lopussa
     double r2;
-
-    // #include "poistettu_piirrä_bootstrap.h" // Käytöstä poistettu koodin pätkä on tuolla.
 
     assert(!luo_data(&dt, &dt1, kausic, 0.05, paras_raja));
     sovita_monta(&dt1, kertoimet, &r2, nboot_vakio);

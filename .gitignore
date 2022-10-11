@@ -8,9 +8,12 @@ köppen_shp
 *.npz
 *.npy
 *.cmp/
-muunna_shapefile
+*.png
 *.out
+*.tex
+*.so
 tmp*
+muunna_shapefile
 vuojakaumadata/
 kausijakaumadata/
 vuojakaumadata_vuosittain/
@@ -18,5 +21,3 @@ talteen_vuojakaumadata/
 wregressio/tallenteet/
 wregressio/virhepalkit.c
 */build/
-*.tex
-*.so
