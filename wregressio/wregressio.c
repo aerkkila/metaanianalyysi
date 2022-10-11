@@ -38,6 +38,8 @@ int tty;
 #ifndef menetelmä
 #define menetelmä keskiarvo_e // kaikki_e ja huipparvo_e eivät käsittele vuorajaa oikein
 #endif
+#define luott_0 0.025
+#define luott_1 0.975
 char aprintapu[256];
 char* aprintf(const char* muoto, ...) {
     va_list args;
@@ -576,8 +578,8 @@ void piirrä_sovitus(FILE *f, const double* kertoimet, int nboot, int wlaji) {
 	    tulos[i] = laske_tulos(d, krt[i]);
 	qsort(tulos, nboot, sizeof(double), vertaa_double);
 	kirjx[i] = d;
-	kirj1[i] = gsl_stats_quantile_from_sorted_data(tulos, 1, nboot, 0.05);
-	kirj2[i] = gsl_stats_quantile_from_sorted_data(tulos, 1, nboot, 0.95);
+	kirj1[i] = gsl_stats_quantile_from_sorted_data(tulos, 1, nboot, luott_0);
+	kirj2[i] = gsl_stats_quantile_from_sorted_data(tulos, 1, nboot, luott_1);
     }
     fwrite(kirjx, sizeof(double), montako, f);
     fwrite(kirj1, sizeof(double), montako, f);
@@ -721,8 +723,8 @@ int main(int argc, char** argv) {
     //fwrite(kertoimet+0, 8, 1, f);
     for(int i=1; i<pit; i++) {
 	qsort(kertoimet+pit+i, nboot_glob, 8*pit, vertaa_double); // pit kpl eri muuttujia on aina peräkkäin
-	double matala = gsl_stats_quantile_from_sorted_data(kertoimet+pit+i, pit, nboot_glob, 0.05);
-	double korkea = gsl_stats_quantile_from_sorted_data(kertoimet+pit+i, pit, nboot_glob, 0.95);
+	double matala = gsl_stats_quantile_from_sorted_data(kertoimet+pit+i, pit, nboot_glob, luott_0);
+	double korkea = gsl_stats_quantile_from_sorted_data(kertoimet+pit+i, pit, nboot_glob, luott_1);
 	fprintf(f, "%s\n%s\n", wetlnimet[i], kaudet[kausi]);
 	fwrite(dt1.wdata[i], 8, dt1.pit, f);
 	piirrä_sovitus(f, kertoimet, nboot_glob, i);
