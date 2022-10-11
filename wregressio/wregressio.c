@@ -47,8 +47,6 @@ char* aprintf(const char* muoto, ...) {
     return aprintapu;
 }
 
-const int nboot_vakio = 150;
-
 typedef struct data_t data_t;
 
 void poista_alusta(data_t*, int);
@@ -64,7 +62,7 @@ struct data_t {
     double *alat;
 };
 
-int kausi=1, tallenna=0, ikir=0, töitä=1;
+int kausi=1, tallenna=0, ikir=0, töitä=1, nboot_glob=3000;
 char *python_arg = "";
 struct Sidonta { char* arg; int lue; void* var; char* muoto; } ohjelm_arg[] = {
     {"-p", 1, &python_arg,     },
@@ -72,6 +70,7 @@ struct Sidonta { char* arg; int lue; void* var; char* muoto; } ohjelm_arg[] = {
     {"-k", 1, &kausi,      "%i"},
     {"-i", 0, &ikir,           },
     {"-j", 1, &töitä,      "%i"},
+    {"-b", 1, &nboot_glob, "%i"},
 };
 void argumentit(int argc, char** argv) {
     int pit = ARRPIT(ohjelm_arg);
@@ -703,11 +702,11 @@ int main(int argc, char** argv) {
 
     /* Kertoimet-muuttujassa on alussa vakiotermi ja kertoimet.
        Sitten jokaisesta bootstrap-sovituksesta vakio ja tulos eli vakio+kerroin[i]. */
-    double kertoimet[pit*(nboot_vakio+2)]; // +2, koska qsort vaihtaa aina pit kappaletta myös lopussa
+    double kertoimet[pit*(nboot_glob+2)]; // +2, koska qsort vaihtaa aina pit kappaletta myös lopussa
     double r2;
 
     assert(!luo_data(&dt, &dt1, kausic, 0.05, paras_raja));
-    sovita_monta(&dt1, kertoimet, &r2, nboot_vakio);
+    sovita_monta(&dt1, kertoimet, &r2, nboot_glob);
     printf("raja: %.3lf\n", paras_raja);
     printf("virhe: %.3lf\n", paras_virhe);
     printf("r²: %.4lf\n", r2);
@@ -721,12 +720,12 @@ int main(int argc, char** argv) {
     assert(fwrite(dt1.vuo,      8, dt1.pit, f) == dt1.pit);
     //fwrite(kertoimet+0, 8, 1, f);
     for(int i=1; i<pit; i++) {
-	qsort(kertoimet+pit+i, nboot_vakio, 8*pit, vertaa_double); // pit kpl eri muuttujia on aina peräkkäin
-	double matala = gsl_stats_quantile_from_sorted_data(kertoimet+pit+i, pit, nboot_vakio, 0.05);
-	double korkea = gsl_stats_quantile_from_sorted_data(kertoimet+pit+i, pit, nboot_vakio, 0.95);
+	qsort(kertoimet+pit+i, nboot_glob, 8*pit, vertaa_double); // pit kpl eri muuttujia on aina peräkkäin
+	double matala = gsl_stats_quantile_from_sorted_data(kertoimet+pit+i, pit, nboot_glob, 0.05);
+	double korkea = gsl_stats_quantile_from_sorted_data(kertoimet+pit+i, pit, nboot_glob, 0.95);
 	fprintf(f, "%s\n%s\n", wetlnimet[i], kaudet[kausi]);
 	fwrite(dt1.wdata[i], 8, dt1.pit, f);
-	piirrä_sovitus(f, kertoimet, nboot_vakio, i);
+	piirrä_sovitus(f, kertoimet, nboot_glob, i);
 	//fwrite(kertoimet+i, 8, 1, f);
 	printf("%-15s %-8.3lf %-8.3lf %.3lf\n", wetlnimet[i], kertoimet[i]+kertoimet[0], matala, korkea);
     }
