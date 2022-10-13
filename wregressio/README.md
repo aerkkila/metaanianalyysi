@@ -12,3 +12,4 @@
 **laske.sh** automates calling wregressio<area>.out \
 **virhepalkit.py[x]** &rarr; wregressio_virhepalkit.py draws the flux values and errorbars calculated by wregressio<area>.c.
 **piirrä.py** &rarr; wregressio\_suora_{season}_{category}.png is called from wregressio.c to draw the scatterplots.
+**taulukko_rajat.c** &rarr; wregr_rajat.tex reads output from wregressio.c and compiles some parameters into latex table
