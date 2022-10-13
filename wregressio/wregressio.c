@@ -679,6 +679,7 @@ int main(int argc, char** argv) {
     /* Piirretään pisteet wetland-osuuden funktiona, ja valitut vuon ylä- ja alarajat. */
     if(luo_data(&dt, &dt1, kausic, 0.05, NAN))
 	varoita(__FILE__, __LINE__);
+    int pisteitä_kaikkiaan = dt1.pit;
     if(!f)
 	assert((f = popen(aprintf("./piirrä.py %s", python_arg), "w")));
     assert(fwrite(&dt1.pit, 4, 1, f) == 1);
@@ -709,7 +710,8 @@ int main(int argc, char** argv) {
 
     assert(!luo_data(&dt, &dt1, kausic, 0.05, paras_raja));
     sovita_monta(&dt1, kertoimet, &r2, nboot_glob);
-    printf("raja: %.3lf\n", paras_raja);
+    printf("rajat: %-3.0lf %-3.0lf\n", paras_raja, alaraja);
+    printf("pisteistä: %.4f\n", (float)dt1.pit / pisteitä_kaikkiaan);
     printf("virhe: %.3lf\n", paras_virhe);
     printf("r²: %.4lf\n", r2);
     printf("sovite:");
