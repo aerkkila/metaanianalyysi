@@ -53,12 +53,13 @@ typedef struct data_t data_t;
 
 void poista_alusta_määrän_perusteella(data_t*, int);
 int montako_poistetaan_alusta(data_t*, double);
-void järjestä_vuon_mukaan(data_t*, double*);
+void _järjestä_vuon_mukaan(data_t*, ...);
+#define järjestä_vuon_mukaan(...) _järjestä_vuon_mukaan(__VA_ARGS__, 0)
 
 struct data_t {
     double *vuo;
     double *wdata[8]; // luku on tarkoituksella tarvittavaa suurempi
-    double virtaama; // emissio / s
+    double keskivuo;
     int resol;
     int aikaa;
     int pit;
@@ -66,7 +67,7 @@ struct data_t {
     double ala;
 };
 
-int kausi=1, tallenna=0, ikir=0, töitä=1, nboot_glob=3000, rang_aste=2;
+int kausi=1, tallenna=0, ikir=0, töitä=1, nboot_glob=3000, rang_aste=1;
 char *python_arg = "";
 struct Sidonta { char* arg; int lue; void* var; char* muoto; } ohjelm_arg[] = {
     {"-p", 1, &python_arg,     },
@@ -117,20 +118,21 @@ void __attribute__((cold)) varoita(const char* tiedosto, int rivi) {
     printf("%s: Jotain outoa rivillä %i\n", tiedosto, rivi);
 }
 
+#define PALAUTA_ALA -11111
 double laske_virtaama_(const data_t* dt, double *kertoimet, int alku, int loppu) {
-    double v = 0;
-    double vuot[wpit];
+    static double ala;
+    if(alku == PALAUTA_ALA)
+	return ala;
+    double v = 0, vuot[wpit];
+    ala = 0;
     for(int i=1; i<wpit; i++)
 	vuot[i] = (kertoimet[i] + kertoimet[0]) * 1e-9;
-    for(int i=alku; i<loppu; i++)
+    for(int i=alku; i<loppu; i++) {
+	ala += dt->alat[i] * dt->wdata[0][i];
 	for(int w=1; w<wpit; w++)
 	    v += vuot[w] * dt->wdata[w][i] * dt->alat[i] * dt->wdata[0][i];
-    v *= SUHT2ABS_KERR;
+    }
     return v;
-}
-
-double laske_virtaama(const data_t* dt, double *kertoimet) {
-    return laske_virtaama_(dt, kertoimet, 0, dt->pit);
 }
 
 double summa(double* dt, int n) {
@@ -138,11 +140,11 @@ double summa(double* dt, int n) {
     for(int i=0; i<n; i++) s += dt[i];
     return s;
 }
-
+#if 0
 int luo_data_kaikki(const data_t* dt, data_t* dt1, char* kausic, double wraja, double vuoraja) {
     char r_ei_kelpaa[dt->resol];
     memset(r_ei_kelpaa, 2, dt->resol);
-    dt1->pit = dt1->virtaama = 0;
+    dt1->pit = dt1->keskivuo = 0;
     for(int t=0; t<dt->aikaa; t+=3) {
 	int tdt = t*dt->resol;
 	for(int r=0; r<dt->resol; r++) {
@@ -160,7 +162,7 @@ int luo_data_kaikki(const data_t* dt, data_t* dt1, char* kausic, double wraja, d
 	    double yrite = dt->vuo[tdt+r] / dt->wdata[0][r] * 1e9;
 	    if(yrite > vuoraja) continue;
 	    dt1->vuo[dt1->pit]  = yrite;
-	    dt1->virtaama       += dt->vuo[tdt+r] * dt->alat[r];
+	    dt1->keskivuo       += dt->vuo[tdt+r] * dt->alat[r];
 	    dt1->alat[dt1->pit] = dt->alat[r];
 	    dt1->wdata[0][dt1->pit] = dt->wdata[0][r];
 	    for(int i=1; i<wpit; i++)
@@ -169,19 +171,19 @@ int luo_data_kaikki(const data_t* dt, data_t* dt1, char* kausic, double wraja, d
 	    dt1->pit++;
 	}
     }
-    dt1->virtaama *= SUHT2ABS_KERR;
+    dt1->keskivuo = NAN;//*= SUHT2ABS_KERR;
     return 0;
 }
-
+#endif
 int luo_data(const data_t* dt, data_t* dt1, char* kausic, double wraja, double vuoraja) {
-    dt1->pit = dt1->virtaama = 0;
-    if(menetelmä == kaikki_e) return luo_data_kaikki(dt, dt1, kausic, wraja, vuoraja);
-    /* Tässä on nyt keskitytty saamaan keskiarvomenetelmä oikein ja huippuarvoa ei ole tarkoituksena käyttää.
-       Vuorajan toteuttaminen huippuarvomenetelmässä on jätetty puolitiehen. */
+    dt1->pit = dt1->keskivuo = 0;
+    //if(menetelmä == kaikki_e) return luo_data_kaikki(dt, dt1, kausic, wraja, vuoraja);
+    /* Tässä on nyt keskitytty saamaan keskiarvomenetelmä oikein ja huippuarvoa ei ole tarkoituksena käyttää. */
     int poistettuja = 0;
     double poistettu_ala = 0;
-    double *virtaamat = malloc(dt->resol*sizeof(double)); // kerätään ensin tähän ja lasketaan yhteen vasta lopussa,
-    //                                                       koska vasta lopussa tiedetään, montako pienintä jätetään ottamatta
+    double *summat = malloc(dt->resol*sizeof(double)); // kerätään ensin tähän ja lasketaan yhteen vasta lopussa,
+    //                                                    koska vasta lopussa tiedetään, montako pienintä jätetään ottamatta
+    double *aikaalat = malloc(dt->resol*sizeof(double));
     for(int r=0; r<dt->resol; r++) {
 	if(!kausic[r]) continue;
 	if(dt->wdata[0][r] < wraja) continue;
@@ -193,31 +195,30 @@ int luo_data(const data_t* dt, data_t* dt1, char* kausic, double wraja, double v
 	switch(menetelmä) {
 	case keskiarvo_e:
 	    summa = 0;
-	    double ala = 0;
-	    int  aikaa=0;
-	    if(kausi==whole_year_e) {
+	    double ala_ja_aika = 0;
+	    if(kausi==whole_year_e)
 		for(int t=0; t<dt->aikaa; t++) {
 		    summa += dt->vuo[t*dt->resol + r] * dt->alat[r];
-		    ala   += dt->alat[r];
-		    aikaa++; }
-	    }
+		    ala_ja_aika += dt->alat[r];
+		}
 	    else
 		for(int t=0; t<dt->aikaa; t++)
 		    if(kausic[t*dt->resol + r] == kausi) {
 			summa += dt->vuo[t*dt->resol + r] * dt->alat[r];
-			ala   += dt->alat[r];
-			aikaa++; }
+			ala_ja_aika += dt->alat[r];
+		    }
 
-	    if(ala==0) continue;
-	    double yrite = summa / ala / dt->wdata[0][r] * 1e9;
+	    if(ala_ja_aika==0) continue;
+	    double yrite = summa / ala_ja_aika / dt->wdata[0][r] * 1e9; // vuo / kosteikon osuus
 	    if(yrite >= vuoraja) {
 		poistettuja++;
 		poistettu_ala += dt->alat[r];
 		continue; }
 	    dt1->vuo[dt1->pit] = yrite;
-	    virtaamat[dt1->pit] = summa / aikaa;
+	    summat[dt1->pit] = summa;
+	    aikaalat[dt1->pit] = ala_ja_aika * dt->wdata[0][r];
 	    break;
-
+#if 0
 	case huippuarvo_e: // muuttujan nimi on hämäävästi summa
 	    summa = -INFINITY;
 	    int argmax = -1;
@@ -240,9 +241,9 @@ int luo_data(const data_t* dt, data_t* dt1, char* kausic, double wraja, double v
 		}
 	    if(summa==-INFINITY) continue;
 	    dt1->vuo[dt1->pit] = summa;
-	    dt1->virtaama      += dt->vuo[argmax] * dt->alat[argmax % dt->resol];
+	    dt1->keskivuo      += NAN;//dt->vuo[argmax] * dt->alat[argmax % dt->resol];
 	    break;
-
+#endif
 	default:
 	    asm("int $3");
 	}
@@ -257,16 +258,13 @@ int luo_data(const data_t* dt, data_t* dt1, char* kausic, double wraja, double v
     int poistetaan = montako_poistetaan_alusta(dt1, poistettu_ala);
     if(dt1->pit - poistetaan < 20) return 1;
     /* Vaikka poistettuja ei olisi, osa rutiineista olettaa datan olevan järjestyksessä. */
-    järjestä_vuon_mukaan(dt1, virtaamat);
+    järjestä_vuon_mukaan(dt1, summat, aikaalat);
     poista_alusta_määrän_perusteella(dt1, poistetaan);
-    /* dt1->pit on nyt oikein, mutta virtaamat alkaa poisjätettävillä arvoilla. */
-    dt1->virtaama = summa(virtaamat+poistetaan, dt1->pit);
-    dt1->virtaama *= SUHT2ABS_KERR;
-    free(virtaamat);
-    /* Laskettakoon vielä kokonaisala. Tätä tarvitaan vain, jos rang_aste != 0. */
-    dt1->ala = 0;
-    for(int i=0; i<dt1->pit; i++)
-	dt1->ala += dt1->alat[i];
+    /* dt1->pit on nyt oikein, mutta summat alkaa poisjätettävillä arvoilla. */
+    dt1->keskivuo = summa(summat+poistetaan, dt1->pit) / summa(aikaalat+poistetaan, dt1->pit) * 1e9;
+    free(summat);
+    free(aikaalat);
+    dt1->ala = summa(dt1->alat, dt1->pit); // Tätä tarvitaan vain, jos rang_aste != 0.
     return 0;
 }
 
@@ -390,11 +388,12 @@ double ristivalidoi(const data_t* dt, int määrä) {
 
     int pit=dt->pit/määrä;
     int väli1=0, väli2 = pit;
-    double virtaama = 0;
+    double virtaama = 0, wetlala = 0;
     for(int i=0; i<määrä-1; i++) {
 	kopioi_vektoreihin(väli1, väli2);
 	gsl_multifit_wlinear(xmatrix, wvec, yvec, cvec, covm, &sum2, work);
 	virtaama += laske_virtaama_(dt, cvec->data, väli1, väli2);
+	wetlala += laske_virtaama_(NULL, NULL, PALAUTA_ALA, 0);
 	väli1 = väli2;
 	väli2 += pit;
     }
@@ -402,9 +401,10 @@ double ristivalidoi(const data_t* dt, int määrä) {
     kopioi_vektoreihin(väli1, väli2);
     gsl_multifit_wlinear(xmatrix, wvec, yvec, cvec, covm, &sum2, work);
     virtaama += laske_virtaama_(dt, cvec->data, väli1, väli2);
+    wetlala += laske_virtaama_(NULL, NULL, PALAUTA_ALA, 0);
 
     joo_vapauta_kaikki_jutut;
-    return virtaama;
+    return virtaama / wetlala * 1e9;
 }
 
 int hae_alku(nct_var* v, struct tm* aika) {
@@ -520,14 +520,20 @@ void järjestä_d(double *d, int *j, int pit) {
     free(apu);
 }
 
-void järjestä_vuon_mukaan(data_t* dt, double* d2) {
+void _järjestä_vuon_mukaan(data_t* dt, ...) {
     int *järj = malloc(dt->pit*sizeof(int));
     for(int i=0; i<dt->pit; i++) järj[i] = i;
     lomituslajittele2(dt->vuo, järj, dt->pit);
     for(int i=0; i<wpit; i++)
 	järjestä_d(dt->wdata[i], järj, dt->pit);
     järjestä_d(dt->alat, järj, dt->pit);
-    järjestä_d(d2, järj, dt->pit);
+
+    va_list ls;
+    va_start(ls, dt);
+    double* d2;
+    while((d2=va_arg(ls, double*)))
+	järjestä_d(d2, järj, dt->pit);
+    va_end(ls);
     free(järj);
 }
 
@@ -649,14 +655,16 @@ int main(int argc, char** argv) {
     int rajapit = ARRPIT(vuorajat);
     double paras_d = INFINITY;
     int paras_i = -1;
-    double alaa_kaikkiaan = NAN, koko_virtaama = NAN;
+    double alaa_kaikkiaan = NAN, koko_keskivuo = NAN;
     /* Haetaan ristivalidoinnilla suurin piirtein paras vuoraja käyttäen ennalta määritettyjä yritteitä */
+    if(!tallenna)
+	printf("%-7s %-7s %-7s %-7s %-7s\n", "yläraja", "emissio", "koko em", "yrite", "osuma");
     for(int i=0; i<rajapit; i++) {
 	if(luo_data(&dt, &dt1, kausic, 0.05, vuorajat[i]))
 	    break;
 	if(vuorajat[i] != vuorajat[i]) {
 	    alaa_kaikkiaan = dt1.ala;
-	    koko_virtaama = dt1.virtaama;
+	    koko_keskivuo = dt1.keskivuo;
 	}
 	double rangaistus = 1;
 	for(int _i=0; _i<rang_aste; _i++)
@@ -664,8 +672,8 @@ int main(int argc, char** argv) {
 	sekoita(&dt1);
 	double v = ristivalidoi(&dt1, 30);
 	if(v!=v) break; // syöte oli liian lyhyt
-	double virhe = (v - dt1.virtaama) / dt1.virtaama;
-	double yrite = virhe<0? -virhe: virhe;
+	double osuma = v / koko_keskivuo;
+	double yrite = osuma<1? 1-osuma: osuma-1;
 	yrite *= rangaistus;
 	if(yrite < paras_d) {
 	    paras_i = i;
@@ -673,14 +681,14 @@ int main(int argc, char** argv) {
 	    korosta;
 	}
 	if(tallenna) continue;
-	printf("%-7.0lf %-7.0lf %-7.0lf %.2lf\n", vuorajat[i], v, dt1.virtaama, yrite);
+	printf("%-7.0lf %-7.3lf %-7.3lf %-7.2lf %-7.2lf\n", vuorajat[i], v, dt1.keskivuo, yrite, osuma);
 	perusväri;
     }
     if(!tallenna) putchar('\n');
 
     /* Tarkennetaan vuorajaa tarkemmalla ristivalidoinnilla. */
     paras_d = INFINITY;
-    double paras_raja = NAN, paras_virhe = NAN;
+    double paras_raja = NAN, paras_osuma = NAN;
     double alaraja = NAN;
     for(double d=-8; d<=8; d+=1) {
 	double raja = vuorajat[paras_i]+d;
@@ -693,18 +701,18 @@ int main(int argc, char** argv) {
 	sekoita(&dt1);
 	double v = ristivalidoi(&dt1, 250); // Tarkempi ristivalidointi kuin edellä
 	if(v!=v) continue;
-	double virhe = (v - dt1.virtaama) / dt1.virtaama;
-	double yrite = virhe<0? -virhe: virhe;
+	double osuma = v / koko_keskivuo;
+	double yrite = osuma<1? 1-osuma: osuma-1;
 	yrite *= rangaistus;
 	if(yrite < paras_d) {
 	    paras_raja = raja;
 	    alaraja = _alaraja;
 	    paras_d = yrite;
-	    paras_virhe = virhe;
+	    paras_osuma = osuma;
 	    korosta;
 	}
 	if(tallenna) continue;
-	printf("%-7.0lf %-7.0lf %-7.0lf %.3lf\n", raja, v, dt1.virtaama, virhe);
+	printf("%-7.0lf %-7.3lf %-7.3lf %-7.2lf %-7.2lf\n", raja, v, dt1.keskivuo, yrite, osuma);
 	perusväri;
 	if(raja - paras_raja > 3) break;
     }
@@ -744,7 +752,7 @@ int main(int argc, char** argv) {
     sovita_monta(&dt1, kertoimet, &r2, nboot_glob);
     printf("rajat: %-3.0lf %-3.0lf\n", paras_raja, alaraja);
     printf("hyväksyttyä: %.4lf\n", dt1.ala / alaa_kaikkiaan);
-    printf("virhe: %.3lf\n", paras_virhe);
+    printf("osuma: %.3lf\n", paras_osuma);
     printf("r²: %.4lf\n", r2);
     printf("sovite:");
     for(int i=0; i<pit; i++)

@@ -49,7 +49,7 @@ void kirjoita(FILE* f, const char* nimi, float* arvo, int tarkk) {
     fprintf(f,  " \\\\\n");
 }
 
-float ylä[kausia_m*2], ala[kausia_m*2], osuus[kausia_m*2], r²[kausia_m*2], virhe[kausia_m*2];
+float ylä[kausia_m*2], ala[kausia_m*2], osuus[kausia_m*2], r²[kausia_m*2], osuma[kausia_m*2];
 
 void lue_kausi(int k, FILE* f, int ikirko) {
     char sana[128];
@@ -58,7 +58,7 @@ void lue_kausi(int k, FILE* f, int ikirko) {
     lukeos_tällainen("rajat:",       f, ylä+ind, ala+ind);
     lukeos_tällainen("hyväksyttyä:", f, osuus+ind);
     lukeos_tällainen("r²:",          f, r²+ind);
-    lukeos_tällainen("virhe:",       f, virhe+ind);
+    lukeos_tällainen("osuma:",       f, osuma+ind);
 }
 
 int main() {
@@ -86,7 +86,7 @@ int main() {
     kirjoita(f, "upper limit", ylä, 0);
     kirjoita(f, "lower limit", ala, 0);
     kirjoita(f, "accepted proportion", osuus, 4);
-    kirjoita(f, "relative error", virhe, 4);
+    kirjoita(f, "relative average flux", osuma, 4);
     kirjoita(f, "R$^2$", r², 4);
 
     fprintf(f, "\\end{tabular}\n");
