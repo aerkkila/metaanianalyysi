@@ -20,5 +20,6 @@ for pid in $pids; do
     wait $pid
 done
 
-cat tallenteet/* > sovitteet.txt
+printf '%s csv %s\n' '-*-' '-*-' > sovitteet.txt
+cat tallenteet/* >> sovitteet.txt
 ./virhepalkit.py -s
