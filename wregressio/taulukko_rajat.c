@@ -17,7 +17,8 @@ int suureita = arrpit(suureet);
 
 #define dir "../"
 
-void lukeos_tällainen(const char* nimi, FILE* f, ...) {
+#define lukeos_tällainen(...) _lukeos_tällainen(__VA_ARGS__, 0)
+void _lukeos_tällainen(const char* nimi, FILE* f, ...) {
     char sana[128];
     int sij = ftell(f);
     while(fscanf(f, "%127s", sana) == 1)
@@ -54,10 +55,10 @@ void lue_kausi(int k, FILE* f, int ikirko) {
     char sana[128];
     int sij = ftell(f);
     int ind = k*2+ikirko;
-    lukeos_tällainen("rajat:",     f, ylä+ind, ala+ind, 0);
-    lukeos_tällainen("pisteistä:", f, osuus+ind, 0);
-    lukeos_tällainen("r²:",        f, r²+ind, 0);
-    lukeos_tällainen("virhe:",     f, virhe+ind, 0);
+    lukeos_tällainen("rajat:",       f, ylä+ind, ala+ind);
+    lukeos_tällainen("hyväksyttyä:", f, osuus+ind);
+    lukeos_tällainen("r²:",          f, r²+ind);
+    lukeos_tällainen("virhe:",       f, virhe+ind);
 }
 
 int main() {
