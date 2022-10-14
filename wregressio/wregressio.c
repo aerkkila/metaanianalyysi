@@ -655,24 +655,22 @@ int main(int argc, char** argv) {
     int rajapit = ARRPIT(vuorajat);
     double paras_d = INFINITY;
     int paras_i = -1;
-    double alaa_kaikkiaan = NAN, koko_keskivuo = NAN;
+    double alaa_kaikkiaan = NAN;
     /* Haetaan ristivalidoinnilla suurin piirtein paras vuoraja käyttäen ennalta määritettyjä yritteitä */
     if(!tallenna)
-	printf("%-7s %-7s %-7s %-7s %-7s\n", "yläraja", "emissio", "koko em", "yrite", "osuma");
+	printf("%-7s %-7s %-7s %-7s %-7s\n", "yläraja", "ennuste", "oikea", "yrite", "osuma");
     for(int i=0; i<rajapit; i++) {
 	if(luo_data(&dt, &dt1, kausic, 0.05, vuorajat[i]))
 	    break;
-	if(vuorajat[i] != vuorajat[i]) {
+	if(vuorajat[i] != vuorajat[i])
 	    alaa_kaikkiaan = dt1.ala;
-	    koko_keskivuo = dt1.keskivuo;
-	}
 	double rangaistus = 1;
 	for(int _i=0; _i<rang_aste; _i++)
 	    rangaistus *= alaa_kaikkiaan / dt1.ala;
 	sekoita(&dt1);
 	double v = ristivalidoi(&dt1, 30);
 	if(v!=v) break; // syöte oli liian lyhyt
-	double osuma = v / koko_keskivuo;
+	double osuma = v / dt1.keskivuo;
 	double yrite = osuma<1? 1-osuma: osuma-1;
 	yrite *= rangaistus;
 	if(yrite < paras_d) {
@@ -701,7 +699,7 @@ int main(int argc, char** argv) {
 	sekoita(&dt1);
 	double v = ristivalidoi(&dt1, 250); // Tarkempi ristivalidointi kuin edellä
 	if(v!=v) continue;
-	double osuma = v / koko_keskivuo;
+	double osuma = v / dt1.keskivuo;
 	double yrite = osuma<1? 1-osuma: osuma-1;
 	yrite *= rangaistus;
 	if(yrite < paras_d) {
