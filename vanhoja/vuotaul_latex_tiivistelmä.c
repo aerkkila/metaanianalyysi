@@ -4,33 +4,37 @@
 #include <string.h>
 #include <assert.h>
 
-#define ARRPIT(a) sizeof(a)/sizeof(*(a))
+#ifndef TIIVISTELMÄ
+#define TIIVISTELMÄ 0
+#endif
 #ifndef KOSTEIKKO
 #define KOSTEIKKO 0
 #endif
 #ifndef KOST_KAHTIA
 #define KOST_KAHTIA 0
-#define kansio "vuotaulukot"
-#else
-#define kansio "vuotaulukot/kahtia"
 #endif
 const char* pripost[] = {"pri", "post"};
 const char* kaudet[] = {"summer", "freezing", "winter"};
 const char* ylänimet[] = {"wetland", "köppen", "ikir"};
+#if TIIVISTELMÄ
+const char* wetlnimet[] = {"bog", "fen", "marsh", "permafrost_bog", "tundra_wetland", "non-wetland"};
+#else
 const char* wetlnimet[] = {"bog", "fen", "marsh", "permafrost_bog", "tundra_wetland", "wetland", "non-wetland"};
+#endif
 const char* ikirnimet[] = {"non_permafrost", "sporadic", "discontinuous", "continuous"};
 const char* köppnimet[] = {"D.b", "D.c", "D.d", "ET"};
-int pit_pripost=ARRPIT(pripost),
-    pit_kaudet=ARRPIT(kaudet),
-    pit_wetl=ARRPIT(wetlnimet),
-    pit_köpp=ARRPIT(köppnimet),
-    pit_ikir=ARRPIT(ikirnimet),
-    ind_jää;
+int pit_pripost, pit_kaudet, pit_wetl, pit_köpp, pit_ikir, ind_jää;
 
+#define ARRPIT(a) sizeof(a)/sizeof(*(a))
 #define _STR(s) #s
 #define STR2(s1,s2) (_STR(s1) _STR(s2))
 
 void pituudet() {
+    pit_pripost = ARRPIT(pripost);
+    pit_kaudet = ARRPIT(kaudet);
+    pit_wetl = ARRPIT(wetlnimet);
+    pit_köpp = ARRPIT(köppnimet);
+    pit_ikir = ARRPIT(ikirnimet);
     for(int i=0; i<pit_kaudet; i++)
 	if(!strcmp(kaudet[i], "freezing")) {
 	    ind_jää = 1;
@@ -51,7 +55,6 @@ int hae_ind(FILE* f, char* str) {
     return pilkkuja;
 }
 
-/* Lukee kohdalla olevan rivin ja siltä riviltä ottaa taulukkoon taul luvut indekseillä tg_ind ja vuo_ind. */
 int ota_rivi(FILE* f, float* taul, int tg_ind, int vuo_ind, const char** nimet, int pit) {
     char a[256];
     assert(fgets(a, 256, f));
@@ -61,14 +64,14 @@ int ota_rivi(FILE* f, float* taul, int tg_ind, int vuo_ind, const char** nimet, 
     return -1;
 kelpaa:
     int ind[] = {tg_ind, vuo_ind};
-    int pienempi = tg_ind>vuo_ind;
+    int ensin = tg_ind>vuo_ind; // vuo eli ind(1) ensin
     int pilkkuja=0;
     int i=0;
     taul += nimi_ind*pit_kaudet*2;
-    while(pilkkuja<ind[pienempi])
+    while(pilkkuja<ind[ensin])
 	pilkkuja += a[i++]==',';
     assert(sscanf(a+i, "%f", taul++) == 1);
-    while(pilkkuja<ind[!pienempi])
+    while(pilkkuja<ind[!ensin])
 	pilkkuja += a[i++]==',';
     assert(sscanf(a+i, "%f", taul) == 1);
     return nimi_ind;
@@ -77,7 +80,7 @@ kelpaa:
 int lue_data(int ppnum, const char* ylänimi, const char** nimet, int pit, float* taul) {
     static int vuo_ind=-1, tg_ind=-1;
     for(int k=0; k<pit_kaudet; k++) {
-	FILE* f = fopen(aprintf(kansio "/%svuo_%s_%s_k%i.csv",
+	FILE* f = fopen(aprintf("vuotaulukot/%svuo_%s_%s_k%i.csv",
 				ylänimi, pripost[ppnum], kaudet[k], KOSTEIKKO*(!!strcmp(ylänimi,"wetland"))), "r");
 	if(!f) return 1;
 	while(fgetc(f) != '\n'); // 1. rivi on kommentti
@@ -121,7 +124,7 @@ float jäätymisarvo(float* taul) {
 }
 
 #define K(...) fprintf(f, __VA_ARGS__)
-#define A K(" & %.4f", taul[k*2])
+#define A if(!TIIVISTELMÄ) K(" & %.4f", taul[k*2])
 #define B K(" & %.0f & %.3f", taul[k*2]/summa*1000, taul[k*2+1])
 void kirjoita_rivi(FILE* f, float* taul) {
     float jä = jäätymisarvo(taul);
@@ -141,21 +144,24 @@ void kirjoita_rivi(FILE* f, float* taul) {
 #undef B
 
 void kirjoita_data(int ppnum, float* taul) {
-#if KOST_KAHTIA
-    FILE *f = fopen("vuosummat_kahtia.tex", "w");
-#else
-    FILE *f = fopen(aprintf("vuosummat%s_%s.tex",
-			    pripost[ppnum], KOSTEIKKO? STR2(_k,KOSTEIKKO): ""), "w");
-#endif
+    FILE *f = fopen(aprintf("vuosummat%s_%s%s.tex",
+			    TIIVISTELMÄ? "_tiivistelmä": "", pripost[ppnum], KOSTEIKKO? STR2(_k,KOSTEIKKO): ""), "w");
     K("\\begin{tabular}{l");
+#if TIIVISTELMÄ
+    for(int i=0; i<pit_kaudet; i++) K("|rr");
+#else
     for(int i=0; i<pit_kaudet; i++) K("|rrr");
+#endif
     K("}\n");
-    for(int i=0; i<pit_kaudet; i++) K(" & \\multicolumn{3}{r}{%s}", kaudet[i]);
+    for(int i=0; i<pit_kaudet; i++) K(" & \\multicolumn{%i}{r}{%s}", 2+!TIIVISTELMÄ, kaudet[i]);
     K(" \\\\\n");
+#if TIIVISTELMÄ
+    for(int i=0; i<pit_kaudet; i++) K(" & {‰} & {nmol/m$^2$/s}");
+#else
     for(int i=0; i<pit_kaudet; i++) K(" & {Tg} & {‰} & {nmol/m$^2$/s}");
+#endif
     K(" \\\\\n\\midrule\n");
-
-#if !KOST_KAHTIA
+    
     for(int i=0; i<pit_ikir; i++) {
 	K("%s", korvaa(ikirnimet[i], '_', ' '));
 	kirjoita_rivi(f, taul);
@@ -166,11 +172,8 @@ void kirjoita_data(int ppnum, float* taul) {
 	kirjoita_rivi(f, taul);
 	taul += pit_kaudet*2;
     }
-#endif
 #if !KOSTEIKKO
-#if !KOST_KAHTIA
     K("\\\\\n");
-#endif
     for(int i=0; i<pit_wetl; i++) {
 	K("%s", korvaa(wetlnimet[i], '_', ' '));
 	kirjoita_rivi(f, taul);
@@ -184,8 +187,7 @@ void kirjoita_data(int ppnum, float* taul) {
 #if KOST_KAHTIA
 int main() {
     pituudet();
-    pit_wetl -= 2;
-    float* taul = malloc(pit_wetl * pit_kaudet * 2 * sizeof(float));
+    float* taul = malloc(pit_wetl * pit_kaudet * sizeof(float));
     if(lue_data(1, "wetland", wetlnimet, pit_wetl, taul))
 	puts("virhe lue_data");
     else

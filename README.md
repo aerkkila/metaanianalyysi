@@ -54,7 +54,8 @@ They should be compiled with argument \`pkg-config --libs nctietue2\`
    - **prf_kasvil_taulukko.py** &rarr; prf_kasvil_taulukko_['1000km2','prosentti'].csv \
 	   csv-table about how much permafrost region and BAWLD classes overlap (*has to be updated*)
    - **vuotaul_latex.c** &rarr; vuosummat['',_tiivistelmä]_['pri','post']['',_k1].tex \
-	   latex table about average fluxes and season part of whole year emission
+	   latex table about average fluxes and season part of whole year emission \
+	   Reads vuotaulukot/\*.csv.
    - **vuojakaumalaatikko<area>.py** &rarr; vuojakaumalaatikko_['pri','post']_[01].png \
 	   boxplot of methane fluxes in different areas and seasons
    - **vuojakaumalaatikko_vuosittain.py** &rarr; jakaumat_vuosittain/*, vuosittaisvaihtelu.tex, kaudet_vuosittain/*

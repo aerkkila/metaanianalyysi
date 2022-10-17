@@ -1,4 +1,5 @@
 kosteikko = 0
+opt = 2
 
 yleiskosteikko.out: yleiskosteikko.c
 	gcc -Wall ${@:.out=.c} -o $@ `pkg-config --libs nctietue2 gsl` -g -O2
@@ -54,8 +55,9 @@ alkupäivät_vuosittain.target: alkupäivät_vuosittain_ikir alkupäivät_vuosit
 wetlandsumma.out: wetlandsumma.c
 	gcc -Wall wetlandsumma.c -o $@ `pkg-config --libs nctietue` -lm -O3
 
+kost_kahtia = 0
 vuotaul_yleinen.out: vuotaul_yleinen.c
-	gcc -Wall -g -O3 vuotaul_yleinen.c -o $@ `pkg-config --libs nctietue2` -lm -DKOSTEIKKO=${kosteikko}
+	gcc -Wall -g -O2 vuotaul_yleinen.c -o $@ `pkg-config --libs nctietue2` -lm -DKOSTEIKKO=${kosteikko} -Dkosteikko_kahtia=${kosteikko_kahtia}
 vuotaul_wetland_post.csv: vuotaul_yleinen.out
 	./vuotaul_yleinen.out wetl post
 vuotaul_wetland_pri.csv: vuotaul_yleinen.out
@@ -73,7 +75,7 @@ vuotaul_yleinen.target: vuotaul_köppen_pri.csv vuotaul_köppen_post.csv vuotaul
 	cat vuotaulukot/*_post_*.csv > vuotaul_post.csv
 
 vuotaul_latex.out: vuotaul_latex.c #vuotaul_yleinen.target
-	gcc vuotaul_latex.c -o $@ -g -Wall -O2 -DKOSTEIKKO=${kosteikko}
+	gcc vuotaul_latex.c -o $@ -g -Wall -O${opt} -DKOSTEIKKO=${kosteikko} -DKOST_KAHTIA=${kost_kahtia}
 
 vuotaul_csv: vuotaul_latex.out
 	./vuotaul_latex.out

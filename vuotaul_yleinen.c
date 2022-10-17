@@ -6,6 +6,7 @@
 #include <stdarg.h>
 #include <time.h>
 #include <assert.h>
+#include <unistd.h>
 
 /* Kääntäjä tarvitsee argumentit `pkg-config --libs nctietue2` -lm
    nctietue2-kirjasto on osoitteessa https://github.com/aerkkila/nctietue2.git */
@@ -28,9 +29,16 @@ const char* pripost_ulos[]   = {"pri", "post"};
 #define kausia 4
 #define wraja 0.05
 #ifndef KOSTEIKKO
-#define KOSTEIKKO 0
+#define KOSTEIKKO 0 // jaetaanko kuivat luokat kosteikon määrällä
 #endif
-enum luokitus_e {kopp_e, ikir_e, wetl_e, kart_e} luokenum;
+#ifndef kosteikko_kahtia
+#define kansio_m "vuotaulukot"
+#define kosteikko_kahtia 0
+#else
+#define kansio_m "vuotaulukot/kahtia"
+#endif
+const char* kansio = kansio_m;
+enum luokitus_e {kopp_e, ikir_e, wetl_e} luokenum;
 int ppnum;
 
 static float *restrict vuoptr, *restrict lat, *restrict yleiskosteikko;
@@ -53,11 +61,7 @@ char* aprintf(const char* muoto, ...) {
 
 int argumentit(int argc, char** argv) {
     if(argc < 3) {
-	if(argc == 2 && !strcmp(argv[1], "kartta")) {
-	    luokenum = kart_e;
-	    return 0;
-	}
-	printf("Käyttö: %s (kartta) TAI (köpp/ikir/wetl pri/post)\n", argv[0]);
+	printf("Käyttö: %s köpp/ikir/wetl pri/post\n", argv[0]);
 	return 1;
     }
     if(!strcmp(argv[1], "köpp"))
@@ -119,7 +123,6 @@ void* lue_wetl() {
     return (luok_vs = nct_read_ncfile("./BAWLD1x1.nc"));
 }
 void* lue_luokitus() {
-    if(luokenum == kart_e) return (void*)1;
     static void* (*funktio[])(void) = { [kopp_e]=lue_kopp, [ikir_e]=lue_ikir, [wetl_e]=lue_wetl, };
     return funktio[luokenum]();
 }
@@ -204,55 +207,6 @@ int tarkista_kausi(struct laskenta* args, int ind_t) {
     return 2; // kausi vaihtui
 }
 
-void vanha_tee_kartta(struct laskenta* args) {
-    static int tehty = 0;
-    if(tehty)
-	puts("Varoitus, uusi kutsu tee_kartta-funktioon päällekirjoittaa vanhan kartan");
-    tehty = 1;
-    char* kausiptr = args->kausiptr;
-    char kartta[resol];
-    for(int r=0; r<resol; r++) {
-	if(!kausiptr[r]) {
-	    kartta[r]=0; continue; }
-	kartta[r] = 1;
-	int t;
-	for(t=0; t<aikapit; t++)
-	    if(kausiptr[t*resol+r] == freezing_e) break;
-	alusta_lasku(args);
-	for(; t<aikapit; t++) {
-	    int ind_t = t*resol+r;
-	    if(!tarkista_kausi(args, ind_t)) {
-		kartta[r] = 2;
-		break;
-	    }
-	}
-    }
-    nct_vset v = {0};
-    size_t dimlens[] = {latpit, resol/latpit};
-    nct_add_var_(&v, kartta, NC_BYTE, "data", 2, NULL, dimlens, NULL)->nonfreeable_data = 1;
-    nct_write_ncfile(&v, "vanha_käytetty_alue.nc");
-    nct_free_vset(&v);
-}
-
-void tee_kartta(struct laskenta* args) {
-    static int tehty = 0;
-    char* kausiptr = args->kausiptr;
-    char kartta[resol];
-    for(int r=0; r<resol; r++) {
-	char ens = !!kausiptr[r];
-	for(int t=0; t<aikapit; t++)
-	    if(!!kausiptr[t*resol+r] != ens) {
-		kartta[r]=1; goto seuraava; }
-	kartta[r]=ens*2;
-    seuraava:;
-    }
-    nct_vset v = {0};
-    size_t dimlens[] = {latpit, resol/latpit};
-    nct_add_var_(&v, kartta, NC_BYTE, "data", 2, NULL, dimlens, NULL)->nonfreeable_data = 1;
-    nct_write_ncfile(&v, aprintf("käytetty_alue%i.nc", ++tehty));
-    nct_free_vset(&v);
-}
-
 #define ALKUUN(t,ala,ala_kost)				\
     int t;						\
     for(t=0; t<aikapit; t++)				\
@@ -320,12 +274,19 @@ void laske_kuiva(struct laskenta* args) {
 void laske_kosteikko(struct laskenta* args) {
     char* kausiptr = args->kausiptr;
     free(yleiskosteikko); yleiskosteikko=NULL; // varmuuden vuoksi
-    double* osuus0ptr = NCTVAR(*luok_vs, "wetland").data;
-    double* osuus1ptr = NCTVAR(*luok_vs, wetlnimet[args->lajinum]).data;
+    double *restrict osuus0ptr = NCTVAR(*luok_vs, "wetland").data;
+    double *restrict osuus1ptr = NCTVAR(*luok_vs, wetlnimet[args->lajinum]).data;
+#if kosteikko_kahtia
+    double *restrict pb = nct_get_var(luok_vs, "permafrost_bog")->data;
+    double *restrict tw = nct_get_var(luok_vs, "tundra_wetland")->data;
+#endif
     args->pintaala = 0;
     for(int r=0; r<resol; r++) {
 	if(osuus0ptr[r] < wraja) continue;
-
+#if kosteikko_kahtia
+	double osuus = (pb[r] + tw[r]) / osuus0ptr[r];
+	if(0.03 < osuus && osuus < 0.97) continue;
+#endif
 	ALKUUN(t,ala,osuusala);
 	ala *= osuus1ptr[r];         // vain kyseisen luokan pinta-ala
 	osuusala = ala/osuus0ptr[r]; // koko ruudun pinta-ala jaettuna osuuden mukaan eri luokille
@@ -434,7 +395,6 @@ int main(int argc, char** argv) {
     luokkia = ( luokenum==kopp_e? ARRPIT(köppnimet):
 		luokenum==ikir_e? ARRPIT(ikirnimet):
 		luokenum==wetl_e? ARRPIT(wetlnimet):
-		luokenum==kart_e? 1:
 		-1 );
     time_t t0 = mktime(&tm0); // haluttu alkuhetki
 
@@ -481,16 +441,22 @@ int main(int argc, char** argv) {
     }
     vuosia = aikapit / 365;
 
-    if(luokenum != kart_e)
-	for(int i=0; i<kausia; i++) {
-	    if(!(ulos[i] =
-		 fopen(aprintf("vuotaulukot/%svuo_%s_%s_k%i.csv",
-			       luokitus_ulos[luokenum], pripost_ulos[ppnum], kaudet[i], KOSTEIKKO*(luokenum!=wetl_e)), "w"))) {
-		printf("Ei luotu ulostiedostoa\n");
-		return 1;
-	    }
-	    fprintf(ulos[i], "#%s kosteikko%i\n,Tg,nmol/s/m²,season_length\n", kaudet[i], KOSTEIKKO*(luokenum!=wetl_e));
+    if(access(kansio, F_OK))
+	if(system(aprintf("mkdir -p %s", kansio))) {
+	    register int eax asm("eax");
+	    printf("system(mkdir)-komento palautti arvon %i", eax);
 	}
+
+    for(int i=0; i<kausia; i++) {
+	if(!(ulos[i] =
+	     fopen(aprintf(kansio_m "/%svuo_%s_%s_k%i.csv",
+			   luokitus_ulos[luokenum], pripost_ulos[ppnum], kaudet[i], KOSTEIKKO*(luokenum!=wetl_e)), "w"))) {
+	    printf("Ei luotu ulostiedostoa\n");
+	    return 1;
+	}
+	fprintf(ulos[i], "#%s kosteikko%i\n,Tg,nmol/s/m²,season_length\n", kaudet[i], KOSTEIKKO*(luokenum!=wetl_e));
+    }
+
     double tallenn[kausia][luokkia+1];
     for(int lajinum=0; lajinum<luokkia; lajinum++) {
 	double ainemäärä   [kausia] = {0}; // mol
@@ -500,18 +466,19 @@ int main(int argc, char** argv) {
 	double ainemäärä2  [kausia] = {0}; // mol
 	double ala_ja_aika2[kausia] = {0}; // m²*s
 
-	struct laskenta l_args = {.ainemäärä=ainemäärä, .ala_ja_aika=ala_ja_aika,
-				  .ainemäärä1=ainemäärä1, .ala_ja_aika1=ala_ja_aika1,
-				  .ainemäärä2=ainemäärä2, .ala_ja_aika2=ala_ja_aika2,
-				  .lajinum=lajinum, .kausiptr=kausiptr,
-				  .alkuhetki=(tmt){.t=t0, .tm=tm0},
-				  .lajinimi=luokenum!=kart_e? luoknimet[luokenum][lajinum]: NULL};
+	struct laskenta l_args = {
+	    .ainemäärä  = ainemäärä,	.ala_ja_aika  = ala_ja_aika,
+	    .ainemäärä1 = ainemäärä1,	.ala_ja_aika1 = ala_ja_aika1,
+	    .ainemäärä2 = ainemäärä2,	.ala_ja_aika2 = ala_ja_aika2,
+	    .lajinum=lajinum, .kausiptr=kausiptr,
+	    .alkuhetki=(tmt){.t=t0, .tm=tm0},
+	    .lajinimi=luoknimet[luokenum][lajinum]
+	};
 
 	switch(luokenum) {
 	case wetl_e: laske_kosteikko(&l_args); break;
 	case ikir_e: laske_ikir     (&l_args); break;
 	case kopp_e: laske_köpp     (&l_args); break;
-	case kart_e: tee_kartta     (&l_args); goto vapauta;
 	}
 
 	kirjoita_csv(&l_args, tallenn, ulos);
@@ -548,7 +515,6 @@ int main(int argc, char** argv) {
 
     for(int i=0; i<kausia; i++)
 	fclose(ulos[i]);
-vapauta:
     nct_free_vset(&kausivset);
     kausivset = (nct_vset){0};
     
