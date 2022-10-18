@@ -86,7 +86,7 @@ int main() {
     kirjoita(f, "upper limit", ylä, 0);
     kirjoita(f, "lower limit", ala, 0);
     kirjoita(f, "accepted proportion", osuus, 4);
-    kirjoita(f, "relative average flux", osuma, 4);
+    kirjoita(f, "$\\frac{\\text{predicted}}{\\text{known}}$ average flux", osuma, 4);
     kirjoita(f, "R$^2$", r², 4);
 
     fprintf(f, "\\end{tabular}\n");

@@ -39,11 +39,11 @@ if __name__=='__main__':
     ds.close()
     a = np.sum(a, axis=0)
 
-    ax = subplot(1, 2, 1, projection=projektio)
-    tee_kuva('portion of bog + fen + marsh')
-    a = 1-a
     ax = subplot(1, 2, 2, projection=projektio)
     tee_kuva('portion of permafrost bog + tundra wetland')
+    a = 1-a
+    ax = subplot(1, 2, 1, projection=projektio)
+    tee_kuva('portion of bog + fen + marsh')
     tight_layout()
     if('-s') in sys.argv:
         savefig('kuvia/wkahtia_kartta.png')
