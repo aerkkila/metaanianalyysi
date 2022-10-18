@@ -20,10 +20,10 @@ They should be compiled with argument \`pkg-config --libs nctietue2\`
 	   Works also as a general converter from shapefile to netcdf.
    - **yleiskosteikko<area>.c** &rarr; yleiskosteikko<area>.nc \
 	   Reads three wetland classes used in the model and creates a combination of them that that best explains the modelled flux.
-
-2. **Following codes process data further from part 1**
    - **köppenmaski<area>.py** &rarr; köppenmaski<area>.npy, köppenmaski<area>.txt \
 	   Climate class for each grid cell.
+
+2. **Following codes process data further from part 1** These make the hard work.
    - **vuojakaumadata<area>.c** &rarr; vuojakaumadata/\*.bin, vuojakaumadata/vuosittain/\*.bin, vuojakaumadata/vuosittain/*.csv \
 	   Calculate distribution of methane fluxes in different areas and seasons. \
 	   If compiled with -DVUODET_ERIKSEEN=1 calculates all years separately \
@@ -33,6 +33,8 @@ They should be compiled with argument \`pkg-config --libs nctietue2\`
 	   Only tested with -DVUODET_ERIKSEEN=1.
    - **vuotaul_yleinen.c** &rarr; vuotaulukot/\*.csv \
 	   Calculate average methane fluxes in different areas and seasons.
+   - **wregressio/** \
+	   Contains its own readme.
 
 3. **Following codes make final things using the preprocessed data from previous parts.**
    - **bawld_wetlosuuskartta.py** &rarr; bawld_wetlosuuskartta.png \
@@ -66,6 +68,3 @@ They should be compiled with argument \`pkg-config --libs nctietue2\`
 
 **Other**
 - **köppenpintaalat<area>.c** areas of climate classes
-
-**Undocumented** \
-FT2kaudet<area>.c, onko_kausi_yhtenäinen.c wetlandsumma<area>.c interpoloi_flux1x1.py, vuojakauman_piirtäjä.py, [Wwx]\*.py
