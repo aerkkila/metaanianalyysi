@@ -57,7 +57,7 @@ wetlandsumma.out: wetlandsumma.c
 
 kost_kahtia = 0
 vuotaul_yleinen.out: vuotaul_yleinen.c
-	gcc -Wall -g -O2 vuotaul_yleinen.c -o $@ `pkg-config --libs nctietue2` -lm -DKOSTEIKKO=${kosteikko} -Dkosteikko_kahtia=${kosteikko_kahtia}
+	gcc -Wall -g -O2 vuotaul_yleinen.c -o $@ `pkg-config --libs nctietue2` -lm -DKOSTEIKKO=${kosteikko} -Dkosteikko_kahtia=${kost_kahtia}
 vuotaul_wetland_post.csv: vuotaul_yleinen.out
 	./vuotaul_yleinen.out wetl post
 vuotaul_wetland_pri.csv: vuotaul_yleinen.out

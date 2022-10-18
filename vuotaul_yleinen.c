@@ -7,6 +7,7 @@
 #include <time.h>
 #include <assert.h>
 #include <unistd.h>
+#include <sys/stat.h>
 
 /* Kääntäjä tarvitsee argumentit `pkg-config --libs nctietue2` -lm
    nctietue2-kirjasto on osoitteessa https://github.com/aerkkila/nctietue2.git */
@@ -32,11 +33,17 @@ const char* pripost_ulos[]   = {"pri", "post"};
 #define KOSTEIKKO 0 // jaetaanko kuivat luokat kosteikon määrällä
 #endif
 #ifndef kosteikko_kahtia
-#define kansio_m "vuotaulukot"
 #define kosteikko_kahtia 0
-#else
-#define kansio_m "vuotaulukot/kahtia"
 #endif
+
+#if kosteikko_kahtia == 0
+#define kansio_m "vuotaulukot"
+#elif kosteikko_kahtia == 1
+#define kansio_m "vuotaulukot/kahtia"
+#elif kosteikko_kahtia == 2
+#define kansio_m "vuotaulukot/kahtia_keskiosa"
+#endif
+
 const char* kansio = kansio_m;
 enum luokitus_e {kopp_e, ikir_e, wetl_e} luokenum;
 int ppnum;
@@ -132,9 +139,20 @@ typedef struct {
     struct tm tm;
 } tmt;
 
+/*
+  var1[kausia] on se, johon yhden pisteen aikasarja kaudelta ensin summataan,
+  var2[kausia] on se, johon yhden kauden summat yhdestä pisteestä siirretään välitilaan.
+  *  Sitä tarvitaan siihen, että summa voidaan jakaa kyseisessä pisteessä olleitten kausien määrällä
+  *  ennen kuin lisätään yhteen muitten pisteitten summan kanssa.
+  var[kausia]  on se, johon lopuksi lisätään var2 / kausien_määrä_tässä_pisteessä.
+  *  Vain tähän muuttujaan kerrytetään tiedot useammasta kuin yhdestä pisteestä.
+  */
+
 struct laskenta {
     char* kausiptr;
-    double *ainemäärä, *ainemäärä1, *ala_ja_aika, *ala_ja_aika1, *ainemäärä2, *ala_ja_aika2, pintaala;
+    double *ainemäärä, *ainemäärä1, *ainemäärä2,
+	*ala_ja_aika, *ala_ja_aika1, *ala_ja_aika2,
+	pintaala;
     int kuluva_kausi, kuluneita_kausia[kausia], lajinum, lukitse;
     const char* lajinimi;
     tmt alkuhetki, kesän_alku;
@@ -144,8 +162,8 @@ void alusta_lasku(struct laskenta* args) {
     args->kuluva_kausi = freezing_e;
     memset(args->kuluneita_kausia, 0,  kausia*sizeof(int));
     memset(args->ainemäärä1, 0, kausia*8);
-    memset(args->ala_ja_aika1, 0, kausia*8);
     memset(args->ainemäärä2, 0, kausia*8);
+    memset(args->ala_ja_aika1, 0, kausia*8);
     memset(args->ala_ja_aika2, 0, kausia*8);
 }
 
@@ -283,9 +301,12 @@ void laske_kosteikko(struct laskenta* args) {
     args->pintaala = 0;
     for(int r=0; r<resol; r++) {
 	if(osuus0ptr[r] < wraja) continue;
-#if kosteikko_kahtia
+#if kosteikko_kahtia == 1
 	double osuus = (pb[r] + tw[r]) / osuus0ptr[r];
 	if(0.03 < osuus && osuus < 0.97) continue;
+#elif kosteikko_kahtia == 2
+	double osuus = (pb[r] + tw[r]) / osuus0ptr[r];
+	if(!(0.03 < osuus && osuus < 0.97)) continue;
 #endif
 	ALKUUN(t,ala,osuusala);
 	ala *= osuus1ptr[r];         // vain kyseisen luokan pinta-ala
@@ -383,6 +404,20 @@ int hae_alku(nct_vset* vset, time_t t0) {
     return (t0-tn1.a.t) / 86400;
 }
 
+/* tekee saman kuin system(mkdir -p kansio) */
+void mkdir_p(const char *restrict nimi, int mode) {
+    char *restrict k1 = strdup(nimi);
+    char *restrict k2 = malloc(strlen(k1));
+    *k2 = 0;
+    char* str = strtok(k1, "/");
+    do {
+	sprintf(k2+strlen(k2), "%s/", str);
+	assert(!mkdir(k2, mode) || errno == EEXIST);
+    } while((str=strtok(NULL, "/")));
+    free(k2);
+    free(k1);
+}
+
 int main(int argc, char** argv) {
     if(argumentit(argc, argv))
 	return 1;
@@ -441,12 +476,7 @@ int main(int argc, char** argv) {
     }
     vuosia = aikapit / 365;
 
-    if(access(kansio, F_OK))
-	if(system(aprintf("mkdir -p %s", kansio))) {
-	    register int eax asm("eax");
-	    printf("system(mkdir)-komento palautti arvon %i", eax);
-	}
-
+    mkdir_p(kansio, 0755);
     for(int i=0; i<kausia; i++) {
 	if(!(ulos[i] =
 	     fopen(aprintf(kansio_m "/%svuo_%s_%s_k%i.csv",
