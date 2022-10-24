@@ -8,24 +8,21 @@ import sys
 
 lajit = ['permafrost_bog', 'tundra_wetland']
 
-def tee_kuva(rajat):
+def tee_kuva(ots):
     ax.coastlines()
     ax.set_extent(kattavuus, platecarree)
+    rajat = np.concatenate([
+        [0,0.05],
+        np.arange(0.95, 1, 0.01),
+    ])
     normi = mpl.colors.BoundaryNorm(boundaries=rajat, ncolors=256)
     pcolormesh(mx, my, a, transform=platecarree, cmap=get_cmap(cmap, 256), norm=normi)
-
-def väripalkki(rajat):
-    nimet = ['non-prf wetland','both','prf wetland']
-    r = np.empty(len(rajat)-1, np.float32)
-    for i in range(len(rajat)-1):
-        r[i] = np.mean(rajat[i:i+2])
-    locator = mpl.ticker.FixedLocator(r)
-    cbar = colorbar(ticks=locator)
-    cbar.set_ticklabels(nimet)
+    colorbar()
+    title(ots)
 
 if __name__=='__main__':
-    rcParams.update({'font.size': 18,
-                     'figure.figsize': (12,10)})
+    rcParams.update({'font.size': 15,
+                     'figure.figsize': (15,7)})
     ds          = Dataset('BAWLD1x1.nc', 'r')
     platecarree = ccrs.PlateCarree()
     projektio   = ccrs.LambertAzimuthalEqualArea(central_latitude=90)
@@ -42,12 +39,13 @@ if __name__=='__main__':
     ds.close()
     a = np.sum(a, axis=0)
 
-    ax = axes(projection=projektio)
-    rajat = np.array([0,0.03,0.97,1])
-    tee_kuva(rajat)
-    väripalkki(rajat)
+    ax = subplot(1, 2, 2, projection=projektio)
+    tee_kuva('portion of permafrost bog + tundra wetland')
+    a = 1-a
+    ax = subplot(1, 2, 1, projection=projektio)
+    tee_kuva('portion of bog + fen + marsh')
     tight_layout()
     if('-s') in sys.argv:
-        savefig('kuvia/wkahtia_kartta.png')
+        savefig('kuvia/wkahtia_kartta_molemmat.png')
     else:
         show()
