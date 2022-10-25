@@ -58,6 +58,8 @@ They should be compiled with argument \`pkg-config --libs nctietue2\`
    - **vuotaul_latex.c** &rarr; vuosummat['',_tiivistelmä]_['pri','post']['',_k1].tex \
 	   latex table about average fluxes and season part of whole year emission \
 	   Reads vuotaulukot/\*.csv.
+   - **lattaul.c** &rarr; lattaul.tex
+	   Latex table about average latitudes of different areas.
    - **vuojakaumalaatikko<area>.py** &rarr; vuojakaumalaatikko_['pri','post']_[01].png \
 	   boxplot of methane fluxes in different areas and seasons
    - **vuojakaumalaatikko_vuosittain.py** &rarr; jakaumat_vuosittain/*, vuosittaisvaihtelu.tex, kaudet_vuosittain/*
