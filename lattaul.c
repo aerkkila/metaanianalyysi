@@ -39,11 +39,11 @@ void kirjoita_data(FILE* f) {
     const char** kaikkinimet[] = {wetlnimet, ikirnimet, köppnimet};
     int pitdet[] = {pit_wetl, pit_ikir, pit_köpp};
     K("\\begin{tabular}{l|rrr}\n");
-    K(" & °N all area & °N area 1 & °N area 2");
+    K(" & °N all area & °N area 1");
     K(" \\\\\n\\midrule\n");
     kirjoita_osio(f, itaul, ikirnimet, 2); K("\\midrule\n");
     kirjoita_osio(f, ktaul, köppnimet, 2); K("\\midrule\n");
-    _kirjoita_osio(f, wtaul, wetlnimet, 3, arrpit(wetlnimet)-1);
+    _kirjoita_osio(f, wtaul, wetlnimet, 2, arrpit(wetlnimet)-1);
     K("non wetland & %.3f \\\\\n", wtaul[arrpit(wetlnimet)-1][0]);
     K("\\end{tabular}\n");
 }
@@ -98,7 +98,7 @@ kelpaa:
 int main() {
     lue_tiedosto(kansio0"vuotaulukot/wetlandvuo_post_whole_year_k0.csv", wtaul, 0, wetlnimet, pit_wetl);
     lue_tiedosto(kansio0"vuotaulukot/kahtia/wetlandvuo_post_whole_year_k0.csv", wtaul, 1, wetlnimet, pit_wetl);
-    lue_tiedosto(kansio0"vuotaulukot/kahtia_keskiosa/wetlandvuo_post_whole_year_k0.csv", wtaul, 2, wetlnimet, pit_wetl);
+    //lue_tiedosto(kansio0"vuotaulukot/kahtia_keskiosa/wetlandvuo_post_whole_year_k0.csv", wtaul, 2, wetlnimet, pit_wetl);
     
     lue_tiedosto(kansio0"vuotaulukot/ikirvuo_post_whole_year_k0.csv", itaul, 0, ikirnimet, pit_ikir);
     lue_tiedosto(kansio0"vuotaulukot/ikirvuo_post_whole_year_k1.csv", itaul, 1, ikirnimet, pit_ikir);
