@@ -3,7 +3,7 @@ import numpy as np
 from netCDF4 import Dataset
 from laatikkokuvaaja import laatikkokuvaaja
 from matplotlib.pyplot import *
-import luokat, sys
+import luokat, sys, time
 
 aste = 0.0174532925199
 SPINTAALA = lambda _lat: np.sin((_lat+1)*aste) - np.sin(_lat*aste)
@@ -13,14 +13,27 @@ al_nimi = ['freezing_start', 'winter_start', 'summer_start','freezing_length','w
 vuosi0 = 2012
 vuosi1 = 2021
 
+def muunna_aika(lista):
+    r = np.empty(len(lista), object)
+    for i in range(len(r)):
+        tämä = time.localtime(time.mktime(time.struct_time((2002,1,int(lista[i])+1,0,0,0,0,1,0)))) # oispa C
+        r[i] = time.strftime("%m-%d", tämä)
+    return r
+
 def viimeistele(tulos, nimi, xnimet, ynimi):
     ax = gca()
     xs = tulos['xsij']
     grid('on', axis='y')
     ylabel(ynimi)
     xticks(tulos['xsij'], labels=[s.replace('_',' ') for s in xnimet.flatten()])
+    yl = ylim()
+    ytik = ax.get_yticks()[1:-1]
+    yticks(ytik)
+    ax.twinx()
+    ylim(yl)
+    päivät = muunna_aika(ytik)
+    yticks(ytik,päivät)
     tight_layout()
-
     if '-s' in sys.argv:
         nimi="kuvia/kausilaatikko_%s_%s.png" %(ynimi.replace(' ','-'), nimi)
         savefig(nimi)
