@@ -62,13 +62,14 @@ They should be compiled with argument \`pkg-config --libs nctietue2\`
 	   Latex table about average latitudes of different areas.
    - **vuojakaumalaatikko<area>.py** &rarr; vuojakaumalaatikko_['pri','post']_[01].png \
 	   boxplot of methane fluxes in different areas and seasons
-   - **vuojakaumalaatikko_vuosittain.py** &rarr; jakaumat_vuosittain/*, vuosittaisvaihtelu.tex, kaudet_vuosittain/*
+   - **vuojakaumalaatikko_vuosittain.py** &rarr; jakaumat_vuosittain/*, uosittaisvaihtelu.tex, kaudet_vuosittain/*
 	   Yearly boxplots of methane fluxex in different areas and seasons. \
 	   Years in same figure, areas and seasons separately. \
 	   Makes also a table about relative standard deviation of annual averages.
 	   Can be run with argument päivä to make similar figures of season start days.
    - **wkahtia_kartta.py** &rarr; wkahtia_kartta.png
-	   Permafrost and non-permafrost wetland categoriy areas separated on a map.
+	   Permafrost and non-permafrost wetland category areas separated on a map.
+   - **xvuo_laatikko.py** &rarr; xvuo_laatikko_wetland.png
 
 **Other**
 - **köppenpintaalat<area>.c** areas of climate classes

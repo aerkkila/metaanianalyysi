@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 from netCDF4 import Dataset
 import numpy as np
-#import seaborn as sns
-#from matplotlib.pyplot import *
 import luokat, re
 
 def lue_data():
