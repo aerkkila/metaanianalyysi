@@ -3,6 +3,7 @@ kansio=/media/levy
 lsblk |grep -q $kansio || { echo ei kovalevyä; exit 1; }
 
 kansio=${kansio}/codedata
+k0=$kansio
 mkdir -p $kansio
 
 cp \
@@ -12,9 +13,10 @@ cp \
     LICENSE \
     $kansio
 
-cp -r \
+cp -ur \
     ikirdata.nc \
     köppen1x1maski.nc \
+    köppenmaski.npy \
     aluemaski.nc \
     pintaalat.npy \
     vuotaulukot \
@@ -65,8 +67,8 @@ table_8.py
 '
 kopioi
 
-regrdir=table_7__figure_8,9,10
-mkdir -p $kansio/$regrdir
+kansio=$kansio/table_7__figure_8,9,10
+mkdir -p $kansio
 cd wregressio
 nimet0='
 wregressio.c
@@ -88,28 +90,141 @@ piirrä.py
 Makefile
 run.sh
 '
-k0=$kansio
-kansio=$kansio/$regrdir
 kopioi
-kansio=$k0
 cd ..
+kansio=$k0
+
+kansio=$kansio/create_ikirdata
+mkdir -p $kansio
+cp ikirdata.py $kansio
+cp /media/levy/Tyotiedostot/PermafrostExtent/PRF_Extent20*_1x1.tif $kansio
+ed -s $kansio/ikirdata.py <<EOF
+/from config import
+.d
+,s/kansio *=.*/kansio = '.\\/'/
+w
+q
+EOF
+kansio=$k0
+
+kansio=$kansio/create_köppen
+mkdir -p $kansio
+cp köppenmaski.py $kansio
+kansio=$kansio/create_köppen1x1maski
+mkdir -p $kansio
+cp muunna_shapefile.c köppentunnisteet.c $kansio
+cp -r köppen_shp $kansio
+cat >$kansio/Makefile <<EOF
+all: a.out
+	./a.out
+
+a.out:
+	gcc -o $@ -O3 muunna_shapefile.c -lnetcdf -lshp -pthread -lm
+EOF
+kansio=$k0
+
+kansio=$kansio/create_aluemaski
+mkdir -p $kansio
+cp aluemaski.py $kansio
+kansio=$k0
+
+kansio=$kansio/create_pintaalat
+mkdir -p $kansio
+cp pintaalat.py $kansio
+kansio=$k0
+
+kansio=$kansio/create_vuotaulukot
+mkdir -p $kansio
+cp vuotaul_yleinen.c $kansio
+cat >$kansio/Makefile <<EOF
+all: vuotaul_00.target vuotaul_10.target vuotaul_01.target
+
+vuotaul_00.target: vuotaul_köppen_pri.csv vuotaul_köppen_post.csv vuotaul_ikir_pri.csv vuotaul_ikir_post.csv vuotaul_wetland_pri.csv vuotaul_wetland_post.csv
+	cat vuotaulukot/*_pri_*.csv > vuotaul_pri.csv
+	cat vuotaulukot/*_post_*.csv > vuotaul_post.csv
+vuotaul_00.out:
+	gcc -Wall -g -O2 vuotaul_yleinen.c -o $@ `pkg-config --libs nctietue2` -lm -DKOSTEIKKO=0 -Dkosteikko_kahtia=0
+vuotaul_wetland_post.csv: vuotaul_00.out
+	./vuotaul_00.out wetl post
+vuotaul_wetland_pri.csv: vuotaul_00.out
+	./vuotaul_00.out wetl pri
+vuotaul_köppen_post.csv: vuotaul_00.out
+	./vuotaul_00.out köpp post
+vuotaul_köppen_pri.csv: vuotaul_00.out
+	./vuotaul_00.out köpp pri
+vuotaul_ikir_post.csv: vuotaul_00.out
+	./vuotaul_00.out ikir post
+vuotaul_ikir_pri.csv: vuotaul_00.out
+	./vuotaul_00.out ikir pri
+
+vuotaul_10.target: vuotaul_köppen_post10.csv vuotaul_ikir_post10.csv
+vuotaul_10.out:
+	gcc -Wall -g -O2 vuotaul_yleinen.c -o $@ `pkg-config --libs nctietue2` -lm -DKOSTEIKKO=1 -Dkosteikko_kahtia=0
+vuotaul_köppen_post10.csv: vuotaul_10.out
+	./vuotaul_10.out köpp post
+vuotaul_ikir_post10.csv: vuotaul_10.out
+	./vuotaul_10.out ikir post
+
+vuotaul_01.target: vuotaul_wetland_post01.csv
+vuotaul_01.out:
+	gcc -Wall -g -O2 vuotaul_yleinen.c -o $@ `pkg-config --libs nctietue2` -lm -DKOSTEIKKO=0 -Dkosteikko_kahtia=1
+vuotaul_wetland_post01.csv vuotaul01.out
+	./vuotaul_01.out wetl post
+EOF
+kansio=$k0 
+
+kansio=$kansio/create_kaudet
+mkdir -p $kansio/data
+a=/media/levy/smos_uusi/data2
+cp kaudet.py $kansio 
+cp $a/freezing_start_doy* $a/winter_start_doy* $a/winter_end_doy* $kansio/data
+#pitää vielä muokata koodia, että tuo kansio on siellä
+kansio=$kansio/create_data
+mkdir -p $kansio/data
+cp  /media/levy/smos_uusi/calculate_DOY_of_winter_end_start.py \
+    /media/levy/smos_uusi/calculate_DOY_of_start_of_freezing.py \
+    $kansio
+cp -u /media/levy/smos_uusi/data2/frozen_percent_pixel_*.nc $kansio/data
+kansio=$kansio/create_data
+mkdir -p $kansio/data
+cp /media/levy/smos_uusi/ft_percents_pixel_ease.c $kansio
+cp /media/levy/Tyotiedostot/Carbon_tracker/EASE_2_l*.nc $kansio
+cp -u /media/levy/smos_uusi/FT2_720_*.nc $kansio/data # 181 Mt kukin
+kansio=$k0
 
 cat > $kansio/create_links.sh <<EOF
 #!/bin/sh
-ln -s BAWLD1x1.nc flux1x1.nc kaudet2.nc ${regrdir}
+( cd ${regrdir};            ln -s ../BAWLD1x1.nc ../flux1x1.nc ../kaudet2.nc . )
+( cd create_köppen;         ln -s ../köppen1x1maski.nc . )
+( cd create_köppen/create_köppen1x1maski; ln -s ../../aluemaski.nc . )
+( cd create_aluemaski;      ln -s ../kaudet2.nc . )
+( cd create_vuotaulukot;    ln -s ../köppenmaski.txt ../ikirdata.nc ../BAWLD1x1.nc ../flux1x1.nc ../kaudet2.nc . )
+( cd create_kaudet;         ln -s ../aluemaski.nc . )
+( cd create_kaudet/create_data/create_data; ln -s ../../../aluemaski.nc . )
 EOF
 
 cat > $kansio/README <<EOF
-It is recommended to run create_links.sh before attempting to run codes in deeper directories than top level.
+It is necessary to run create_links.sh before attempting to run most codes elsewhere than in the root directory.
 
 The idea is that a directory always contains the data that is needed to run the codes
-and if data was created using other codes, those codes and their data are given one directory deeper
-but always hierarchy is not that clear.
-In such cases the directory contains a shell script that runs the codes in the right order.
+and if data was created using other codes, those codes and their data are given one directory deeper.
+Codes that make data for other codes are in directories called create_*/.
 If a file is needed in many levels, it is given in the uppermost directory
-and user may have to create links or move files to run codes in deeper directories.
+and it has to be linked to deeper directories to run those codes.
 That is automated in file create_links.sh which puts needed links to right directories.
 
-laatikkokuvaaja.py is a module for making whisker plots.
+There seems to be some cyclic dependencis on creations of kaudet2.nc and aluemaski.nc.
+If one wants to create everything from scratch, references to aluemaski.nc has to be left out codes in create_kaudet/.
+The codes will still work and create the same results but they will run slower.
+
 fig_11.py and table_8.py are the same file but given twice for naming reasons.
+
+Dictionary:
+aluemaski			a mask of used area
+ikirdata                        permafrost data
+kaudet                          seasons
+laatikkokuvaaja.py		a module for making whisker plots
+pintaalat			surface areas
+vuo				flux
+vuotaulukot			flux tables
 EOF

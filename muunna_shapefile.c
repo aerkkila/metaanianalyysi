@@ -195,6 +195,7 @@ int main(int argc, char** argv) {
     return 0;
 }
 
+#if 0
 void kirjoita_netcdf_str(int ncid, int latid, int lonid) {
     int latlonid[] = {latid, lonid};
     int varid;
@@ -226,6 +227,7 @@ void kirjoita_netcdf_str(int ncid, int latid, int lonid) {
 	free(nimet[i]);
     free(nimet);
 }
+#endif
 
 void luo_netcdf_maski(int monesko) {
     size_t pit = pit_latlon; //int restrict
