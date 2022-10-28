@@ -45,8 +45,6 @@ They should be compiled with argument \`pkg-config --libs nctietue2\`
 	   Season average methane flux on map. Different map for each permafrost region, season and prior/posterior data.
    - **jäätym_histog.py** &rarr; ikir[0123]\_freezing_['start','end','length']_ft[012]<area>.png (deprecated?) \
 	   like ikir_alkuloppu.py but only freezing period including its length and different ft-data
-   - **jäätym_laatikko.py** &rarr; freezing-['start','end','length']_['ikir','kopp']_laatikko<area>.png (deprecated?) \
-	   boxplot of freezing period dates in different permafrost or climate areas and with different ft-data
    - **kaudet_laatikko.py** &rarr; kausilaatikko_{season}\_['length','start']\_ikirköpp.png \
 	   Boxplot of season start day or length in different climate and permafrost classifications.
    - **köppikir_kartta.py** &rarr; ['köppen','ikir']\_kartta.png \

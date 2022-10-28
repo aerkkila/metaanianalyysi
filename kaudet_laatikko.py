@@ -26,13 +26,14 @@ def viimeistele(tulos, nimi, xnimet, ynimi):
     grid('on', axis='y')
     ylabel(ynimi)
     xticks(tulos['xsij'], labels=[s.replace('_',' ') for s in xnimet.flatten()])
-    yl = ylim()
-    ytik = ax.get_yticks()[1:-1]
-    yticks(ytik)
-    ax.twinx()
-    ylim(yl)
-    päivät = muunna_aika(ytik)
-    yticks(ytik,päivät)
+    if not 'length' in ynimi:
+        yl = ylim()
+        ytik = ax.get_yticks()[1:-1]
+        yticks(ytik)
+        ax.twinx()
+        ylim(yl)
+        päivät = muunna_aika(ytik)
+        yticks(ytik,päivät)
     tight_layout()
     if '-s' in sys.argv:
         nimi="kuvia/kausilaatikko_%s_%s.png" %(ynimi.replace(' ','-'), nimi)
