@@ -17,6 +17,9 @@ for i in range(len(kaudet)):
 
 xticks(x, lajit*len(kaudet), rotation=90)
 ylabel('nmol m$^{-2}$ s$^{-1}$')
+grid('on', axis='y')
+lim = gca().get_yticks()[1:-1]
+yticks(np.arange(lim[0], lim[-1], 2.5))
 legend(loc='upper right')
 tight_layout()
 if '-s' in sys.argv:

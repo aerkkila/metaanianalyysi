@@ -43,12 +43,13 @@ def lisää_kausien_keskiarvot(tulos, luokka, kausi):
         #meds[i] = dt[ind1+pit_per_2]
         kars[i] = np.mean(dt[ind1+pit_per_i : ind2-pit_per_i])
         ind1 = ind2
-    gca().twinx()
-    plot(tulos['xsij1'], kars, 'o', color='r', markersize=7)
-    ylabel('%s start' %kausi)
-    pienin = min(kars)
-    erotus = (max(kars)-pienin)*0.6
-    ylim([pienin-erotus, max(kars)+erotus])
+    if 0:
+        gca().twinx()
+        plot(tulos['xsij1'], kars, 'o', color='r', markersize=7)
+        ylabel('%s start' %kausi)
+        pienin = min(kars)
+        erotus = (max(kars)-pienin)*0.6
+        ylim([pienin-erotus, max(kars)+erotus])
 
 def aja2(luokka, kausi, textied):
     ppnum = 0 if 'pri' in sys.argv else 1
