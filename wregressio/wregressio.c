@@ -194,6 +194,7 @@ int luo_data(const data_t* dt, data_t* dt1, char* kausic, double wraja, double v
 
 	switch(menetelmä) {
 	case keskiarvo_e:
+	    /* Lasketaan yhteen yksi hilaruutu koko ajalta kyseisellä kaudella. */
 	    summa = 0;
 	    double ala_ja_aika = 0;
 	    if(kausi==whole_year_e)
@@ -208,6 +209,7 @@ int luo_data(const data_t* dt, data_t* dt1, char* kausic, double wraja, double v
 			ala_ja_aika += dt->alat[r];
 		    }
 
+	    /* Lasketaan keskiarvo (yrite) jakamalla summa pinta-alalla ja ajalla */
 	    if(ala_ja_aika==0) continue;
 	    double yrite = summa / ala_ja_aika / dt->wdata[0][r] * 1e9; // vuo / kosteikon osuus
 	    if(yrite >= vuoraja) {
