@@ -23,6 +23,7 @@ const int resol = 19800;
 const char* ikirnimet[]      = {"non_permafrost", "sporadic", "discontinuous", "continuous"};
 const char* köppnimet[]      = {"D.b", "D.c", "D.d", "ET"};
 const char* wetlnimet[]      = {"wetland", "bog", "fen", "marsh", "permafrost_bog", "tundra_wetland"};
+enum                           {wetland_e, bog_e, fen_e, marsh_e, permafrost_bog_e, tundra_wetland_e};
 const char* kaudet[]         = {"whole_year", "summer", "freezing", "winter"};
 enum                           {whole_year_e, summer_e, freezing_e, winter_e};
 const char* pripost_sisaan[] = {"flux_bio_prior", "flux_bio_posterior"};
@@ -71,24 +72,21 @@ int argumentit(int argc, char** argv) {
 	printf("Käyttö: %s köpp/ikir/wetl pri/post\n", argv[0]);
 	return 1;
     }
-    if(!strcmp(argv[1], "köpp"))
-	luokenum = kopp_e;
-    else if (!strcmp(argv[1], "ikir"))
-	luokenum = ikir_e;
-    else if (!strcmp(argv[1], "wetl"))
-	luokenum = wetl_e;
-    else {
-	printf("Ei luettu luokitusargumenttia\n");
-	return 1;
-    }
-    if(!strcmp(argv[2], "pri"))
-	ppnum = 0;
-    else if(!strcmp(argv[2], "post"))
-	ppnum = 1;
-    else {
-	printf("Ei luettu pri/post-argumenttia\n");
-	return 1;
-    }
+    for(int i=1; i<argc; i++)
+	if(!strcmp(argv[i], "köpp"))
+	    luokenum = kopp_e;
+	else if (!strcmp(argv[i], "ikir"))
+	    luokenum = ikir_e;
+	else if (!strcmp(argv[i], "wetl"))
+	    luokenum = wetl_e;
+	else if(!strcmp(argv[i], "pri"))
+	    ppnum = 0;
+	else if(!strcmp(argv[i], "post"))
+	    ppnum = 1;
+	else {
+	    printf("Virheellinen argumentti %s", argv[i]);
+	    return 1;
+	}
     return 0;
 }
 
@@ -153,6 +151,7 @@ typedef struct{ double _[3][kausia]; } taikuus;
 struct laskenta {
     char* kausiptr;
     taikuus ainemäärä, ala_ja_aika, leveyspiiri;
+    int pisteitä[kausia];
     int kuluva_kausi, kuluneita_kausia[kausia], lajinum, lukitse;
     const char* lajinimi;
     tmt alkuhetki, kesän_alku;
@@ -175,6 +174,7 @@ void hyväksy_data_välitilasta(struct laskenta* args) {
 	    args->ainemäärä  ._[2][k] += args->ainemäärä  ._[1][k] * kerroin;
 	    args->ala_ja_aika._[2][k] += args->ala_ja_aika._[1][k] * kerroin;
 	    args->leveyspiiri._[2][k] += args->leveyspiiri._[1][k] * kerroin;
+	    args->pisteitä[k]++;
 	} // nollaaminen tehdään aina tämän jälkeen alusta_lasku-funktiossa
 }
 
@@ -307,7 +307,10 @@ void laske_kosteikko(struct laskenta* args) {
 	if(osuus0ptr[r] < wraja) continue;
 #if kosteikko_kahtia == 1
 	double osuus = (pb[r] + tw[r]) / osuus0ptr[r];
-	if(0.03 < osuus && osuus < 0.97) continue;
+	if(args->lajinum == wetland_e) {
+	    if(0.03 < osuus && osuus < 0.97) continue; }
+	else if(args->lajinum >  marsh_e && osuus<0.97) continue;
+	else if(args->lajinum <= marsh_e && osuus>0.03) continue;
 #elif kosteikko_kahtia == 2
 	double osuus = (pb[r] + tw[r]) / osuus0ptr[r];
 	if(!(0.03 < osuus && osuus < 0.97)) continue;
@@ -387,15 +390,17 @@ void kirjoita_csv(struct laskenta* args, double tallenn[kausia][luokkia], FILE**
 	args->ala_ja_aika._[2][0] += args->ala_ja_aika._[2][i];
 	args->leveyspiiri._[2][0] += args->leveyspiiri._[2][i];
     }
+    args->pisteitä[0] = args->pisteitä[summer_e];
     for(int i=0; i<kausia; i++) {
 	double leveyspiiri = args->leveyspiiri._[2][i] / args->ala_ja_aika._[2][i];
 	args->ainemäärä._[2][i]   *= 86400;
 	args->ala_ja_aika._[2][i] *= 86400;
-	fprintf(ulos[i], "%s,%.4lf,%.5lf,%.4lf,%.4lf\n", args->lajinimi,
+	fprintf(ulos[i], "%s,%.4lf,%.5lf,%.4lf,%.4lf,%i\n", args->lajinimi,
 		args->ainemäärä  ._[2][i] * 16.0416 * 1e-12,               // Tg
 		args->ainemäärä  ._[2][i] / args->ala_ja_aika._[2][i]*1e9, // nmol/s/m²
 		args->ala_ja_aika._[2][i] / args->ala_ja_aika._[2][0],     // 1
-		leveyspiiri                                                // °
+		leveyspiiri,                                               // °
+		args->pisteitä[i]					   // 1
 	    );
 	tallenn[i][args->lajinum] = args->ainemäärä._[2][i] / args->ala_ja_aika._[2][i]*1e9;
     }
@@ -492,7 +497,7 @@ int main(int argc, char** argv) {
 	    printf("Ei luotu ulostiedostoa\n");
 	    return 1;
 	}
-	fprintf(ulos[i], "#%s kosteikko%i\n,Tg,nmol/s/m²,season_length,lat\n", kaudet[i], KOSTEIKKO*(luokenum!=wetl_e));
+	fprintf(ulos[i], "#%s kosteikko%i\n,Tg,nmol/s/m²,season_length,lat,N\n", kaudet[i], KOSTEIKKO*(luokenum!=wetl_e));
     }
 
     double tallenn[kausia][luokkia+1];
