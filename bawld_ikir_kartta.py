@@ -48,6 +48,6 @@ if __name__=='__main__':
     väripalkki(rajat)
     tight_layout()
     if('-s') in sys.argv:
-        savefig('kuvia/wkahtia_kartta.png')
+        savefig('kuvia/bawld_ikir_kartta.png')
     else:
         show()

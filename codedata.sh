@@ -38,7 +38,7 @@ kopioi() {
 nimet0='
 köppikir_kartta.py
 kaudet_laatikko.py
-wkahtia_kartta.py
+bawld_ikir_kartta.py
 xvuo_laatikko.py
 vuojakaumalaatikko.py
 vuojakaumalaatikko_vuosittain.py

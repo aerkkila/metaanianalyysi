@@ -70,7 +70,7 @@ def main():
         '''
 
         xticks(rotation=90)
-        xlabel('fraction of %s' %(argv1))#, aluenimi))
+        xlabel('%s percentage' %(argv1))
         ylabel('flux (nmol m$^{-2}$ s$^{-1}$)')
         ax = gca()
         xsij = tulos['xsij1']
