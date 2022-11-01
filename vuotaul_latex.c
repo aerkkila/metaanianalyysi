@@ -10,10 +10,16 @@
 #endif
 #ifndef KOST_KAHTIA
 #define KOST_KAHTIA 0
-#define kansio "vuotaulukot"
-#else
-#define kansio "vuotaulukot/kahtia"
 #endif
+
+#if KOST_KAHTIA == 0
+#define kansio "vuotaulukot"
+#elif KOST_KAHTIA == 1
+#define kansio "vuotaulukot/kahtia"
+#elif KOST_KAHTIA == 2
+#define kansio "vuotaulukot/kahtia_keskiosa"
+#endif
+
 const char* pripost[] = {"pri", "post"};
 const char* kaudet[] = {"summer", "freezing", "winter"};
 const char* ylänimet[] = {"wetland", "köppen", "ikir"};
@@ -141,8 +147,10 @@ void kirjoita_rivi(FILE* f, float* taul) {
 #undef B
 
 void kirjoita_data(int ppnum, float* taul) {
-#if KOST_KAHTIA
+#if KOST_KAHTIA==1
     FILE *f = fopen("vuosummat_kahtia.tex", "w");
+#elif KOST_KAHTIA==2
+    FILE *f = fopen("vuosummat_sekoitus.tex", "w");
 #else
     FILE *f = fopen(aprintf("vuosummat%s_%s.tex",
 			    pripost[ppnum], KOSTEIKKO? STR2(_k,KOSTEIKKO): ""), "w");
