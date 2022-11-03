@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <err.h>
 
 /* Kääntäjä tarvitsee argumentit `pkg-config --libs nctietue2` -lm
    nctietue2-kirjasto on osoitteessa https://github.com/aerkkila/nctietue2.git */
@@ -141,20 +142,24 @@ typedef struct {
   var[0][kausi] on se, johon yhden pisteen aikasarja kaudelta ensin summataan,
   var[1][kausi] on se, johon yhden kauden summat yhdestä pisteestä siirretään välitilaan.
   *  Sitä tarvitaan siihen, että summa voidaan jakaa kyseisessä pisteessä olleitten kausien määrällä
-  *  ennen kuin lisätään yhteen muitten pisteitten summan kanssa.
+  *  ennen kuin lisätään yhteen muitten pisteitten summan kanssa
+  *  ja että kesken jäävää kautta ei oteta mukaan.
   var[2][kausi]  on se, johon lopuksi lisätään var[1] / kausien_määrä_tässä_pisteessä.
   *  Vain tähän muuttujaan kerrytetään tiedot useammasta kuin yhdestä pisteestä.
   */
 
 typedef struct{ double _[3][kausia]; } taikuus;
+typedef double avg_t[kausia][12];
 
 struct laskenta {
     char* kausiptr;
     taikuus ainemäärä, ala_ja_aika, leveyspiiri;
+    double virhe[kausia];
     int pisteitä[kausia];
     int kuluva_kausi, kuluneita_kausia[kausia], lajinum, lukitse;
     const char* lajinimi;
     tmt alkuhetki, kesän_alku;
+    avg_t keskiarvo;
 };
 #define olkoon(args,i,j,a) (args)->ainemäärä._[i][j] = (args)->ala_ja_aika._[i][j] = (args)->leveyspiiri._[i][j] = a
 
@@ -167,14 +172,19 @@ void alusta_lasku(struct laskenta* args) {
     }
 }
 
+/* Tämä funktio kutsutaan aina kun yhdessä pisteessä on käyty kaikki aika-askelet läpi. */
 void hyväksy_data_välitilasta(struct laskenta* args) {
     for(int k=1; k<kausia; k++)
 	if(args->kuluneita_kausia[k] != 0) {
+	    double virhe = args->keskiarvo[k][args->lajinum] - args->ainemäärä._[1][k] / args->ala_ja_aika._[1][k] * 1e9;
 	    double kerroin = 1.0 / args->kuluneita_kausia[k];
 	    args->ainemäärä  ._[2][k] += args->ainemäärä  ._[1][k] * kerroin;
 	    args->ala_ja_aika._[2][k] += args->ala_ja_aika._[1][k] * kerroin;
 	    args->leveyspiiri._[2][k] += args->leveyspiiri._[1][k] * kerroin;
-	    args->pisteitä[k]++;
+	    if(virhe==virhe) {
+		args->virhe[k]        += virhe * virhe;
+		args->pisteitä[k]++;
+	    }
 	} // nollaaminen tehdään aina tämän jälkeen alusta_lasku-funktiossa
 }
 
@@ -395,15 +405,56 @@ void kirjoita_csv(struct laskenta* args, double tallenn[kausia][luokkia], FILE**
 	double leveyspiiri = args->leveyspiiri._[2][i] / args->ala_ja_aika._[2][i];
 	args->ainemäärä._[2][i]   *= 86400;
 	args->ala_ja_aika._[2][i] *= 86400;
-	fprintf(ulos[i], "%s,%.4lf,%.5lf,%.4lf,%.4lf,%i\n", args->lajinimi,
+	fprintf(ulos[i], "%s,%.4lf,%.5lf,%.4lf,%.4lf,%i,%.5f\n", args->lajinimi,
 		args->ainemäärä  ._[2][i] * 16.0416 * 1e-12,               // Tg
 		args->ainemäärä  ._[2][i] / args->ala_ja_aika._[2][i]*1e9, // nmol/s/m²
 		args->ala_ja_aika._[2][i] / args->ala_ja_aika._[2][0],     // 1
 		leveyspiiri,                                               // °
-		args->pisteitä[i]					   // 1
+		args->pisteitä[i],					   // 1
+		args->virhe[i] / (args->pisteitä[i] + 1)		   // (nmol/s/m²)²
 	    );
 	tallenn[i][args->lajinum] = args->ainemäärä._[2][i] / args->ala_ja_aika._[2][i]*1e9;
     }
+}
+
+int hae_ind(const char* restrict str, FILE *f) {
+    int ind = 0;
+    char apu[256];
+    while(fscanf(f, "%[^,\n]", apu) != EOF) {
+	if(!strcmp(apu, str))
+	    return ind;
+	fgetc(f);
+	ind++;
+    }
+    return -1;
+}
+
+/* Lukee keskiarvon jos ohjelma on jo ajettu aiemmin ja siten keskiarvo on jo laskettu.
+ * Ensimmäisellä ohjelman ajamisella keskiarvoa ei vielä ole saatavilla ja siten keskihajontaa ei laskesta.
+ */
+int seuraava_rivi(FILE *f) {
+    while(fgetc(f) != '\n' && !feof(f));
+    return !feof(f);
+}
+void lue_keskiarvot(char* nimi, double *avg) {
+    FILE *f = fopen(nimi, "r");
+    if(!f) return;
+    seuraava_rivi(f);
+    int ind = hae_ind("nmol/s/m²", f);
+    seuraava_rivi(f);
+    int i=0;
+    do {
+	for(int _i=0; _i<ind; _i++)
+	    if(fscanf(f, "%*[^,],") == EOF)
+		goto ulos;
+	switch(fscanf(f, "%lf", avg+i++)) {
+	    case 1: break;
+	    default: warnx("rivi %i, i=%i", __LINE__, i);
+		     goto ulos;
+	}
+    } while(seuraava_rivi(f));
+ulos:
+    fclose(f);
 }
 
 /* Paljonko pitää siirtyä eteenpäin, jotta päästään t0:n kohdalle */
@@ -489,15 +540,20 @@ int main(int argc, char** argv) {
     }
     vuosia = aikapit / 365;
 
+    avg_t keskiarvo;
+    for(int i=0; i<sizeof(keskiarvo)/sizeof(double); i++)
+	((double*)keskiarvo)[i] = NAN;
+
     mkdir_p(kansio, 0755);
     for(int i=0; i<kausia; i++) {
-	if(!(ulos[i] =
-	     fopen(aprintf(kansio_m "/%svuo_%s_%s_k%i.csv",
-			   luokitus_ulos[luokenum], pripost_ulos[ppnum], kaudet[i], KOSTEIKKO*(luokenum!=wetl_e)), "w"))) {
+	aprintf(kansio_m "/%svuo_%s_%s_k%i.csv",
+		luokitus_ulos[luokenum], pripost_ulos[ppnum], kaudet[i], KOSTEIKKO*(luokenum!=wetl_e));
+	lue_keskiarvot(aprintapu, keskiarvo[i]);
+	if(!(ulos[i] = fopen(aprintapu, "w"))) {
 	    printf("Ei luotu ulostiedostoa\n");
 	    return 1;
 	}
-	fprintf(ulos[i], "#%s kosteikko%i\n,Tg,nmol/s/m²,season_length,lat,N\n", kaudet[i], KOSTEIKKO*(luokenum!=wetl_e));
+	fprintf(ulos[i], "#%s kosteikko%i\n,Tg,nmol/s/m²,season_length,lat,N,σ²\n", kaudet[i], KOSTEIKKO*(luokenum!=wetl_e));
     }
 
     double tallenn[kausia][luokkia+1];
@@ -508,6 +564,7 @@ int main(int argc, char** argv) {
 	    .alkuhetki    = (tmt){.t=t0, .tm=tm0},
 	    .lajinimi     = luoknimet[luokenum][lajinum],
 	};
+	memcpy(l_args.keskiarvo, keskiarvo, sizeof(avg_t));
 
 	switch(luokenum) {
 	case wetl_e: laske_kosteikko(&l_args); break;
@@ -525,6 +582,7 @@ int main(int argc, char** argv) {
 	    .lajinum      = luokkia,
 	    .lajinimi     = "non-wetland",
 	};
+	memcpy(l_args.keskiarvo, keskiarvo, sizeof(avg_t));
 	laske_kuiva(&l_args);
 	kirjoita_csv(&l_args, tallenn, ulos);
 
