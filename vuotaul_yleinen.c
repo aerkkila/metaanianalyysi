@@ -307,8 +307,9 @@ void laske_kuiva(struct laskenta* args) {
 void laske_kosteikko(struct laskenta* args) {
     char* kausiptr = args->kausiptr;
     free(yleiskosteikko); yleiskosteikko=NULL; // varmuuden vuoksi
-    double *restrict osuus0ptr = NCTVAR(*luok_vs, "wetland").data;
-    double *restrict osuus1ptr = NCTVAR(*luok_vs, wetlnimet[args->lajinum]).data;
+    const double *restrict osuus0ptr = NCTVAR(*luok_vs, "wetland").data;
+    const double *restrict osuus1ptr = args->lajinum<luokkia? NCTVAR(*luok_vs, wetlnimet[args->lajinum]).data:
+	osuus0ptr; // Tämä tapahtuu, kun kosteikko_kahtia==1 && wetland_[non]prf
 #if kosteikko_kahtia
     double *restrict pb = nct_get_var(luok_vs, "permafrost_bog")->data;
     double *restrict tw = nct_get_var(luok_vs, "tundra_wetland")->data;
@@ -319,6 +320,10 @@ void laske_kosteikko(struct laskenta* args) {
 	double osuus = (pb[r] + tw[r]) / osuus0ptr[r];
 	if(args->lajinum == wetland_e) {
 	    if(0.03 < osuus && osuus < 0.97) continue; }
+	else if(args->lajinum == luokkia+1) {
+	    if(osuus > 0.03) continue; } // wetland_nonprf
+	else if(args->lajinum == luokkia+2) {
+	    if(osuus < 0.97) continue; } // wetland_prf
 	else if(args->lajinum >  marsh_e && osuus<0.97) continue;
 	else if(args->lajinum <= marsh_e && osuus>0.03) continue;
 #elif kosteikko_kahtia == 2
@@ -585,7 +590,27 @@ int main(int argc, char** argv) {
 	memcpy(l_args.keskiarvo, keskiarvo, sizeof(avg_t));
 	laske_kuiva(&l_args);
 	kirjoita_csv(&l_args, tallenn, ulos);
+#if kosteikko_kahtia == 1
+	l_args = (struct laskenta){
+	    .kausiptr     = kausiptr,
+	    .alkuhetki    = (tmt){.t=t0, .tm=tm0},
+	    .lajinum      = luokkia+1,
+	    .lajinimi     = "wetland_nonprf",
+	};
+	memcpy(l_args.keskiarvo, keskiarvo, sizeof(avg_t));
+	laske_kosteikko(&l_args);
+	kirjoita_csv(&l_args, tallenn, ulos);
 
+	l_args = (struct laskenta){
+	    .kausiptr     = kausiptr,
+	    .alkuhetki    = (tmt){.t=t0, .tm=tm0},
+	    .lajinum      = luokkia+2,
+	    .lajinimi     = "wetland_prf",
+	};
+	memcpy(l_args.keskiarvo, keskiarvo, sizeof(avg_t));
+	laske_kosteikko(&l_args);
+	kirjoita_csv(&l_args, tallenn, ulos);
+#endif
 	FILE *f = fopen(aprintf("vuokertoimet_%s.csv", pripost_ulos[ppnum]), "w");
 	for(int i=0; i<kausia; i++)
 	    fprintf(f, ",%s", kaudet[i]);
