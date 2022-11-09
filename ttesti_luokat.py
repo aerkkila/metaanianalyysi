@@ -11,7 +11,7 @@ equal_t = lambda x1,x2,s1,s2,n1,n2: (x1 - x2) / (sp(s1,s2,n1,n2) * (1/n1 + 1/n2)
 welch_t = lambda x1,x2,s1,s2,n1,n2: (x1 - x2) / (s1/n1 + s2/n2)**0.5
 dof = lambda s1,n1,s2,n2: (s1/n1 + s2/n2)**2 / (s1**2/(n1**3-n1**2) + s2**2/(n2**3-n2**2))
 
-tiedosto = "vuotaulukot/kahtia_keskiosa/wetlandvuo_post_%s_k0.csv"
+tiedosto = "vuotaulukot/wetlandvuo_post_%s_k0.csv"
 
 f = open(tiedosto %'summer', 'r')
 f.readline()
@@ -24,21 +24,12 @@ ind[2] = a.index('N')
 f.close();
 
 def laske(d1, d2, suure1, suure2, eri):
-    if 0:
-        if eri:
-            print("\033[91m", end='')
-        else:
-            print("\033[92m", end='')
-        print(suure1, suure2)
-        print("\033[0m", end='')
     if eri:
         tsuure = welch_t(d1[0],d2[0],d1[1],d2[1],d1[2],d2[2])
         df = dof(d1[1], d1[2], d2[1], d2[2])
     else:
         tsuure = equal_t(d1[0],d2[0],d1[1],d2[1],d1[2],d2[2])
         df = d1[2]+d2[2]
-    #print("%.5f, %.2f (%.0f), %s – %s" %(tsuure, df, d1[2]+d2[2], suure1, suure2))
-    #print("\033[1m%.4f\033[0m" %(t.cdf(tsuure, df)))
     return t.cdf(tsuure, df)
 
 def lue(f, suure):
@@ -51,12 +42,14 @@ def lue(f, suure):
 
 def työstä_kausi(tiedosto, taul):
     f = open(tiedosto, 'r')
-    for j,suure1 in enumerate(luokat.wetl[1:]):
+    luok = luokat.wetl[1:]
+    imarsh = luok.index('marsh')
+    for j,suure1 in enumerate(luok):
         d1 = lue(f, suure1)
         f.seek(0)
-        for i,suure2 in enumerate(luokat.wetl[1:]):
+        for i,suure2 in enumerate(luok):
             d2 = lue(f, suure2)
-            taul[j,i] = laske(d1,d2,suure1,suure2, (i<3 or j<3) and (i>=3 or j>=3))
+            taul[j,i] = laske(d1,d2,suure1,suure2, (i<=imarsh or j<=imarsh) and (i>imarsh or j>imarsh))
     f.close()
     return taul
 
@@ -94,13 +87,11 @@ def tulosta_kivasti(taul):
     perus()
 
 def main():
-    np.set_printoptions(precision=4, suppress=True, nanstr='-')
     tpit = len(luokat.wetl[1:])
     for kausi in luokat.kaudet[1:]:
         taul = np.empty([tpit,tpit], np.float32)
         print("\033[1;92m%s\033[0m" %kausi)
         taul = työstä_kausi(tiedosto %kausi, taul)
-        #print(taul)
         tulosta_kivasti(taul)
         pri('\n')
 
