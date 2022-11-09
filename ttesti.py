@@ -26,7 +26,9 @@ def laske(d1,d2,suure):
     print("\033[1m%.4f\033[0m" %(t.cdf(tsuure, df)))
 
 def työstä_kausi(tiedosto):
-    for suure in luokat.wetl[1:]:
+    lkt = luokat.wetl[1:]
+    lkt.extend(['wetland_nonprf','wetland_prf'])
+    for suure in lkt:
         f = open(tiedosto, 'r')
         for rivi in f:
             a = rivi[:-1].split(',')
@@ -59,7 +61,7 @@ def työstä_kausi(tiedosto):
             if a[0] == suure:
                 d1 = np.array(a)[ind].astype(np.float32)
                 break
-        laske(d1,d2,suure)
+        laske(d1,d2,suure+'-wetland')
     f.close()
 
 for kausi in luokat.kaudet[1:]:
