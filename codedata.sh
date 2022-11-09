@@ -42,6 +42,8 @@ bawld_ikir_kartta.py
 xvuo_laatikko.py
 vuojakaumalaatikko.py
 vuojakaumalaatikko_vuosittain.py
+ttesti_luokat.py
+ttesti.py
 '
 nimet1='
 fig_1,2.py
@@ -50,6 +52,8 @@ fig_5.py
 fig_6.py
 fig_7.py
 fig_11.py
+ttest_wcateg.py
+ttest_mixed-pure.py
 '
 kopioi
 
@@ -67,7 +71,7 @@ table_8.py
 '
 kopioi
 
-kansio=$kansio/table_7__figure_8,9,10
+kansio=$k0/table_7__figure_8,9,10
 mkdir -p $kansio
 cd wregressio
 nimet0='
@@ -92,9 +96,8 @@ run.sh
 '
 kopioi
 cd ..
-kansio=$k0
 
-kansio=$kansio/create_ikirdata
+kansio=$k0/create_ikirdata
 mkdir -p $kansio
 cp ikirdata.py $kansio
 cp /media/levy/Tyotiedostot/PermafrostExtent/PRF_Extent20*_1x1.tif $kansio
@@ -105,9 +108,8 @@ ed -s $kansio/ikirdata.py <<EOF
 w
 q
 EOF
-kansio=$k0
 
-kansio=$kansio/create_köppen
+kansio=$k0/create_köppen
 mkdir -p $kansio
 cp köppenmaski.py $kansio
 kansio=$kansio/create_köppen1x1maski
@@ -121,19 +123,16 @@ all: a.out
 a.out:
 	gcc -o $@ -O3 muunna_shapefile.c -lnetcdf -lshp -pthread -lm
 EOF
-kansio=$k0
 
-kansio=$kansio/create_aluemaski
+kansio=$k0/create_aluemaski
 mkdir -p $kansio
 cp aluemaski.py $kansio
-kansio=$k0
 
-kansio=$kansio/create_pintaalat
+kansio=$k0/create_pintaalat
 mkdir -p $kansio
 cp pintaalat.py $kansio
-kansio=$k0
 
-kansio=$kansio/create_vuotaulukot
+kansio=$k0/create_vuotaulukot
 mkdir -p $kansio
 cp vuotaul_yleinen.c $kansio
 cat >$kansio/Makefile <<EOF
@@ -180,9 +179,8 @@ vuotaul_02.out:
 vuotaul_wetland_post02.csv vuotaul02.out
 	./vuotaul_02.out wetl post
 EOF
-kansio=$k0 
 
-kansio=$kansio/create_kaudet
+kansio=$k0/create_kaudet
 mkdir -p $kansio/data
 a=/media/levy/smos_uusi/data2
 cp kaudet.py $kansio 
@@ -199,9 +197,13 @@ mkdir -p $kansio/data
 cp /media/levy/smos_uusi/ft_percents_pixel_ease.c $kansio
 cp /media/levy/Tyotiedostot/Carbon_tracker/EASE_2_l*.nc $kansio
 cp -u /media/levy/smos_uusi/FT2_720_*.nc $kansio/data # 181 Mt kukin
-kansio=$k0
 
-cat > $kansio/create_links.sh <<EOF
+kansio=$k0/create_BAWLD1x1
+mkdir -p $kansio
+cp -ur /media/levy/Tyotiedostot/MethEOWP730/BAWLD/ $kansio/data
+cp BAWLD.py $kansio
+
+cat > $k0/create_links.sh <<EOF
 #!/bin/sh
 ( cd ${regrdir};            ln -s ../BAWLD1x1.nc ../flux1x1.nc ../kaudet2.nc . )
 ( cd create_köppen;         ln -s ../köppen1x1maski.nc . )
@@ -212,18 +214,20 @@ cat > $kansio/create_links.sh <<EOF
 ( cd create_kaudet/create_data/create_data; ln -s ../../../aluemaski.nc . )
 EOF
 
-cat > $kansio/README <<EOF
+cat > $k0/README <<EOF
 It is necessary to run create_links.sh before attempting to run most codes elsewhere than in the root directory.
 
 The idea is that a directory always contains the data that is needed to run the codes
 and if data was created using other codes, those codes and their data are given one directory deeper.
 Codes that make data for other codes are in directories called create_*/.
+The root directory contains all codes that make the final results used in the article.
+
 If a file is needed in many levels, it is given in the uppermost directory
 and it has to be linked to deeper directories to run those codes.
 That is automated in file create_links.sh which puts needed links to right directories.
 
 There seems to be some cyclic dependencis on creations of kaudet2.nc and aluemaski.nc.
-If one wants to create everything from scratch, references to aluemaski.nc has to be left out codes in create_kaudet/.
+If one wants to create everything from scratch, references to aluemaski.nc has to be left out from codes in create_kaudet/.
 The codes will still work and create the same results but they will run slower.
 
 fig_11.py and table_8.py are the same file but given twice for naming reasons.
