@@ -18,19 +18,9 @@ tunnisteet_kaikki = {
     'lake'           : 'LAK',
     'river'          : 'RIV',
 }
-tunnisteet = {
-    # 'glacier'        : 'GLA',
-    # 'rockland'       : 'ROC',
-    'tundra_dry'     : 'TUN',
-    'boreal_forest'  : 'BOR',
-    # 'wetland'        : 'WET',
-    'permafrost_bog' : 'PEB',
-    'tundra_wetland' : 'WTU',
-    # 'marsh'          : 'MAR',
-    'bog'            : 'BOG',
-    'fen'            : 'FEN',
-    'lake'           : 'LAK',
-    # 'river'          : 'RIV',
+lisäluokat = {
+    'wetland_nonprf' : ['bog','fen','marsh'],
+    'wetland_prf'    : ['permafrost_bog','tundra_wetland']
 }
 
 def hae_tiednimi(luokka, hakemisto, jatke):
@@ -40,9 +30,9 @@ def hae_tiednimi(luokka, hakemisto, jatke):
     print("Ei löytynyt %s" %luokka)
     sys.exit()
 
-def luo_data(luokat, alkup=True, muunnos=True, jatke=''):
-    alkup_data = None
-    muunn_data = None
+def luo_data(jatke):
+    alkup,muunnos = (1,1)
+    luokat = tunnisteet_kaikki.keys()
     if alkup:
         ds0 = Dataset('BAWLD05x05%s.nc' %jatke, 'w')
         lat0 = np.arange(29.25, 83.9, 0.5)
@@ -63,11 +53,8 @@ def luo_data(luokat, alkup=True, muunnos=True, jatke=''):
         ds1.createVariable('lon', 'f8', ('lon'))
         ds1['lat'][:] = lat1
         ds1['lon'][:] = lon1
-    for luokka in luokat:
-        ds = Dataset(hae_tiednimi(luokka, config.tyotiedostot+'MethEOWP730/BAWLD/', jatke), 'r')
-        lat = ds['lat'][:]
-        liite = np.zeros([np.searchsorted(lat0,lat[0]), lon0.size])
-        data0 = ds['Band1'][:].filled(0)
+
+    def luo_muuttuja(data0, liite, luokka):
         data0 = np.concatenate([liite,data0*0.01], axis=0)
         if(alkup):
             ds0.createVariable(luokka, 'f8', ('lat','lon'))
@@ -77,12 +64,30 @@ def luo_data(luokat, alkup=True, muunnos=True, jatke=''):
             data1 = interp(lon1, lat1)
             ds1.createVariable(luokka, 'f8', ('lat','lon'))
             ds1[luokka][:] = data1
+
+    for luokka in luokat:
+        ds = Dataset(hae_tiednimi(luokka, config.tyotiedostot+'MethEOWP730/BAWLD/', jatke), 'r')
+        lat = ds['lat'][:]
+        liite = np.zeros([np.searchsorted(lat0,lat[0]), lon0.size])
+        data0 = ds['Band1'][:].filled(0)
+        luo_muuttuja(data0, liite, luokka)
         ds.close()
+    for luokka in lisäluokat:
+        lista = lisäluokat[luokka]
+        ds = Dataset(hae_tiednimi(lista[0], config.tyotiedostot+'MethEOWP730/BAWLD/', jatke), 'r')
+        dt = ds['Band1'][:].filled(0)
+        ds.close()
+        for a in lista[1:]:
+            ds = Dataset(hae_tiednimi(a, config.tyotiedostot+'MethEOWP730/BAWLD/', jatke), 'r')
+            dt += ds['Band1'][:].filled(0)
+            ds.close()
+        luo_muuttuja(dt, liite, luokka)
+        
     return ds0, ds1
 
 def main():
     for jatke in ['','_H','_L']:
-        ds0, ds1 = luo_data(tunnisteet_kaikki.keys(), jatke=jatke)
+        ds0, ds1 = luo_data(jatke)        
         ds0.close()
         ds1.close()
 
