@@ -23,8 +23,8 @@ const int resol = 19800;
 
 const char* ikirnimet[]      = {"non_permafrost", "sporadic", "discontinuous", "continuous"};
 const char* köppnimet[]      = {"D.b", "D.c", "D.d", "ET"};
-const char* wetlnimet[]      = {"wetland", "bog", "fen", "marsh", "permafrost_bog", "tundra_wetland"};
-enum                           {wetland_e, bog_e, fen_e, marsh_e, permafrost_bog_e, tundra_wetland_e};
+//const char* wetlnimet[]      = {"wetland", "bog", "fen", "marsh", "permafrost_bog", "tundra_wetland"};
+//enum                           {wetland_e, bog_e, fen_e, marsh_e, permafrost_bog_e, tundra_wetland_e};
 const char* kaudet[]         = {"whole_year", "summer", "freezing", "winter"};
 enum                           {whole_year_e, summer_e, freezing_e, winter_e};
 const char* pripost_sisaan[] = {"flux_bio_prior", "flux_bio_posterior"};
@@ -44,6 +44,14 @@ const char* pripost_ulos[]   = {"pri", "post"};
 #define kansio_m "vuotaulukot/kahtia"
 #elif kosteikko_kahtia == 2
 #define kansio_m "vuotaulukot/kahtia_keskiosa"
+#endif
+
+#if kosteikko_kahtia
+const char* wetlnimet[] = {"wetland", "bog", "fen", "marsh", "permafrost_bog", "tundra_wetland", "wetland_nonprf", "wetland_prf"};
+enum                      {wetland_e, bog_e, fen_e, marsh_e, permafrost_bog_e, tundra_wetland_e, wetland_nonprf_e, wetland_prf_e};
+#else
+const char* wetlnimet[] = {"wetland", "bog", "fen", "marsh", "permafrost_bog", "tundra_wetland"};
+enum                      {wetland_e, bog_e, fen_e, marsh_e, permafrost_bog_e, tundra_wetland_e};
 #endif
 
 const char* kansio = kansio_m;
@@ -108,7 +116,7 @@ void* lue_kopp() {
     int pit;
     FILE* f = fopen("./köppenmaski.txt", "r");
     if(!f) return NULL;
-    if((pit=fread(luok, 1, resol, f))!=resol)
+    if((pit=fread(luok, 1, resol, f)) != resol)
 	printf("Luettiin %i eikä %i\n", pit, resol);
     for(int i=0; i<resol; i++)
 	luok[i] -= '0'+1; // '1' -> 0 jne.
@@ -296,7 +304,7 @@ void laske_kuiva(struct laskenta* args) {
 	    double virtaama = vuoptr[ind_t] * ala;
 	    args->ainemäärä  ._[0][(int)kausiptr[ind_t]] += virtaama; // *86400 kerrotaan lopussa: mol/s * s -> mol
 	    args->ala_ja_aika._[0][(int)kausiptr[ind_t]] += ala_kost; // *86400 kerrotaan lopussa: m²*d -> m²*s
-	    args->leveyspiiri._[0][(int)kausiptr[ind_t]] += latnyt*ala_kost; // tässä funktiossa ala_kost aina == ala
+	    args->leveyspiiri._[0][(int)kausiptr[ind_t]] += latnyt*ala_kost; // tässä funktiossa aina ala_kost == ala
 	}
     pois_aikasilmukasta:
 	hyväksy_data_välitilasta(args);
@@ -304,12 +312,17 @@ void laske_kuiva(struct laskenta* args) {
     }
 }
 
+	/*
+	else if(args->lajinum == luokkia+1) {
+	    if(prf > 0.03) continue; } // wetland_nonprf
+	else if(args->lajinum == luokkia+2) {
+	if(prf < 0.97) continue; } // wetland_prf*/
+
 void laske_kosteikko(struct laskenta* args) {
     char* kausiptr = args->kausiptr;
     free(yleiskosteikko); yleiskosteikko=NULL; // varmuuden vuoksi
     const double *restrict osuus0ptr = NCTVAR(*luok_vs, "wetland").data;
-    const double *restrict osuus1ptr = args->lajinum<luokkia? NCTVAR(*luok_vs, wetlnimet[args->lajinum]).data:
-	osuus0ptr; // Tämä tapahtuu, kun kosteikko_kahtia==1 && wetland_[non]prf
+    const double *restrict osuus1ptr = NCTVAR(*luok_vs, wetlnimet[args->lajinum]).data;
 #if kosteikko_kahtia
     double *restrict pb = nct_get_var(luok_vs, "permafrost_bog")->data;
     double *restrict tw = nct_get_var(luok_vs, "tundra_wetland")->data;
@@ -317,18 +330,19 @@ void laske_kosteikko(struct laskenta* args) {
     for(int r=0; r<resol; r++) {
 	if(osuus0ptr[r] < wraja) continue;
 #if kosteikko_kahtia == 1
-	double osuus = (pb[r] + tw[r]) / osuus0ptr[r];
+	double prf = (pb[r] + tw[r]) / osuus0ptr[r];
 	if(args->lajinum == wetland_e) {
-	    if(0.03 < osuus && osuus < 0.97) continue; }
-	else if(args->lajinum == luokkia+1) {
-	    if(osuus > 0.03) continue; } // wetland_nonprf
-	else if(args->lajinum == luokkia+2) {
-	    if(osuus < 0.97) continue; } // wetland_prf
-	else if(args->lajinum >  marsh_e && osuus<0.97) continue;
-	else if(args->lajinum <= marsh_e && osuus>0.03) continue;
+	    if(0.03 < prf && prf < 0.97) continue;
+	}
+	else if(args->lajinum <= marsh_e || args->lajinum == wetland_nonprf_e) {
+	    if(prf>0.03) continue;
+	}
+	else {
+	    if(prf<0.97) continue;
+	}
 #elif kosteikko_kahtia == 2
-	double osuus = (pb[r] + tw[r]) / osuus0ptr[r];
-	if(!(0.03 < osuus && osuus < 0.97)) continue;
+	double prf = (pb[r] + tw[r]) / osuus0ptr[r];
+	if(!(0.03 < prf && prf < 0.97)) continue;
 #endif
 	ALKUUN(t,ala,osuusala,latnyt);
 	ala *= osuus1ptr[r];         // vain kyseisen luokan pinta-ala
@@ -580,7 +594,7 @@ int main(int argc, char** argv) {
 	kirjoita_csv(&l_args, tallenn, ulos);
     }
 
-    if(luokenum == wetl_e) {
+    if(luokenum == wetl_e && !kosteikko_kahtia) {
 	struct laskenta l_args = {
 	    .kausiptr     = kausiptr,
 	    .alkuhetki    = (tmt){.t=t0, .tm=tm0},
@@ -590,27 +604,7 @@ int main(int argc, char** argv) {
 	memcpy(l_args.keskiarvo, keskiarvo, sizeof(avg_t));
 	laske_kuiva(&l_args);
 	kirjoita_csv(&l_args, tallenn, ulos);
-#if kosteikko_kahtia == 1
-	l_args = (struct laskenta){
-	    .kausiptr     = kausiptr,
-	    .alkuhetki    = (tmt){.t=t0, .tm=tm0},
-	    .lajinum      = luokkia+1,
-	    .lajinimi     = "wetland_nonprf",
-	};
-	memcpy(l_args.keskiarvo, keskiarvo, sizeof(avg_t));
-	laske_kosteikko(&l_args);
-	kirjoita_csv(&l_args, tallenn, ulos);
 
-	l_args = (struct laskenta){
-	    .kausiptr     = kausiptr,
-	    .alkuhetki    = (tmt){.t=t0, .tm=tm0},
-	    .lajinum      = luokkia+2,
-	    .lajinimi     = "wetland_prf",
-	};
-	memcpy(l_args.keskiarvo, keskiarvo, sizeof(avg_t));
-	laske_kosteikko(&l_args);
-	kirjoita_csv(&l_args, tallenn, ulos);
-#endif
 	FILE *f = fopen(aprintf("vuokertoimet_%s.csv", pripost_ulos[ppnum]), "w");
 	for(int i=0; i<kausia; i++)
 	    fprintf(f, ",%s", kaudet[i]);
