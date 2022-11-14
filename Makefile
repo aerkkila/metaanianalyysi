@@ -1,103 +1,65 @@
-kosteikko = 0
-opt = 2
+all: vuotaul_00.target vuotaul_10.target vuotaul_01.target vuotaul_02.target kuvat taulukot.out
 
-yleiskosteikko.out: yleiskosteikko.c
-	gcc -Wall ${@:.out=.c} -o $@ `pkg-config --libs nctietue2 gsl` -g -O2
-
-vuojakaumadata.out: vuojakaumadata.c
-	gcc -Wall vuojakaumadata.c -o $@ `pkg-config --libs nctietue2 gsl` -g -O3
-vuojakauma_ikir: vuojakaumadata.out
-	./vuojakaumadata.out ikir post
-vuojakauma_köpp: vuojakaumadata.out
-	./vuojakaumadata.out köpp post
-vuojakauma_wetl: vuojakaumadata.out
-	./vuojakaumadata.out wetl post
-vuojakaumadata.target: vuojakauma_ikir vuojakauma_köpp vuojakauma_wetl
-
-vuojakauma_pri_ikir: vuojakaumadata.out
-	./vuojakaumadata.out ikir pri
-vuojakauma_pri_köpp: vuojakaumadata.out
-	./vuojakaumadata.out köpp pri
-vuojakauma_pri_wetl: vuojakaumadata.out
-	./vuojakaumadata.out wetl pri
-vuojakaumadata_pri.target: vuojakauma_pri_ikir vuojakauma_pri_köpp vuojakauma_pri_wetl
-
-vuojakaumadata_vuosittain.out: vuojakaumadata.c
-	gcc -Wall vuojakaumadata.c -o $@ `pkg-config --libs nctietue2 gsl` -g -O3 -DVUODET_ERIKSEEN=1
-vuojakauma_vuosittain_ikir: vuojakaumadata_vuosittain.out
-	./vuojakaumadata_vuosittain.out ikir post
-vuojakauma_vuosittain_köpp: vuojakaumadata_vuosittain.out
-	./vuojakaumadata_vuosittain.out köpp post
-vuojakauma_vuosittain_wetl: vuojakaumadata_vuosittain.out
-	./vuojakaumadata_vuosittain.out wetl post
-vuojakaumadata_vuosittain.target: vuojakauma_vuosittain_ikir vuojakauma_vuosittain_köpp vuojakauma_vuosittain_wetl
-	cat vuojakaumadata/vuosittain/emissio_*_post.csv > emissio_vuosittain.csv
-
-vuojakauma_vuosittain_pri_ikir: vuojakaumadata_vuosittain.out
-	./vuojakaumadata_vuosittain.out ikir pri
-vuojakauma_vuosittain_pri_köpp: vuojakaumadata_vuosittain.out
-	./vuojakaumadata_vuosittain.out köpp pri
-vuojakauma_vuosittain_pri_wetl: vuojakaumadata_vuosittain.out
-	./vuojakaumadata_vuosittain.out wetl pri
-vuojakaumadata_vuosittain_pri.target: vuojakauma_vuosittain_pri_ikir vuojakauma_vuosittain_pri_köpp vuojakauma_vuosittain_pri_wetl
-
-alkupäivät_vuosittain.out: kertajakaumadata.c
-	gcc -Wall kertajakaumadata.c -o $@ `pkg-config --libs nctietue2 gsl` -lm -g -O3 -DVUODET_ERIKSEEN=1
-alkupäivät_vuosittain_ikir: alkupäivät_vuosittain.out
-	./alkupäivät_vuosittain.out ikir post
-alkupäivät_vuosittain_köpp: alkupäivät_vuosittain.out
-	./alkupäivät_vuosittain.out köpp post
-alkupäivät_vuosittain_wetl: alkupäivät_vuosittain.out
-	./alkupäivät_vuosittain.out wetl post
-alkupäivät_vuosittain.target: alkupäivät_vuosittain_ikir alkupäivät_vuosittain_köpp alkupäivät_vuosittain_wetl
-	cat kausijakaumadata/alkupäivät_*.csv > alkupäivät_vuosittain.csv
-
-wetlandsumma.out: wetlandsumma.c
-	gcc -Wall wetlandsumma.c -o $@ `pkg-config --libs nctietue` -lm -O3
-
-kosteikko_kahtia = 0
-vuotaul_yleinen.out: vuotaul_yleinen.c
-	gcc -Wall -g -O2 vuotaul_yleinen.c -o $@ `pkg-config --libs nctietue2` -lm -DKOSTEIKKO=${kosteikko} -Dkosteikko_kahtia=${kosteikko_kahtia}
-vuotaul_wetland_post.csv: vuotaul_yleinen.out
-	./vuotaul_yleinen.out wetl post
-vuotaul_wetland_pri.csv: vuotaul_yleinen.out
-	./vuotaul_yleinen.out wetl pri
-vuotaul_köppen_post.csv: vuotaul_yleinen.out
-	./vuotaul_yleinen.out köpp post
-vuotaul_köppen_pri.csv: vuotaul_yleinen.out
-	./vuotaul_yleinen.out köpp pri
-vuotaul_ikir_post.csv: vuotaul_yleinen.out
-	./vuotaul_yleinen.out ikir post
-vuotaul_ikir_pri.csv: vuotaul_yleinen.out
-	./vuotaul_yleinen.out ikir pri
-vuotaul_yleinen.target: vuotaul_köppen_pri.csv vuotaul_köppen_post.csv vuotaul_ikir_pri.csv vuotaul_ikir_post.csv vuotaul_wetland_pri.csv vuotaul_wetland_post.csv
+vuotaul_00.target: vuotaul_köppen_pri.csv vuotaul_köppen_post.csv vuotaul_ikir_pri.csv vuotaul_ikir_post.csv vuotaul_wetland_pri.csv vuotaul_wetland_post.csv
 	cat vuotaulukot/*_pri_*.csv > vuotaul_pri.csv
 	cat vuotaulukot/*_post_*.csv > vuotaul_post.csv
+vuotaul_00.out:
+	gcc -Wall -g -O2 vuotaul_yleinen.c -o $@ `pkg-config --libs nctietue2` -lm -DKOSTEIKKO=0 -Dkosteikko_kahtia=0
+vuotaul_wetland_post.csv: vuotaul_00.out
+	./vuotaul_00.out wetl post
+vuotaul_wetland_pri.csv: vuotaul_00.out
+	./vuotaul_00.out wetl pri
+vuotaul_köppen_post.csv: vuotaul_00.out
+	./vuotaul_00.out köpp post
+vuotaul_köppen_pri.csv: vuotaul_00.out
+	./vuotaul_00.out köpp pri
+vuotaul_ikir_post.csv: vuotaul_00.out
+	./vuotaul_00.out ikir post
+vuotaul_ikir_pri.csv: vuotaul_00.out
+	./vuotaul_00.out ikir pri
 
-vuotaul_latex.out: vuotaul_latex.c #vuotaul_yleinen.target
-	gcc vuotaul_latex.c -o $@ -g -Wall -O${opt} -DKOSTEIKKO=${kosteikko} -DKOST_KAHTIA=${kosteikko_kahtia}
+# calculates climate and permafrost class data with only their wetland areas into vuotaulukot/*k1.csv
+vuotaul_10.target: vuotaul_köppen_post10.csv vuotaul_ikir_post10.csv
+vuotaul_10.out:
+	gcc -Wall -g -O2 vuotaul_yleinen.c -o $@ `pkg-config --libs nctietue2` -lm -DKOSTEIKKO=1 -Dkosteikko_kahtia=0
+vuotaul_köppen_post10.csv: vuotaul_10.out
+	./vuotaul_10.out köpp post
+vuotaul_ikir_post10.csv: vuotaul_10.out
+	./vuotaul_10.out ikir post
 
-vuotaul_csv: vuotaul_latex.out
-	./vuotaul_latex.out
+# calculates wetland data without the mixed area into vuotaulukot/kahtia/*
+vuotaul_01.target: vuotaul_wetland_post01.csv
+vuotaul_01.out:
+	gcc -Wall -g -O2 vuotaul_yleinen.c -o $@ `pkg-config --libs nctietue2` -lm -DKOSTEIKKO=0 -Dkosteikko_kahtia=1
+vuotaul_wetland_post01.csv: vuotaul_01.out
+	./vuotaul_01.out wetl post
 
-FT2kaudet.out: FT2kaudet.c
-	gcc -Wall -O3 -o $@ FT2kaudet.c `pkg-config --libs nctietue`
+# calculates wetland data with only the mixed area into vuotaulukot/kahtia_keskiosa/*
+vuotaul_02.target: vuotaul_wetland_post02.csv
+vuotaul_02.out:
+	gcc -Wall -g -O2 vuotaul_yleinen.c -o $@ `pkg-config --libs nctietue2` -lm -DKOSTEIKKO=0 -Dkosteikko_kahtia=2
+vuotaul_wetland_post02.csv: vuotaul_02.out
+	./vuotaul_02.out wetl post
 
-kaudet1.nc: FT2kaudet.out
-	./FT2kaudet.out ../FT1x1_1.nc $@
+kuvat:
+	./köppikir_kartta.py -s
+	./kaudet_laatikko.py -s
+	./bawld_ikir_kartta.py -s
+	./xvuo_laatikko.py -s
+	./vuojakaumalaatikko.py -s
+	./vuojakaumalaatikko_vuosittain.py -s
 
-kaudet2.nc: FT2kaudet.out
-	./FT2kaudet.out ../FT1x1_2.nc $@
+vuotaul.out:
+	gcc vuotaul_latex.c -O2 -o $@
+	./$@
+	gcc vuotaul_latex.c -DKOST_KAHTIA=1 -O2 -o $@
+	./$@
+	gcc vuotaul_latex.c -DKOST_KAHTIA=2 -O2 -o $@
+	./$@
+	gcc vuotaul_latex.c -DKOSTEIKKO=1 -O3 -o $@
+	./$@
 
-kaudet12: kaudet1.nc kaudet2.nc
-
-kausista_pituudet.out: kausista_pituudet.c
-	gcc -Wall -g -Og -o $@ kausista_pituudet.c `pkg-config --libs nctietue` -lm
-
-kausien_pituudet1.nc: kausista_pituudet.out kaudet1.nc
-	./kausista_pituudet.out kaudet1.nc $@
-
-kausien_pituudet2.nc: kausista_pituudet.out kaudet2.nc
-	./kausista_pituudet.out kaudet2.nc $@
-
-kausien_pituudet: kausien_pituudet1.nc kausien_pituudet2.nc
+taulukot.out: vuotaul.out
+	./köppikir_taulukko.py
+	gcc lattaul.c -O1 -o $@
+	./$@

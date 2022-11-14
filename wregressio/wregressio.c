@@ -643,7 +643,7 @@ int main(int argc, char** argv) {
 
     luo_suhteellinen_pintaala(&dt, vuovs);
 
-    nct_vset* vvv = nct_read_ncfile_info(ncdir "kaudet2.nc");
+    nct_vset* vvv = nct_read_ncfile_info(ncdir "kaudet.nc");
     var = nct_load_var(nct_next_truevar(vvv->vars[0], 0), -1);
     alku = hae_alku(nct_get_var(vvv, "time"), &tm0);
     char* kausic = var->data + alku*dt.resol;

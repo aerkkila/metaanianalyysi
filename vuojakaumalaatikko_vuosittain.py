@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 from matplotlib.pyplot import *
 import numpy as np
-import sys, struct
+import sys, struct, os
 from laatikkokuvaaja import laatikkokuvaaja
 import luokat
 
@@ -85,8 +85,16 @@ def aja2(luokka, kausi, textied):
     tight_layout()
     if '-s' in sys.argv:
         if päivä:
+            try:
+                os.mkdir('kuvia/kaudet_vuosittain', 0o755)
+            except FileExistsError:
+                pass
             nimi = 'kuvia/kaudet_vuosittain/%s_%s.png' %(luokka, kausi)
         else:
+            try:
+                os.mkdir('kuvia/jakaumat_vuosittain', 0o755)
+            except FileExistsError:
+                pass
             nimi = 'kuvia/jakaumat_vuosittain/%s_%s_%s.png' %(pripost[ppnum], luokka, kausi)
         savefig(nimi)
         clf()

@@ -536,7 +536,7 @@ int main(int argc, char** argv) {
 	alat[i] = PINTAALA(ASTE*lat[i], ASTE);
 
     nct_vset kausivset;
-    nct_read_ncfile_gd0(&kausivset, "./kaudet2.nc");
+    nct_read_ncfile_gd0(&kausivset, "./kaudet.nc");
 
     apuvar = &NCTVAR(kausivset, "kausi");
     assert(apuvar->xtype == NC_BYTE || apuvar->xtype == NC_UBYTE);
@@ -594,7 +594,7 @@ int main(int argc, char** argv) {
 	kirjoita_csv(&l_args, tallenn, ulos);
     }
 
-    if(luokenum == wetl_e && !kosteikko_kahtia) {
+    if(luokenum == wetl_e) {
 	struct laskenta l_args = {
 	    .kausiptr     = kausiptr,
 	    .alkuhetki    = (tmt){.t=t0, .tm=tm0},

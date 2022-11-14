@@ -9,7 +9,6 @@ mkdir -p $kansio
 cp \
     laatikkokuvaaja.py \
     luokat.py \
-    config.py \
     LICENSE \
     $kansio
 
@@ -20,7 +19,7 @@ cp -ur \
     aluemaski.nc \
     pintaalat.npy \
     vuotaulukot \
-    kaudet2.nc \
+    kaudet.nc \
     BAWLD1x1.nc \
     flux1x1.nc \
     $kansio
@@ -72,6 +71,7 @@ table_8.py
 kopioi
 
 kansio=$k0/table_7__figure_8,9,10
+regrdir=$kansio
 mkdir -p $kansio
 cd wregressio
 nimet0='
@@ -124,10 +124,6 @@ a.out:
 	gcc -o $@ -O3 muunna_shapefile.c -lnetcdf -lshp -pthread -lm
 EOF
 
-kansio=$k0/create_aluemaski
-mkdir -p $kansio
-cp aluemaski.py $kansio
-
 kansio=$k0/create_pintaalat
 mkdir -p $kansio
 cp pintaalat.py $kansio
@@ -142,7 +138,7 @@ vuotaul_00.target: vuotaul_köppen_pri.csv vuotaul_köppen_post.csv vuotaul_ikir
 	cat vuotaulukot/*_pri_*.csv > vuotaul_pri.csv
 	cat vuotaulukot/*_post_*.csv > vuotaul_post.csv
 vuotaul_00.out:
-	gcc -Wall -g -O2 vuotaul_yleinen.c -o $@ `pkg-config --libs nctietue2` -lm -DKOSTEIKKO=0 -Dkosteikko_kahtia=0
+	gcc -Wall -g -O2 vuotaul_yleinen.c -o \$@ \`pkg-config --libs nctietue2\` -lm -DKOSTEIKKO=0 -Dkosteikko_kahtia=0
 vuotaul_wetland_post.csv: vuotaul_00.out
 	./vuotaul_00.out wetl post
 vuotaul_wetland_pri.csv: vuotaul_00.out
@@ -159,7 +155,7 @@ vuotaul_ikir_pri.csv: vuotaul_00.out
 # calculates climate and permafrost class data with only their wetland areas into vuotaulukot/*k1.csv
 vuotaul_10.target: vuotaul_köppen_post10.csv vuotaul_ikir_post10.csv
 vuotaul_10.out:
-	gcc -Wall -g -O2 vuotaul_yleinen.c -o $@ `pkg-config --libs nctietue2` -lm -DKOSTEIKKO=1 -Dkosteikko_kahtia=0
+	gcc -Wall -g -O2 vuotaul_yleinen.c -o \$@ \`pkg-config --libs nctietue2\` -lm -DKOSTEIKKO=1 -Dkosteikko_kahtia=0
 vuotaul_köppen_post10.csv: vuotaul_10.out
 	./vuotaul_10.out köpp post
 vuotaul_ikir_post10.csv: vuotaul_10.out
@@ -168,15 +164,15 @@ vuotaul_ikir_post10.csv: vuotaul_10.out
 # calculates wetland data without the mixed area into vuotaulukot/kahtia/*
 vuotaul_01.target: vuotaul_wetland_post01.csv
 vuotaul_01.out:
-	gcc -Wall -g -O2 vuotaul_yleinen.c -o $@ `pkg-config --libs nctietue2` -lm -DKOSTEIKKO=0 -Dkosteikko_kahtia=1
-vuotaul_wetland_post01.csv vuotaul01.out
+	gcc -Wall -g -O2 vuotaul_yleinen.c -o \$@ \`pkg-config --libs nctietue2\` -lm -DKOSTEIKKO=0 -Dkosteikko_kahtia=1
+vuotaul_wetland_post01.csv: vuotaul_01.out
 	./vuotaul_01.out wetl post
 
 # calculates wetland data with only the mixed area into vuotaulukot/kahtia_keskiosa/*
 vuotaul_02.target: vuotaul_wetland_post02.csv
 vuotaul_02.out:
-	gcc -Wall -g -O2 vuotaul_yleinen.c -o $@ `pkg-config --libs nctietue2` -lm -DKOSTEIKKO=0 -Dkosteikko_kahtia=2
-vuotaul_wetland_post02.csv vuotaul02.out
+	gcc -Wall -g -O2 vuotaul_yleinen.c -o \$@ \`pkg-config --libs nctietue2\` -lm -DKOSTEIKKO=0 -Dkosteikko_kahtia=2
+vuotaul_wetland_post02.csv: vuotaul_02.out
 	./vuotaul_02.out wetl post
 EOF
 
@@ -197,6 +193,18 @@ mkdir -p $kansio/data
 cp /media/levy/smos_uusi/ft_percents_pixel_ease.c $kansio
 cp /media/levy/Tyotiedostot/Carbon_tracker/EASE_2_l*.nc $kansio
 cp -u /media/levy/smos_uusi/FT2_720_*.nc $kansio/data # 181 Mt kukin
+kansio=$kansio/create_data
+mkdir -p $kansio
+cp /media/levy/smos_uusi/yhdistä_vuosittain.c $kansio
+cat >$kansio/README <<EOF
+Original data was given as a separate file for each day (time step)
+and some days were missing.
+This is the code that was used to combine each year into one file
+and fill missing dates with values read from previous existing date.
+
+Needed files are not given because together they are large
+and almost the same as ../data.
+EOF
 
 kansio=$k0/create_BAWLD1x1
 mkdir -p $kansio
@@ -205,11 +213,10 @@ cp BAWLD.py $kansio
 
 cat > $k0/create_links.sh <<EOF
 #!/bin/sh
-( cd ${regrdir};            ln -s ../BAWLD1x1.nc ../flux1x1.nc ../kaudet2.nc . )
+( cd ${regrdir};            ln -s ../BAWLD1x1.nc ../flux1x1.nc ../kaudet.nc . )
 ( cd create_köppen;         ln -s ../köppen1x1maski.nc . )
 ( cd create_köppen/create_köppen1x1maski; ln -s ../../aluemaski.nc . )
-( cd create_aluemaski;      ln -s ../kaudet2.nc . )
-( cd create_vuotaulukot;    ln -s ../köppenmaski.txt ../ikirdata.nc ../BAWLD1x1.nc ../flux1x1.nc ../kaudet2.nc . )
+( cd create_vuotaulukot;    ln -s ../köppenmaski.txt ../ikirdata.nc ../BAWLD1x1.nc ../flux1x1.nc ../kaudet.nc . )
 ( cd create_kaudet;         ln -s ../aluemaski.nc . )
 ( cd create_kaudet/create_data/create_data; ln -s ../../../aluemaski.nc . )
 EOF
@@ -225,10 +232,6 @@ The root directory contains all codes that make the final results used in the ar
 If a file is needed in many levels, it is given in the uppermost directory
 and it has to be linked to deeper directories to run those codes.
 That is automated in file create_links.sh which puts needed links to right directories.
-
-There seems to be some cyclic dependencis on creations of kaudet2.nc and aluemaski.nc.
-If one wants to create everything from scratch, references to aluemaski.nc has to be left out from codes in create_kaudet/.
-The codes will still work and create the same results but they will run slower.
 
 fig_11.py and table_8.py are the same file but given twice for naming reasons.
 

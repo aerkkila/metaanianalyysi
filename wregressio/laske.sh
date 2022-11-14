@@ -23,3 +23,5 @@ done
 printf '%s csv %s\n' '-*-' '-*-' > sovitteet.txt
 cat tallenteet/* >> sovitteet.txt
 ./virhepalkit.py -s
+gcc taulukko_rajat.c -O2 -g -o taulukko_rajat.out
+./taulukko_rajat.out

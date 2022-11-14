@@ -38,8 +38,6 @@ def main():
         f.write(' \\\\\n')
     f.write('\\end{tabular}\n')
     f.close()
-    print(taul)
-    
 
 if __name__=='__main__':
     try:

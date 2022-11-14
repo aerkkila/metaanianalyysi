@@ -20,7 +20,7 @@
 #define kansio "vuotaulukot/kahtia_keskiosa"
 #endif
 
-const char* pripost[] = {"pri", "post"};
+const char* pripost[] = {"post", "pri"};
 const char* kaudet[] = {"summer", "freezing", "winter"};
 const char* ylänimet[] = {"wetland", "köppen", "ikir"};
 const char* wetlnimet[] = {"bog", "fen", "marsh", "permafrost_bog", "tundra_wetland", "wetland", "non-wetland"};
@@ -194,17 +194,17 @@ int main() {
     pituudet();
     pit_wetl -= 2;
     float* taul = malloc(pit_wetl * pit_kaudet * 2 * sizeof(float));
-    if(lue_data(1, "wetland", wetlnimet, pit_wetl, taul))
+    if(lue_data(0, "wetland", wetlnimet, pit_wetl, taul))
 	puts("virhe lue_data");
     else
-	kirjoita_data(1, taul);
+	kirjoita_data(0, taul);
     free(taul);
 }
 #else
 int main() {
     pituudet();
     float* taul = malloc((pit_wetl+pit_köpp+pit_ikir)*pit_kaudet*2*sizeof(float));
-    for(int ppnum=0; ppnum<pit_pripost; ppnum++) {
+    for(int ppnum=0; ppnum<pit_pripost*(KOSTEIKKO==0); ppnum++) {
 	float* taul1 = taul;
 	if(lue_data(ppnum, "ikir", ikirnimet, pit_ikir, taul1))
 	    puts("virhe lue_data");
