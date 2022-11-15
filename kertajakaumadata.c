@@ -5,11 +5,12 @@
 #include <math.h>
 #include <stdarg.h>
 #include <unistd.h>
+#include <sys/stat.h> // mkdir
 #include <gsl/gsl_sort.h>
 #include <gsl/gsl_statistics.h>
 #include <assert.h>
 #include <time.h>
-#include <errno.h>
+#include <err.h>
 
 // kääntäjä tarvitsee argumentit `pkg-config --libs nctietue2 gsl`
 // lisäksi tarvittaessa -DVUODET_ERIKSEEN=1
@@ -342,11 +343,8 @@ float* pintaaloista_kertymäfunktio(float* data, float* cdfptr, int pit) {
 }
 
 void tallenna(struct laskenta* args, void* data, int kirjpit, int kausi) {
-    if(access(kansio, F_OK))
-	if(system(aprintf("mkdir %s", kansio))) {
-	    register int eax asm("eax");
-	    printf("system(mkdir)-komento palautti arvon %i", eax);
-	}
+    if(mkdir(kansio, 0755) < 0 && errno != EEXIST)
+	err(1, "mkdir %s epäonnistui, rivi %i", kansio, __LINE__);
     FILE *f = fopen(aprintf("./%s/%s_%s.bin", kansio, args->lajinimi, kaudet[kausi]), "w");
     assert(f);
     fwrite(&kirjpit, 4, 1, f);
@@ -441,7 +439,7 @@ int main(int argc, char** argv) {
     nct_free_vset(&apuvset);
     free(lat);
 
-    nct_vset *kausivset = nct_read_ncfile("kaudet2.nc");
+    nct_vset *kausivset = nct_read_ncfile("kaudet.nc");
 
     apuvar = &NCTVAR(*kausivset, "kausi");
     assert(apuvar->xtype == NC_BYTE || apuvar->xtype == NC_UBYTE);

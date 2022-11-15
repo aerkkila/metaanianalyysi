@@ -3,8 +3,6 @@ Most C-codes in this repository use this library github.com/aerkkila/nctietue2.g
 They should be compiled with argument \`pkg-config --libs nctietue2\`
 
 1. **Following codes create the data that rest of the codes need. These may read external data which is not in this repository.**
-   - **aluemaski<area>.py** &rarr; aluemaski<area>.nc \
-	   a simple code: mask of area that should be used
    - **BAWLD<area>.py** &rarr; BAWLD05x05<area>.nc, BAWLD1x1<area>.nc \
 	   BAWLD classification
    - **ikirdata<area>.py** &rarr; ikirdata<area>.nc, ikirdata<area>.npy \
@@ -60,7 +58,7 @@ They should be compiled with argument \`pkg-config --libs nctietue2\`
 	   Latex table about average latitudes of different areas.
    - **vuojakaumalaatikko<area>.py** &rarr; vuojakaumalaatikko_['pri','post']_[01].png \
 	   boxplot of methane fluxes in different areas and seasons
-   - **vuojakaumalaatikko_vuosittain.py** &rarr; jakaumat_vuosittain/*, uosittaisvaihtelu.tex, kaudet_vuosittain/*
+   - **vuojakaumalaatikko_vuosittain.py** &rarr; jakaumat_vuosittain/*, vuosittaisvaihtelu.tex, kaudet_vuosittain/*
 	   Yearly boxplots of methane fluxex in different areas and seasons. \
 	   Years in same figure, areas and seasons separately. \
 	   Makes also a table about relative standard deviation of annual averages.

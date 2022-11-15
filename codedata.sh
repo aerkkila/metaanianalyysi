@@ -19,6 +19,7 @@ cp -ur \
     aluemaski.nc \
     pintaalat.npy \
     vuotaulukot \
+    vuojakaumadata \
     kaudet.nc \
     BAWLD1x1.nc \
     flux1x1.nc \
@@ -176,6 +177,36 @@ vuotaul_wetland_post02.csv: vuotaul_02.out
 	./vuotaul_02.out wetl post
 EOF
 
+kansio=$k0/create_vuojakaumadata
+mkdir -p $kansio
+cp vuojakaumadata.c $kansio
+cat >$kansio/Makefile <<EOF
+all: total annually
+total: vuojakauma_ikir vuojakauma_köpp vuojakauma_wetl
+annually: vuojakauma_vuosittain_ikir vuojakauma_vuosittain_köpp vuojakauma_vuosittain_wetl
+
+vuojakaumadata.out: vuojakaumadata.c
+	gcc -Wall \$< -o \$@ \`pkg-config --libs nctietue2 gsl\` -g -O3
+
+vuojakauma_ikir: vuojakaumadata.out
+	./\$< ikir post
+vuojakauma_köpp: vuojakaumadata.out
+	./\$< köpp post
+vuojakauma_wetl: vuojakaumadata.out
+	./\$< wetl post
+
+vuojakaumadata_vuosittain.out: vuojakaumadata.c
+	gcc -Wall \$< -o \$@ \`pkg-config --libs nctietue2 gsl\` -g -O3 -DVUODET_ERIKSEEN=1
+vuojakauma_vuosittain_ikir: vuojakaumadata_vuosittain.out
+	./\$< ikir post
+vuojakauma_vuosittain_köpp: vuojakaumadata_vuosittain.out
+	./\$< köpp post
+vuojakauma_vuosittain_wetl: vuojakaumadata_vuosittain.out
+	./\$< wetl post
+vuojakaumadata_vuosittain.target: vuojakauma_vuosittain_ikir vuojakauma_vuosittain_köpp vuojakauma_vuosittain_wetl
+	cat vuojakaumadata/vuosittain/emissio_*_post.csv > emissio_vuosittain.csv
+EOF
+
 kansio=$k0/create_kaudet
 mkdir -p $kansio/data
 a=/media/levy/smos_uusi/data2
@@ -217,6 +248,7 @@ cat > $k0/create_links.sh <<EOF
 ( cd create_köppen;         ln -s ../köppen1x1maski.nc . )
 ( cd create_köppen/create_köppen1x1maski; ln -s ../../aluemaski.nc . )
 ( cd create_vuotaulukot;    ln -s ../köppenmaski.txt ../ikirdata.nc ../BAWLD1x1.nc ../flux1x1.nc ../kaudet.nc . )
+( cd create_vuojakaumadata; ln -s ../köppenmaski.txt ../ikirdata.nc ../BAWLD1x1.nc ../flux1x1.nc ../kaudet.nc . )
 ( cd create_kaudet;         ln -s ../aluemaski.nc . )
 ( cd create_kaudet/create_data/create_data; ln -s ../../../aluemaski.nc . )
 EOF
@@ -236,11 +268,13 @@ That is automated in file create_links.sh which puts needed links to right direc
 fig_11.py and table_8.py are the same file but given twice for naming reasons.
 
 Dictionary:
-aluemaski			a mask of used area
+aluemaski			region mask
 ikirdata                        permafrost data
 kaudet                          seasons
 laatikkokuvaaja.py		a module for making whisker plots
 pintaalat			surface areas
 vuo				flux
+vuojakaumadata			flux distribution data
 vuotaulukot			flux tables
+vuosittain			annually
 EOF

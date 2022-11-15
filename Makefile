@@ -1,4 +1,4 @@
-all: vuotaul_00.target vuotaul_10.target vuotaul_01.target vuotaul_02.target kuvat taulukot.out
+all: vuotaul_00.target vuotaul_10.target vuotaul_01.target vuotaul_02.target vuojakaumadata.target kuvat taulukot.out
 
 vuotaul_00.target: vuotaul_köppen_pri.csv vuotaul_köppen_post.csv vuotaul_ikir_pri.csv vuotaul_ikir_post.csv vuotaul_wetland_pri.csv vuotaul_wetland_post.csv
 	cat vuotaulukot/*_pri_*.csv > vuotaul_pri.csv
@@ -41,6 +41,29 @@ vuotaul_02.out:
 vuotaul_wetland_post02.csv: vuotaul_02.out
 	./vuotaul_02.out wetl post
 
+# vuojakaumadata
+vuojakaumadata.out: vuojakaumadata.c
+	gcc -Wall $< -o $@ `pkg-config --libs nctietue2 gsl` -g -O3
+vuojakauma_ikir: vuojakaumadata.out
+	./$< ikir post
+vuojakauma_köpp: vuojakaumadata.out
+	./$< köpp post
+vuojakauma_wetl: vuojakaumadata.out
+	./$< wetl post
+vuojakaumadata.target: vuojakauma_ikir vuojakauma_köpp vuojakauma_wetl
+
+# vuojakaumadata vuosittain
+vuojakaumadata_vuosittain.out: vuojakaumadata.c
+	gcc -Wall $< -o $@ `pkg-config --libs nctietue2 gsl` -g -O3 -DVUODET_ERIKSEEN=1
+vuojakauma_vuosittain_ikir: vuojakaumadata_vuosittain.out
+	./$< ikir post
+vuojakauma_vuosittain_köpp: vuojakaumadata_vuosittain.out
+	./$< köpp post
+vuojakauma_vuosittain_wetl: vuojakaumadata_vuosittain.out
+	./$< wetl post
+vuojakaumadata_vuosittain.target: vuojakauma_vuosittain_ikir vuojakauma_vuosittain_köpp vuojakauma_vuosittain_wetl
+	cat vuojakaumadata/vuosittain/emissio_*_post.csv > emissio_vuosittain.csv
+
 kuvat:
 	./köppikir_kartta.py -s
 	./kaudet_laatikko.py -s
@@ -63,3 +86,15 @@ taulukot.out: vuotaul.out
 	./köppikir_taulukko.py
 	gcc lattaul.c -O1 -o $@
 	./$@
+
+# Näitä ei sisälly all-kohteeseen
+alkupäivät_vuosittain.out: kertajakaumadata.c
+	gcc -Wall kertajakaumadata.c -o $@ `pkg-config --libs nctietue2 gsl` -lm -g -O3 -DVUODET_ERIKSEEN=1
+alkupäivät_vuosittain_ikir: alkupäivät_vuosittain.out
+	./alkupäivät_vuosittain.out ikir post
+alkupäivät_vuosittain_köpp: alkupäivät_vuosittain.out
+	./alkupäivät_vuosittain.out köpp post
+alkupäivät_vuosittain_wetl: alkupäivät_vuosittain.out
+	./alkupäivät_vuosittain.out wetl post
+alkupäivät_vuosittain.target: alkupäivät_vuosittain_ikir alkupäivät_vuosittain_köpp alkupäivät_vuosittain_wetl
+	cat kausijakaumadata/alkupäivät_*.csv > alkupäivät_vuosittain.csv
