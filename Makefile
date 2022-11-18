@@ -66,6 +66,7 @@ vuojakaumadata_vuosittain.target: vuojakauma_vuosittain_ikir vuojakauma_vuositta
 
 kuvat:
 	./köppikir_kartta.py -s
+	./köppikir_kartta.py ikir -s
 	./kaudet_laatikko.py -s
 	./bawld_ikir_kartta.py -s
 	./xvuo_laatikko.py -s
