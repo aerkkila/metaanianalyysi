@@ -1,11 +1,5 @@
-/*Pitää asentaa:
-  . https://github.com/OSGeo/shapelib.git (shapefil.h) (./autogen.sh; ./configure; make install)
-  . libnetcdf-dev (netcdf.h)
-  shapelib (eri kuin tuo github) tarjoaa hyödyllisiä apuvälineitä komentoriville kuten shpinfo ja dbfinfo
-  Kääntäjä tarvitsee argumentit -lm -lnetcdf -lshp -pthread
-  -j n ajaa n:llä säikeellä
-  -v on argumentti, jota ilman ohjelma on mykkä
-  -g määrittää hilan tarkkuuden. Ilman sitä luetaan netcdf-tiedosto ja tehdään sen mukainen hila.
+/* Pitää asentaa https://github.com/OSGeo/shapelib.git (shapefil.h)
+   Kääntäjä tarvitsee argumentit -lm -lnetcdf -lshp -pthread
 */
 
 #include <shapefil.h>
@@ -54,8 +48,8 @@ static const char* dbfnimi = "GRIDCODE";
 static int nEnt, shptype, verbose, njobs=1, ncpalaute, arg_luettu, ncid;
 static int lukeva_saie = -1, i_kopp = 0;
 static char* lmaskit;
+static char* nc_kirj_nimi;
 static double hila, hila_lon, hila_lat;
-char* nc_kirj_nimi;
 SHPObject** shpoliot;
 size_t pit_lat, pit_lon, pit_latlon;
 int koppluokkia;
@@ -68,22 +62,34 @@ struct {
     char* str;
 } kopptunnisteet[] =
 {
-#include "köppentunnisteet.c"
+#include "köppentunnisteet.h"
 };
 
 int main(int argc, char** argv) {
     clock_t kello = clock();
     int id;
+#define Switch(a) do { char* _switchc = a; if(0)
+#define Case(a,b) else if(!strcmp(_switchc, a) || !strcmp(_switchc, b))
+#define End } while(0)
     for(int i=1; i<argc; i++) {
-	if( !strcmp(argv[i],"-v") || !strcmp(argv[i],"--verbose") )
+	Switch(argv[i]);
+	Case("-v", "--verbose") {
 	    verbose = 1;
-	if( !strcmp(argv[i],"-j") || !strcmp(argv[i],"--njobs") )
-	    sscanf( argv[++i], "%i", &njobs );
-	if( !strcmp(argv[i],"-g") || !strcmp(argv[i],"--grid") )
-	    sscanf( argv[++i], "%lf", &hila );
-	if( !strcmp(argv[i],"-o") )
+	    continue; }
+	Case("-j", "--njobs") {
+	    sscanf(argv[++i], "%i", &njobs);
+	    continue; }
+	Case("-g", "--grid") {
+	    sscanf(argv[++i], "%lf", &hila);
+	    continue; }
+	Case("-o", "-o") {
 	    nc_kirj_nimi = strdup(argv[++i]);
+	    continue; }
+	End;
     }
+#undef Switch
+#undef Case
+#undef End
     if(!nc_kirj_nimi)
 	nc_kirj_nimi = strdup(nc_kirj_nimi0);
 
@@ -195,40 +201,6 @@ int main(int argc, char** argv) {
     return 0;
 }
 
-#if 0
-void kirjoita_netcdf_str(int ncid, int latid, int lonid) {
-    int latlonid[] = {latid, lonid};
-    int varid;
-    int nc_pit = pit_lat*pit_lon;
-    char **nimet = malloc(nc_pit*sizeof(char*));
-    int j_edel = 0;
-    int luokkia = koppluokkia;
-    for(int nc_id=0; nc_id<nc_pit; nc_id++) {
-	if( nc_kirj_data[nc_id] == kopptunnisteet[j_edel].id ) { //luultavimmin seuraava on sama kuin edellinen
-	    nimet[nc_id] = strdup( kopptunnisteet[j_edel].str );
-	    continue;
-	}
-	for(int j=0; j<luokkia; j++)
-	    if( nc_kirj_data[nc_id] == kopptunnisteet[j].id ) {
-		nimet[nc_id] = strdup( kopptunnisteet[j].str );
-		j_edel = j;
-		goto FOR_NC_PIT;
-	    }
-	nimet[nc_id] = strdup("");
-	j_edel = 0;
-    FOR_NC_PIT:
-	;
-    }
-    size_t alkuptr[]  = { 0, 0 };
-    size_t loppuptr[] = { pit_lat, pit_lon };
-    NCFUNK( nc_def_var, ncid, "sluokka", NC_STRING, 2, latlonid, &varid );
-    NCFUNK( nc_put_vara, ncid, varid, alkuptr, loppuptr, nimet );
-    for(int i=0; i<nc_pit; i++)
-	free(nimet[i]);
-    free(nimet);
-}
-#endif
-
 void luo_netcdf_maski(int monesko) {
     size_t pit = pit_latlon; //int restrict
     char* lmaski = lmaskit+pit*monesko;
@@ -241,7 +213,7 @@ void* tee_maskit(void* arg) {
     int saie = *(int*)arg;
     arg_luettu = 1;
     int monesko;
-KOKO_FUNKTIO:
+loop:
     while(1) {
 	while(lukeva_saie >= 0)
 	    usleep(1);
@@ -258,7 +230,7 @@ KOKO_FUNKTIO:
     if(monesko >= koppluokkia)
 	return NULL;
     luo_netcdf_maski(monesko);
-    goto KOKO_FUNKTIO;
+    goto loop;
 }
 
 void kirjoita_netcdf_maski(int ncid, int latid, int lonid) {
@@ -291,7 +263,6 @@ void kirjoita_netcdf() {
     NCFUNK( nc_def_var, ncid, "luokka", NC_KIRJTYYPPI_ENUM, 2, latlonid, &varid );
     NCFUNK( nc_put_var, ncid, varid, nc_kirj_data );
     kirjoita_netcdf_maski(ncid, latid, lonid);
-    //kirjoita_netcdf_str( ncid, latid, lonid );
     NCFUNK( nc_close, ncid );
 }
 
@@ -305,7 +276,7 @@ void* selaa_oliot(void *restrict varg) {
     for(int yi=0; yi<pit_lat; yi++)
 	for(int xi=alku; xi<loppu; xi++)
 	    for(int i=0; i<nEnt; i++) //tätä voisi optimoida lämpimällä aloituksella
-		if( piste_polygonissa(lon[xi],lat[yi],shpoliot[i]) ) {
+		if (piste_polygonissa(lon[xi],lat[yi],shpoliot[i])) {
 		    nc_kirj_data[ yi*pit_lon + xi ] = (nc_kirj_tyyppi)dbfdata[i];
 		    break;
 		}
@@ -313,7 +284,7 @@ void* selaa_oliot(void *restrict varg) {
     clock_gettime(CLOCK_REALTIME, &loppuaika);
     double aika = loppuaika.tv_sec - alkuaika.tv_sec;
     aika += (loppuaika.tv_nsec - alkuaika.tv_nsec) * 1.0e-9;
-    if(aika < 1)
+    if (aika < 1)
 	Printf("%.2lf ms\n", aika*1000);
     else
 	Printf("%.3lf s\n", aika);
@@ -323,7 +294,7 @@ void* selaa_oliot(void *restrict varg) {
 int piste_polygonissa(double x, double y, SHPObject* olio) {
     x += 0.09;
     y += 0.09;
-    if( x < olio->dfXMin || x >= olio->dfXMax || y < olio->dfYMin || y >= olio->dfYMax )
+    if (x < olio->dfXMin || x >= olio->dfXMax || y < olio->dfYMin || y >= olio->dfYMax)
 	return 0;
     //return 1; //Tämä riittää, jos alueitten tiedetään olevan suorakulmioita
     /*Tämä taas toimii minkä tahansa muotoiselle alueelle*/
@@ -345,8 +316,8 @@ int piste_polygonissa(double x, double y, SHPObject* olio) {
 double kulma(piste keha1, piste keha2, piste p) {
     piste sv1 = suuntavektori(p, keha1);
     piste sv2 = suuntavektori(p, keha2);
-    double abs_kulma = acos( pistetulo(sv1,sv2) / (vektpituus(sv1)*vektpituus(sv2)) );
-    return abs_kulma * sign( ristitulo(sv1,sv2) );
+    double abs_kulma = acos(pistetulo(sv1,sv2) / (vektpituus(sv1)*vektpituus(sv2)));
+    return abs_kulma * sign(ristitulo(sv1,sv2));
 }
 
 piste suuntavektori(piste p0, piste p1) { 
@@ -362,7 +333,7 @@ double ristitulo(piste p0, piste p1) {
 }
 
 double vektpituus(piste p) {
-    return sqrt( p.a[0]*p.a[0] + p.a[1]*p.a[1] );
+    return sqrt(p.a[0]*p.a[0] + p.a[1]*p.a[1]);
 }
 
 int sign(double a) {
