@@ -13,9 +13,8 @@ They should be compiled with argument \`pkg-config --libs nctietue2\`
 	   number is for three different freeze/thaw datasets
    - **pintaalat<area>.py** &rarr; pintaalat<area>.npy \
 	   a simple code: calculate area of each grid cell
-   - **muunna_shapefile.c** &rarr; köppen1x1maski<area>.nc \
+   - **köppen.c** &rarr; köppen1x1maski<area>.nc \
 	   Reads shapefile of köppen classification and outputs netcdf file.
-	   Works also as a general converter from shapefile to netcdf.
    - **yleiskosteikko<area>.c** &rarr; yleiskosteikko<area>.nc \
 	   Reads three wetland classes used in the model and creates a combination of them that that best explains the modelled flux.
    - **köppenmaski<area>.py** &rarr; köppenmaski<area>.npy, köppenmaski<area>.txt \
@@ -61,11 +60,13 @@ They should be compiled with argument \`pkg-config --libs nctietue2\`
    - **vuojakaumalaatikko_vuosittain.py** &rarr; jakaumat_vuosittain/*, vuosittaisvaihtelu.tex, kaudet_vuosittain/*
 	   Yearly boxplots of methane fluxex in different areas and seasons. \
 	   Years in same figure, areas and seasons separately. \
-	   Makes also a table about relative standard deviation of annual averages.
+	   Makes also a table about relative standard deviation of annual averages. \
 	   Can be run with argument päivä to make similar figures of season start days.
    - **bawld_ikir_kartta.py** &rarr; bawld_ikir_kartta.png
 	   Permafrost and non-permafrost wetland category areas separated on a map.
    - **xvuo_laatikko.py** &rarr; xvuo_laatikko_wetland.png
+   - **osajää.py** &rarr; osajää.png
+	   Figure about relation between frozen percent and partly frozen percent
 
 **Other**
 - **köppenpintaalat<area>.c** areas of climate classes
