@@ -15,12 +15,13 @@ def rajaa(dt, maski):
         uusi[t,:] = dt[t,:][maski]
     return uusi
 
-def aikamuunnos(dt, dt1, tpit):
+def aikamuunnos(dt, dt1, tpit, alat):
     alku = 220 # tämä on joskus elokuussa
     loppu = alku+365
-    ret = np.empty([len(tpit)-1, dt.shape[1], 100], dt.dtype)
-    ret1 = np.empty_like(ret)
-    rind = np.zeros(len(tpit)-1, int)
+    ret    = np.empty([len(tpit)-1, dt.shape[1], 100], dt.dtype)
+    ret1   = np.empty_like(ret)
+    rind   = np.zeros(len(tpit)-1, int)
+    määrät = np.zeros(len(tpit), np.float64) # viimeiseen tulee ohitettu pinta-ala
     for p in range(dt.shape[1]):
         t0 = 0
         t1 = 999999999
@@ -35,17 +36,19 @@ def aikamuunnos(dt, dt1, tpit):
         ind = np.searchsorted(tpit, t1-t0)
         pit = t1-t0
         if(ind == 0 or pit > tpit[-1]):
+            määrät[-1] += alat[p]
             continue
         ind -= 1
-        indek = np.round(np.linspace(t0-pit, t1, 100)).astype(int)
+        indek = np.linspace(t0-pit, t1, 100).astype(int)
         ret[ind,rind[ind],:] = dt[indek,p]
         ret1[ind,rind[ind],:] = dt1[indek,p]
+        määrät[ind] += alat[p]
         rind[ind] += 1
-    return ret, ret1, rind
+    return ret, ret1, määrät, rind
 
 vuosi = 2015
 
-def lue(nimi, maski):
+def lue(nimi):
     i = 0
     a = Dataset(nimi %(kansio, vuosi))
     b = np.ma.getdata(a['data'][:])
@@ -53,7 +56,7 @@ def lue(nimi, maski):
     a = Dataset(nimi %(kansio, vuosi+1))
     b = np.concatenate([b, np.ma.getdata(a['data'][:])], axis=0)
     a.close()
-    return rajaa(b, maski)
+    return b
 
 def main():
     rcParams.update({'figure.figsize':(12,10), 'font.size':19})
@@ -63,12 +66,15 @@ def main():
     maski = np.ma.getdata(a['maski'][:]).flatten().astype(bool)
     a.close()
 
-    ft[0] = lue("%s/frozen_percent_pixel_%i.nc", maski)
-    ft[1] = lue("%s/partly_frozen_percent_pixel_%i.nc", maski)
+    ft[0] = lue("%s/frozen_percent_pixel_%i.nc")
+    ft[0] = rajaa(ft[0], maski)
+    ft[1] = lue("%s/partly_frozen_percent_pixel_%i.nc")
+    ft[1] = rajaa(ft[1], maski)
+    alat = np.load('pintaalat.npy')[maski]
 
-    rajat = [5, 15, 30, 50, 70]
+    rajat = [1, 8, 15, 35, 60]
 
-    ft[0],ft[1],pitdet = aikamuunnos(ft[0], ft[1], rajat)
+    ft[0],ft[1],alat,pitdet = aikamuunnos(ft[0], ft[1], rajat, alat)
     a = np.empty([ft[0].shape[0],ft[0].shape[2]], ft[0].dtype)
     b = np.empty_like(a)
     for i,p in enumerate(pitdet):
@@ -76,12 +82,13 @@ def main():
         b[i,:] = np.mean(ft[1][i,:p,:], axis=0)
 
     x = np.linspace(-100,100,a.shape[-1])
+    ala = np.sum(alat)
 
     for r in range(len(rajat)-1):
         plot(x, a[r,:], label='frozen', linewidth=2)
         plot(x, b[r,:], label='partly_frozen', linewidth=2)
-        xlabel('freezing period state (%)')
-        title('%i < freezing period length ≤ %i' %(rajat[r], rajat[r+1]))
+        xlabel('freezing period elapsed (%)')
+        title('%i < freezing period length ≤ %i, %.0f %% of area' %(rajat[r], rajat[r+1], alat[r]/ala*100))
         legend(loc='upper left', fancybox=0)
         tight_layout()
         if '-s' in sys.argv:
@@ -92,13 +99,18 @@ def main():
 
     # yhdistetään erilliskuvat käyttäen komentiriviohjelmaa gm
     if '-s' in sys.argv:
-        xpit = int(np.ceil(np.sqrt(len(rajat))-1))
-        ypit = int(np.ceil((len(rajat)-1) / xpit))
+        kuvia = len(rajat)-1
+        xpit = int(np.ceil(np.sqrt(kuvia)))
+        ypit = int(np.ceil((kuvia) / xpit))
         str = 'gm convert'
         ind=0
         for y in range(ypit):
+            if not ind < kuvia:
+                break
             str += ' +append'
             for x in range(xpit):
+                if not ind < kuvia:
+                    break
                 str += ' kuvia/osajää%i.png' %(ind); ind+=1
         str += ' -append kuvia/osajää.png'
         print(str)
