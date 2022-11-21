@@ -15,7 +15,7 @@
 
 #define ARRPIT(a) sizeof(a)/sizeof(*(a))
 #define MIN(a,b) (a)<(b)? (a): (b)
-const double r2 = 6371229.0*6371229.0;
+const double r2 = 6362132.0*6362132.0;
 #define PINTAALA(lat, hila) ((hila) * r2 * (sin((lat)+0.5*(hila)) - sin((lat)-0.5*(hila))))
 #define ASTE 0.017453293
 

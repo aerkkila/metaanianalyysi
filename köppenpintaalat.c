@@ -7,7 +7,7 @@
 
 const char* const nimet[] = {"", "D.b", "D.c", "D.d", "ET"};
 
-const double r2 = 6371229.0*6371229.0;
+const double r2 = 6362132.0*6362132.0;
 #define ASTE 0.017453293
 #define PINTAALA(lat, hila) ((hila) * r2 * (sin((lat)+0.5*(hila)) - sin((lat)-0.5*(hila))))
 

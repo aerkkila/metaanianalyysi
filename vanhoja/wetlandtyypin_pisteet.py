@@ -5,7 +5,7 @@ from wetlandvuo_data import tee_data
 import numpy as np
 
 aste = 0.0174532925199
-R2 = 40592558970441
+R2 = 6362132.0*6362132.0
 PINTAALA1x1 = lambda _lat: aste*R2*( np.sin((_lat+1)*aste) - np.sin(_lat*aste) )*1.0e-6
 def pintaalat1x1(lat):
     alat = np.empty_like(lat)

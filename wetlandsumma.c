@@ -6,7 +6,7 @@
 // gcc wetlandsumma.c `pkg-config --libs nctietue` -lm
 // nctietue-kirjaston saa githubista https://github.com/aerkkila/nctietue.git
 
-const double r2 = 40592558970441; //(6371229 m)^2;
+const double r2 = 6362132.0*6362132.0;
 #define PINTAALA(lat, hila) ((hila)*r2*(sin((lat)+(hila))-sin(lat))*1.0e-6)
 #define ASTE 0.017453293
 

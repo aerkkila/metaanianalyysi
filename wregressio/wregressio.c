@@ -32,7 +32,7 @@ const char* pripost_ulos[]   = {"pri", "post"};
 #define perusväri do { if(tty) printf("\033[0m"); } while(0)
 int tty;
 
-#define SUHT2ABS_KERR 6371229.0*6371229.0 * 0.017453293 * 1 // r2 * ASTE * hila
+#define SUHT2ABS_KERR 6362132.0*6362132.0 * 0.017453293 * 1 // r2 * ASTE * hila
 #define ncdir "../"
 
 #ifndef menetelmä

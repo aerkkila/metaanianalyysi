@@ -19,7 +19,7 @@
 #define ARRPIT(a) (sizeof(a)/sizeof(*(a)))
 #define MIN(a,b) (a)<(b)? (a): (b)
 #define ASTE 0.017453293
-const double r2 = 6371229.0*6371229.0;
+const double r2 = 6362132.0*6362132.0;
 #define SUHT_ALA(lat, hila) (sin((((double)lat)+(hila)*0.5) * ASTE) - sin((((double)lat)-(hila)*0.5) * ASTE))
 #define SUHT2ABS_KERR(hila) (r2 * ASTE * (hila))
 

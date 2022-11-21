@@ -4,7 +4,7 @@
 import numpy as np
 
 aste = 0.0174532925199
-R2 = 40592558970441
+R2 = 6362132**2
 PINTAALA1x1 = lambda _lat: aste*R2*(np.sin((_lat+1)*aste) - np.sin(_lat*aste))*1.0e-6
 
 if __name__ == '__main__':
