@@ -26,7 +26,7 @@ const char* ylänimet[] = {"wetland", "köppen", "ikir"};
 const char* wetlnimet[] = {"bog", "fen", "marsh", "permafrost_bog", "tundra_wetland", "wetland", "non-wetland"};
 const char* ikirnimet[] = {"non_permafrost", "sporadic", "discontinuous", "continuous"};
 const char* köppnimet[] = {"D.b", "D.c", "D.d", "ET"};
-int pit_pripost=ARRPIT(pripost),
+int 
     pit_kaudet=ARRPIT(kaudet),
     pit_wetl=ARRPIT(wetlnimet),
     pit_köpp=ARRPIT(köppnimet),
@@ -152,7 +152,7 @@ void kirjoita_data(int ppnum, float* taul) {
 #elif KOST_KAHTIA==2
     FILE *f = fopen("vuosummat_sekoitus.tex", "w");
 #else
-    FILE *f = fopen(aprintf("vuosummat%s_%s.tex",
+    FILE *f = fopen(aprintf("vuosummat_%s%s.tex",
 			    pripost[ppnum], KOSTEIKKO? STR2(_k,KOSTEIKKO): ""), "w");
 #endif
     K("\\begin{tabular}{l");
@@ -204,7 +204,8 @@ int main() {
 int main() {
     pituudet();
     float* taul = malloc((pit_wetl+pit_köpp+pit_ikir)*pit_kaudet*2*sizeof(float));
-    for(int ppnum=0; ppnum<pit_pripost*(KOSTEIKKO==0); ppnum++) {
+    int toistot = 1 + (KOSTEIKKO==0 && KOST_KAHTIA==0);
+    for(int ppnum=0; ppnum<toistot; ppnum++) {
 	float* taul1 = taul;
 	if(lue_data(ppnum, "ikir", ikirnimet, pit_ikir, taul1))
 	    puts("virhe lue_data");

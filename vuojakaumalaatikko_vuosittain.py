@@ -43,13 +43,12 @@ def lisää_kausien_keskiarvot(tulos, luokka, kausi):
         #meds[i] = dt[ind1+pit_per_2]
         kars[i] = np.mean(dt[ind1+pit_per_i : ind2-pit_per_i])
         ind1 = ind2
-    if 0:
-        gca().twinx()
-        plot(tulos['xsij1'], kars, 'o', color='r', markersize=7)
-        ylabel('%s start' %kausi)
-        pienin = min(kars)
-        erotus = (max(kars)-pienin)*0.6
-        ylim([pienin-erotus, max(kars)+erotus])
+    gca().twinx()
+    plot(tulos['xsij1'], kars, 'o', color='r', markersize=7)
+    ylabel('%s start' %kausi)
+    pienin = min(kars)
+    erotus = (max(kars)-pienin)*0.6
+    ylim([pienin-erotus, max(kars)+erotus])
 
 def aja2(luokka, kausi, textied):
     ppnum = 0 if 'pri' in sys.argv else 1
@@ -81,7 +80,7 @@ def aja2(luokka, kausi, textied):
     else:
         ylabel('%s start' %kausi)
         title(luokka)
-    lisää_kausien_keskiarvot(tulos, luokka, kausi)
+    #lisää_kausien_keskiarvot(tulos, luokka, kausi)
     tight_layout()
     if '-s' in sys.argv:
         if päivä:
@@ -113,7 +112,7 @@ def main():
     textied.write('\\\\\n\\midrule\n')
     print('')
     for luokkai,luokka in enumerate(np.concatenate([luokitus0,luokitus1])):
-        print("\033[A\r%i/%i\033[K" %(luokkai+1,len(luokitus0)+len(luokitus1)))
+        print("\033[A\r%i/%i " %(luokkai+1,len(luokitus0)+len(luokitus1)))
         textied.write(luokka.replace('_',' '))
         for kausii,kausi in enumerate(kaudet):
             aja2(luokka, kausi, textied)
