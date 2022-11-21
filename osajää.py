@@ -78,11 +78,11 @@ def main():
     x = np.linspace(-100,100,a.shape[-1])
 
     for r in range(len(rajat)-1):
-        plot(x, a[r,:], label='frozen')
-        plot(x, b[r,:], label='partly_frozen')
+        plot(x, a[r,:], label='frozen', linewidth=2)
+        plot(x, b[r,:], label='partly_frozen', linewidth=2)
         xlabel('freezing period state (%)')
         title('%i < freezing period length ≤ %i' %(rajat[r], rajat[r+1]))
-        legend(loc='upper left')
+        legend(loc='upper left', fancybox=0)
         tight_layout()
         if '-s' in sys.argv:
             savefig('kuvia/osajää%i.png' %(r))
