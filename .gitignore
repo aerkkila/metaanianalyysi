@@ -12,6 +12,7 @@ testi*
 *.out
 *.tex
 *.so
+*.swp
 tmp*
 muunna_shapefile
 vuojakaumadata/
