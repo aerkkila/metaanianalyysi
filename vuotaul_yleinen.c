@@ -490,7 +490,7 @@ int hae_alku(nct_vset* vset, time_t t0) {
 /* tekee saman kuin system(mkdir -p kansio) */
 void mkdir_p(const char *restrict nimi, int mode) {
     char *restrict k1 = strdup(nimi);
-    char *restrict k2 = malloc(strlen(k1));
+    char *restrict k2 = malloc(strlen(k1)+2);
     *k2 = 0;
     char* str = strtok(k1, "/");
     do {
