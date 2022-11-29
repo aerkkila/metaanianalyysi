@@ -1,12 +1,16 @@
-#include <nctietue.h>
+#include <nctietue2.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/stat.h> // mkdir
+#include <err.h>
 
-/* kääntäjälle `pkg-config --libs nctietue` -O3
-   github.com/aerkkila/nctietue pitää olla asennettuna
-   Tämä tekee saman kuin vastaava Python-koodi, mutta merkittävästi nopeammin. */
+/*
+ * Written based on a Python code which was written by Maria Tenkanen 
+ * kääntäjälle `pkg-config --libs nctietue2` [-O3]
+ * github.com/aerkkila/nctietue2 pitää olla asennettuna
+ */
 
 void transpose(double* taul) {
     double* uusi = malloc(720*720*sizeof(double));
@@ -19,36 +23,58 @@ void transpose(double* taul) {
 
 const int resol = 55*360;
 
-int main(int argc, char** argv) {
-    int data1vai2=argc, nfrozen, npartly, nthaw;
-    nct_vset ftset, easelon, easelat, aluemaskiset;
-    char apustr[256];
-    unsigned char *aluemaski;
-    int valinta[32], valintapit;
-    unsigned char *ft;
+#define vnta_maxpit 50
+int* tee_valintaindeksit(double* lat, double* lon) {
     double *e2lon, *e2lat;
+    e2lon = nct_read_from_ncfile("EASE_2_lon.nc", NULL, nc_get_var_double, sizeof(double));
+    e2lat = nct_read_from_ncfile("EASE_2_lat.nc", NULL, nc_get_var_double, sizeof(double));
+    unsigned char* data = nct_read_from_ncfile("FT_720_2016.nc", "data", nc_get_var_ubyte, 1);
 
-    nct_read_ncfile_gd(&easelon, "../Tyotiedostot/Carbon_tracker/EASE_2_lon.nc");
-    nct_read_ncfile_gd(&easelat, "../Tyotiedostot/Carbon_tracker/EASE_2_lat.nc");
-    nct_read_ncfile_gd(&aluemaskiset, "./aluemaski.nc");
-
-    aluemaski = aluemaskiset.vars[2].data;
-    e2lon = easelon.vars[0].data;
-    e2lat = easelat.vars[0].data;
-    /* En ymmärrä miksi, mutta pituuspiirit on merkitty siten, että tarvitaan tälläinen muunnos */
+    /* Pituuspiirit pitää jostain syystä muuntaa näin. */
     transpose(e2lon);
     for(int i=0; i<720*720; i++) {
 	e2lon[i] = -e2lon[i]+180;
 	if(e2lon[i] > 180)
 	    e2lon[i] -= 360;
     }
+
+    int* indeksit = malloc(resol*vnta_maxpit*sizeof(int));
+    for(int j=0; j<55; j++) {
+	float lat1 = lat[j];
+	for(int i=0; i<360; i++) {
+	    float lon1 = lon[i];
+	    int valintapit=0;
+	    int* valinta = indeksit + (j*360+i)*vnta_maxpit;
+	    for(int k=0; k<720*720; k++)
+		if(data[k] && e2lon[k]>=lon1-0.5 && e2lon[k]<lon1+0.5 && e2lat[k]>=lat1-0.5 && e2lat[k]<lat1+0.5) {
+		    valinta[valintapit++] = k;
+		    if(valintapit >= vnta_maxpit) {
+			fprintf(stderr, "vnta_maxpit-arvoa (%i) pitää kasvattaa\n\n", vnta_maxpit);
+			abort(); }
+		}
+	    valinta[valintapit] = -1;
+	}
+    }
+    free(data);
+    free(e2lat);
+    free(e2lon);
+    return indeksit;
+}
+
+int main() {
+    int nfrozen, npartly, nthaw;
+    nct_vset ftset;
+    char apustr[256];
+    unsigned char *aluemaski;
+    unsigned char *ft;
+
     double* restrict lat = nct_range_NC_DOUBLE(29.5, 84, 1);
     double* restrict lon = nct_range_NC_DOUBLE(-179.5, 180, 1);
 
     float* frozen = malloc(366*resol*4);
     float* partly = malloc(366*resol*4);
     float* thaw = malloc(366*resol*4);
-    char* numgrids = malloc(366*resol);
+    char* numgrids = malloc(resol);
     if(!thaw || !numgrids || !partly || !frozen) {
 	fprintf(stderr, "malloc epäonnistui\n");
 	return 1;
@@ -56,94 +82,86 @@ int main(int argc, char** argv) {
 
     nct_vset tallenn = {0};
     int dimids[] = {0,1,2};
-    nct_add_coord(&tallenn, nct_range_NC_INT(0,366,1), 366, NC_INT, "time");
-    nct_add_coord(&tallenn, lat, 55, NC_DOUBLE, "lat");
-    nct_add_coord(&tallenn, lon, 360, NC_DOUBLE, "lon");
-    nct_add_att_text(&tallenn, 0, "units", NULL, 0);
-    nct_add_att_text(&tallenn, 0, "calendar", "proleptic_gregorian", 0);
-    tallenn.vars = realloc(tallenn.vars, (tallenn.nvars+1)*sizeof(nct_var));
-    nct_simply_add_var(&tallenn, frozen, NC_FLOAT, 3, dimids, "data");
+    nct_add_dim(&tallenn, nct_range_NC_INT(0,366,1), 366, NC_INT, "time");
+    nct_add_dim(&tallenn, lat, 55, NC_DOUBLE, "lat");
+    nct_add_dim(&tallenn, lon, 360, NC_DOUBLE, "lon");
+    nct_add_varatt_text(tallenn.vars[0], "units", strdup("days since 0000-00-00"), 1);
+    nct_add_varatt_text(tallenn.vars[0], "calendar", "proleptic_gregorian", 0);
+    nct_add_var(&tallenn, frozen, NC_FLOAT, "data", 3, dimids);
+
+    int* vntaind = tee_valintaindeksit(lat, lon);
+
+    if(mkdir("ft_percent", 0755) && errno != EEXIST)
+	err(1, "mkdir ft_percent (rivi %i)", __LINE__);
 
     int y0 = 2010;
+    putchar('\n');
     for(int y=y0; y<2022; y++) {
-	sprintf(apustr, "FT%i_720_%i.nc", data1vai2, y);
-	nct_read_ncfile_gd(&ftset, apustr);
-	ft = ftset.vars[nct_get_noncoord_varid(&ftset)].data;
-	int tpit = ftset.dims[nct_get_dimid(&ftset, "time")].len;
-	tallenn.dims[0].len = tpit;
+	printf("\033[A\rvuosi %i\033[K\n", y);
+	sprintf(apustr, "FT_720_%i.nc", y);
+	nct_read_ncfile_gd0(&ftset, apustr);
+	ft = nct_next_truevar(ftset.vars[0], 0)->data;
+	int tpit = NCTDIM(ftset, "time").len;
+	tallenn.dims[0]->len = tpit;
 	memset(frozen,   0, 366*resol*4);
 	memset(partly,   0, 366*resol*4);
 	memset(thaw,     0, 366*resol*4);
-	memset(numgrids, 0, 366*resol);
+	memset(numgrids, 0, resol);
 	for(int j=0; j<55; j++) {
-	    printf("\rvuosi %i, lat %i/%i\033[K", y, j+1, 55);
-	    fflush(stdout);
-	    float lat1 = lat[j];
 	    for(int i=0; i<360; i++) {
-		if(!aluemaski[j*360+i])
-		    continue;
-		float lon1 = lon[i];
-		valintapit=0;
-		/* Mitkä pisteet otetaan huomioon */
-		for(int k=0; k<720*720; k++)
-		    if(e2lon[k]>=lon1-0.5 && e2lon[k]<lon1+0.5 && e2lat[k]>=lat1-0.5 && e2lat[k]<lat1+0.5)
-			valinta[valintapit++] = k;
-
-		if(!valintapit)
-		    continue;
-		/* Käydään kyseiset pisteet läpi kaikilla ajanhetkillä */
+		int k, ij = (j*360+i)*vnta_maxpit;
 		for(int t=0; t<tpit; t++) {
 		    nfrozen = npartly = nthaw = 0;
-		    for(int k=0; k<valintapit; k++) {
-			unsigned char h = ft[valinta[k]+720*720*t];
+		    for(k=0; vntaind[ij+k]>=0; k++) {
+			unsigned char h = ft[vntaind[ij+k]+720*720*t];
 			nfrozen += h==3;
 			npartly += h==2;
 			nthaw   += h==1;
 		    }
-		    int ind = t*resol+j*360+i;
-		    frozen[ind] = (float)nfrozen / valintapit;
-		    partly[ind] = (float)npartly / valintapit;
-		    thaw[ind]   = (float)nthaw   / valintapit;
-		    numgrids[ind] = valintapit;
+		    int ind1 = j*360 + i;
+		    int ind = t*resol + ind1;
+		    frozen[ind] = (float)nfrozen / k;
+		    partly[ind] = (float)npartly / k;
+		    thaw[ind]   = (float)nthaw   / k;
+		    numgrids[ind1] = k;
 		}
 	    }
 	}
 
 	sprintf(apustr, "days since %i-01-01", y);
-	tallenn.vars[0].attrs[0].value = strdup(apustr);
+	free(tallenn.vars[0]->atts[0].value);
+	tallenn.vars[0]->atts[0].value = strdup(apustr);
 
-	tallenn.vars[3].data = frozen;
-	sprintf(apustr, "data%i/frozen_percent_pixel_%i.nc", data1vai2, y);
+	tallenn.vars[3]->data = frozen;
+	sprintf(apustr, "ft_percent/frozen_percent_pixel_%i.nc", y);
 	nct_write_ncfile(&tallenn, apustr);
 
-	tallenn.vars[3].data = partly;
-	sprintf(apustr, "data%i/partly_frozen_percent_pixel_%i.nc", data1vai2, y);
+	tallenn.vars[3]->data = partly;
+	sprintf(apustr, "ft_percent/partly_frozen_percent_pixel_%i.nc", y);
 	nct_write_ncfile(&tallenn, apustr);
 
-	tallenn.vars[3].data = thaw;
-	sprintf(apustr, "data%i/thaw_percent_pixel_%i.nc", data1vai2, y);
+	tallenn.vars[3]->data = thaw;
+	sprintf(apustr, "ft_percent/thaw_percent_pixel_%i.nc", y);
 	nct_write_ncfile(&tallenn, apustr);
 
-	tallenn.vars[3].data = numgrids;
-	tallenn.vars[3].xtype = NC_UBYTE;
-	sprintf(apustr, "data%i/number_of_pixel_%i.nc", data1vai2, y);
-	nct_write_ncfile(&tallenn, apustr);
-	tallenn.vars[3].xtype = NC_FLOAT;
-
-	free(tallenn.vars[0].attrs[0].value);
-	tallenn.vars[0].attrs[0].value = NULL;
-
-	tallenn.vars[3].data = NULL;
+	tallenn.vars[3]->data = NULL;
 	nct_free_vset(&ftset);
     }
-    puts("");
+
+    /* Number of pixels on aina sama, joten tallennetaan ilman aikakoordinaattia. */
+    NCTVAR(tallenn,"lat").nonfreeable_data = 1;
+    NCTVAR(tallenn,"lon").nonfreeable_data = 1;
     nct_free_vset(&tallenn);
-    nct_free_vset(&easelon);
-    nct_free_vset(&easelat);
-    nct_free_vset(&aluemaskiset);
+    tallenn = (nct_vset){0};
+    nct_add_dim(&tallenn, lat, 55, NC_DOUBLE, "lat");
+    nct_add_dim(&tallenn, lon, 360, NC_DOUBLE, "lon");
+    int dimids2[] = {0,1};
+    nct_add_var(&tallenn, numgrids, NC_UBYTE, "data", 2, dimids);
+    nct_write_ncfile(&tallenn, "ft_percent/number_of_pixels.nc");
+
+    nct_free_vset(&tallenn);
     free(frozen);
     free(partly);
     free(thaw);
-    free(numgrids);
-    return 0;
+    free(vntaind);
 }
