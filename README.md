@@ -29,7 +29,8 @@ They should be compiled with argument \`pkg-config --libs nctietue2\`
 	   Like vuojakaumadata<area>.c but for season start days or similar with only 1 value per season in a cell. \
 	   Only tested with -DVUODET_ERIKSEEN=1.
    - **vuotaul_yleinen.c** &rarr; vuotaulukot/\*.csv \
-	   Calculate average methane fluxes in different areas and seasons.
+	   Calculate average methane fluxes in different areas and seasons. \
+	   **This has to be run twice to get standard deviations right.**
    - **wregressio/** \
 	   Contains its own readme.
 
