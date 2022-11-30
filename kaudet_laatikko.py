@@ -8,8 +8,8 @@ import luokat, sys, time
 aste = 0.0174532925199
 SPINTAALA = lambda _lat: np.sin((_lat+1)*aste) - np.sin(_lat*aste)
 
-al_muuttuja = ['jaatym_alku','talven_alku','kesan_alku','freezing','winter','summer',]
-al_nimi = ['freezing_start', 'winter_start', 'summer_start','freezing_length','winter_length','summer_length']
+kaudet = luokat.kaudet[1:]
+pd_muuttujat = [['%s_start' %k, '%s_end' %k] for k in kaudet]
 vuosi0 = 2012
 vuosi1 = 2021
 
@@ -63,7 +63,7 @@ def toimikoon_ikirouta(ikirdata):
 def main():
     rcParams.update({'figure.figsize':(5,7), 'font.size':14})
     ikirluvut  = [0,1,2,3]
-    päivädata  = Dataset("kausien_pituudet2.nc", "r")
+    päivädata  = Dataset("kausien_päivät.nc", "r")
     köppdata   = np.tile(np.load("köppenmaski.npy"), vuosi1-vuosi0)
     ikirdata_  = Dataset("ikirdata.nc", "r")
     ikirvuodet = ikirdata_['vuosi'][:]
@@ -73,11 +73,10 @@ def main():
     painot = np.array([SPINTAALA(lat) for lat in päivädata['lat'][:]])
     painot = np.tile(np.repeat(painot, 360), vuosi1-vuosi0)
 
-    #xnimet_ikir = ['%s%s' %('\n'*max((i%3),(i%2)), s) for i,s in enumerate(luokat.ikir)]
     xnimet_ikir = ['PF%i' %i for i in range(4)]
-    xnimet_köpp = luokat.kopp
+    xnimet_köpp = luokat.köpp
 
-    for i_muutt,muutt in enumerate(al_muuttuja):
+    for kausi,muutt in zip(kaudet, pd_muuttujat):
         painostot_ikir = np.empty([len(ikirluvut)], object)
         pdatastot_ikir = np.empty_like(painostot_ikir)
         painostot_köpp = np.empty([len(luokat.kopp)], object)
@@ -85,36 +84,31 @@ def main():
 
         vuodet     = päivädata['vuosi'][:]
         vuosimaski = (vuosi0<=vuodet) & (vuodet<vuosi1)
-        data_      = np.ma.getdata(päivädata[muutt][:][vuosimaski].flatten())
+        loput      = np.ma.getdata(päivädata[muutt[1]][:][vuosimaski]).flatten()
+        alut       = np.ma.getdata(päivädata[muutt[0]][:][vuosimaski]).flatten()
+        pitdet     = loput-alut
 
-        for i_luok in range(len(ikirluvut)):
-            luokmaski  = ikirdata == ikirluvut[i_luok]
-            data_luok  = data_[luokmaski]
-            paino_luok = painot[luokmaski]
-            datamaski  = data_luok == data_luok
-            data_luok  = data_luok[datamaski]
-            paino_luok = paino_luok[datamaski]
-            pdatastot_ikir[i_luok] = data_luok
-            painostot_ikir[i_luok] = paino_luok
+        for dt,nimi in zip([alut,pitdet], ['start','length']):
+            for iluok in range(len(ikirluvut)):
+                maski  = ikirdata == ikirluvut[iluok]
+                pdatastot_ikir[iluok] = dt[maski]
+                painostot_ikir[iluok] = painot[maski]
+                maski = pdatastot_ikir[iluok] == pdatastot_ikir[iluok]
+                pdatastot_ikir[iluok] = pdatastot_ikir[iluok][maski]
+                painostot_ikir[iluok] = painostot_ikir[iluok][maski]
 
-        for i_luok in range(len(luokat.kopp)):
-            luokmaski  = köppdata[i_luok,:]
-            data_luok  = data_[luokmaski]
-            paino_luok = painot[luokmaski]
-            datamaski  = data_luok == data_luok
-            data_luok  = data_luok[datamaski]
-            paino_luok = paino_luok[datamaski]
-            pdatastot_köpp[i_luok] = data_luok
-            painostot_köpp[i_luok] = paino_luok
+            for iluok in range(len(luokat.köpp)):
+                maski  = ikirdata == ikirluvut[iluok]
+                pdatastot_köpp[iluok] = dt[maski]
+                painostot_köpp[iluok] = painot[maski]
+                maski = pdatastot_köpp[iluok] == pdatastot_köpp[iluok]
+                pdatastot_köpp[iluok] = pdatastot_köpp[iluok][maski]
+                painostot_köpp[iluok] = painostot_köpp[iluok][maski]
 
-        #tulos = laatikkokuvaaja(pdatastot_ikir.flatten(), fliers='', painostot=painostot_ikir.flatten())
-        #viimeistele(tulos, "ikir", xnimet_ikir, al_nimi[i_muutt))
-        #tulos = laatikkokuvaaja(pdatastot_köpp.flatten(), fliers='', painostot=painostot_köpp.flatten())
-        #viimeistele(tulos, "köpp", xnimet_köpp, al_nimi[i_muutt])
-        tulos = laatikkokuvaaja(np.concatenate([pdatastot_ikir.flatten(), pdatastot_köpp.flatten()]),
-                                fliers='', avgmarker='o',
-                                painostot = np.concatenate([painostot_ikir.flatten(), painostot_köpp.flatten()]))
-        viimeistele(tulos, "ikirköpp", np.concatenate([xnimet_ikir, xnimet_köpp]), al_nimi[i_muutt].replace('_',' '))
+            tulos = laatikkokuvaaja(np.concatenate([pdatastot_ikir.flatten(), pdatastot_köpp.flatten()]),
+                                    fliers='', avgmarker='o',
+                                    painostot = np.concatenate([painostot_ikir.flatten(), painostot_köpp.flatten()]))
+            viimeistele(tulos, "ikirköpp", np.concatenate([xnimet_ikir, xnimet_köpp]), '%s %s' %(kausi, nimi))
 
     päivädata.close()
 
