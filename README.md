@@ -7,9 +7,9 @@ They should be compiled with argument \`pkg-config --libs nctietue2\`
 	   BAWLD classification
    - **ikirdata<area>.py** &rarr; ikirdata<area>.nc, ikirdata<area>.npy \
 	   permafrost classification
-   - **kaudet<area>.py** &rarr; kaudet[012]<area>.nc, kausien_pituudet[012]<area>.nc \
+   - **kaudet<area>.c* &rarr; kaudet<area>.nc, kausien_päivät<area>.nc \
 	   season classification (kaudet<area>.nc) \
-	   season lengths and start dates (kausien_pituudet<area>.nc) \
+	   season start and end dates (kausien_päivät<area>.nc) \
 	   number is for three different freeze/thaw datasets
    - **pintaalat<area>.py** &rarr; pintaalat<area>.npy \
 	   a simple code: calculate area of each grid cell
