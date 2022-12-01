@@ -1,5 +1,5 @@
 # pintaalat.py ja kaudet.py pitää olla ajettuina ennen tätä
-all: vuotaul_00.target vuotaul_10.target vuotaul_01.target vuotaul_02.target vuojakaumadata.target vuojakaumadata_vuosittain.target kuvat taulukot.out
+all: vuotaul_00.target vuotaul_10.target vuotaul_01.target vuotaul_02.target vuojakaumadata.target vuojakaumadata_vuosittain.target kuvat taulukot.target
 
 vuotaul_00.target: vuotaul_köppen_pri.csv vuotaul_köppen_post.csv vuotaul_ikir_pri.csv vuotaul_ikir_post.csv vuotaul_wetland_pri.csv vuotaul_wetland_post.csv
 	cat vuotaulukot/*_pri_*.csv > vuotaul_pri.csv
@@ -84,20 +84,20 @@ kuvat:
 	./vuojakaumalaatikko.py -s
 	./vuojakaumalaatikko_vuosittain.py -s
 
-vuotaul.out:
-	gcc vuotaul_latex.c -O2 -o $@
-	./$@
-	gcc vuotaul_latex.c -DKOST_KAHTIA=1 -O2 -o $@
-	./$@
-	gcc vuotaul_latex.c -DKOST_KAHTIA=2 -O2 -o $@
-	./$@
-	gcc vuotaul_latex.c -DKOSTEIKKO=1 -O3 -o $@
-	./$@
+vuotaul.target:
+	gcc vuotaul_latex.c -O2 -o vuotaul.out
+	./vuotaul.out
+	gcc vuotaul_latex.c -DKOST_KAHTIA=1 -O2 -o vuotaul.out
+	./vuotaul.out
+	gcc vuotaul_latex.c -DKOST_KAHTIA=2 -O2 -o vuotaul.out
+	./vuotaul.out
+	gcc vuotaul_latex.c -DKOSTEIKKO=1 -O3 -o vuotaul.out
+	./vuotaul.out
 
-taulukot.out: |vuotaul.out
+taulukot.target: vuotaul.target
 	./köppikir_taulukko.py
-	gcc lattaul.c -O1 -o $@
-	./$@
+	gcc lattaul.c -O1 -o vuotaul.out
+	./vuotaul.out
 
 # Näitä ei sisälly all-kohteeseen
 alkupäivät_vuosittain.out: kertajakaumadata.c

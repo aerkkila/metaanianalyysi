@@ -153,7 +153,7 @@ int main(int argc, char** argv) {
 	}
 	int t = t_alku;
 
-	for(; froz[t*pit_xy+i] != froz[t*pit_xy+i]; t++)
+	for(; t<t_pit && froz[t*pit_xy+i] != froz[t*pit_xy+i]; t++)
 	    kausi[(t-t_alku)*pit_xy+i] = 0;
 
 kesä_loppuun:
