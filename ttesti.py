@@ -23,7 +23,7 @@ def laske(d1,d2,suure):
     tsuure = welch_t(d1[0],d2[0],d1[1],d2[1],d1[2],d2[2])
     df = dof(d1[1], d1[2], d2[1], d2[2])
     print("%.5f, %.2f (%.0f), %s" %(tsuure, df, d1[2]+d2[2], suure))
-    print("\033[1m%.4f\033[0m" %(t.cdf(tsuure, df)))
+    print("\033[1m%.5f\033[0m" %(t.cdf(tsuure, df)))
 
 def työstä_kausi(tiedosto):
     lkt = luokat.wetl[1:]
@@ -61,7 +61,7 @@ def työstä_kausi(tiedosto):
             if a[0] == suure:
                 d1 = np.array(a)[ind].astype(np.float32)
                 break
-        laske(d1,d2,suure+'-wetland')
+        laske(d1,d2,suure+'-alueelta wetland')
     f.close()
 
 for kausi in luokat.kaudet[1:]:
