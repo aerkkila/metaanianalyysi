@@ -1,18 +1,18 @@
 #!/bin/sh
-kansio=/media/levy
-lsblk |grep -q $kansio || { echo ei kovalevyä; exit 1; }
+kansio=$HOME
+#lsblk |grep -q $kansio || { echo ei kovalevyä; exit 1; }
 
 kansio=${kansio}/codedata
 k0=$kansio
 mkdir -p $kansio
 
-cp \
+cp -l \
     laatikkokuvaaja.py \
     luokat.py \
     LICENSE \
     $kansio
 
-cp -ur \
+cp -lr \
     ikirdata.nc \
     köppen1x1maski.nc \
     köppenmaski.npy \
@@ -21,6 +21,7 @@ cp -ur \
     vuotaulukot \
     vuojakaumadata \
     kaudet.nc \
+    kausien_päivät.nc \
     BAWLD1x1.nc \
     flux1x1.nc \
     $kansio
@@ -115,7 +116,7 @@ mkdir -p $kansio
 cp köppenmaski.py $kansio
 kansio=$kansio/create_köppen1x1maski
 mkdir -p $kansio
-cp muunna_shapefile.c köppentunnisteet.c $kansio
+cp köppen.c köppentunnisteet.h $kansio
 cp -r köppen_shp $kansio
 cat >$kansio/Makefile <<EOF
 all: a.out
@@ -209,25 +210,21 @@ EOF
 
 kansio=$k0/create_kaudet
 mkdir -p $kansio/data
-a=/media/levy/smos_uusi/data2
-cp kaudet.py $kansio 
-cp $a/freezing_start_doy* $a/winter_start_doy* $a/winter_end_doy* $kansio/data
-#pitää vielä muokata koodia, että tuo kansio on siellä
+a=/home/aerkkila/smos_uusi/
+cp $a/kaudet.c $kansio
+cp -l $HOME/smos_uusi/ft_percent/frozen_percent_pixel_*.nc $kansio/data
+cp -l $HOME/smos_uusi/ft_percent/partly_frozen_percent_pixel_*.nc $kansio/data
 kansio=$kansio/create_data
 mkdir -p $kansio/data
-cp  /media/levy/smos_uusi/calculate_DOY_of_winter_end_start.py \
-    /media/levy/smos_uusi/calculate_DOY_of_start_of_freezing.py \
-    $kansio
-cp -u /media/levy/smos_uusi/data2/frozen_percent_pixel_*.nc $kansio/data
-kansio=$kansio/create_data
-mkdir -p $kansio/data
-cp /media/levy/smos_uusi/ft_percents_pixel_ease.c $kansio
-cp /media/levy/Tyotiedostot/Carbon_tracker/EASE_2_l*.nc $kansio
-cp -u /media/levy/smos_uusi/FT2_720_*.nc $kansio/data # 181 Mt kukin
+cp $a/ft_percents_pixel_ease.c $kansio
+cp -l $a/EASE_2_l*.nc $kansio
+cp -l $HOME/smos_uusi/FT_720_*.nc $kansio/data # isoja
 kansio=$kansio/create_data
 mkdir -p $kansio
-cp /media/levy/smos_uusi/yhdistä_vuosittain.c $kansio
+cp $HOME/smos_uusi/yhdistä_vuosittain.c $kansio
 cat >$kansio/README <<EOF
+Here should be a link if data gets published.
+
 Original data was given as a separate file for each day (time step)
 and some days were missing.
 This is the code that was used to combine each year into one file
@@ -239,8 +236,12 @@ EOF
 
 kansio=$k0/create_BAWLD1x1
 mkdir -p $kansio
-cp -ur /media/levy/Tyotiedostot/MethEOWP730/BAWLD/ $kansio/data
-cp BAWLD.py $kansio
+cp bawld/*.[ch] bawld/Makefile $kansio
+cat > $kansio/README <<EOF
+Used data is BAWLD_V1___Shapefile.zip from https://doi.org/10.18739/A2C824F9X (Olefeldt et al., 2021) which should be extracted into directory data. Makefile downloads and extracts it automatically.
+
+Olefeldt, D., Hovemyr, M., Kuhn, M. A., Bastviken, D., Bohn, T. J., Connolly, J., Crill, P., Euskirchen, E. S., Finkelstein, S. A., Genet, H., Grosse, G., Harris, L. I., Heffernan, L., Helbig, M., Hugelius, G., Hutchins, R., Juutinen, S., Lara, M. J., Malhotra, A., Manies, K., McGuire, A. D., Natali, S. M., O'Donnell, J. A., Parmentier, F.-J. W., Räsänen, A., Schädel, C., Sonnentag, O., Strack, M., Tank, S. E., Treat, C., Varner, R. K., Virtanen, T., Warren, R. K., and Watts, J. D.: The Boreal–Arctic Wetland and Lake Dataset (BAWLD), Earth Syst. Sci. Data, 13, 5127–5149, https://doi.org/10.5194/essd-13-5127-2021, 2021.
+EOF
 
 cat > $k0/create_links.sh <<EOF
 #!/bin/sh
@@ -251,18 +252,20 @@ cat > $k0/create_links.sh <<EOF
 ( cd create_vuojakaumadata; ln -s ../köppenmaski.txt ../ikirdata.nc ../BAWLD1x1.nc ../flux1x1.nc ../kaudet.nc . )
 ( cd create_kaudet;         ln -s ../aluemaski.nc . )
 ( cd create_kaudet/create_data/create_data; ln -s ../../../aluemaski.nc . )
+( cd create_BAWLD1x1;       ln -s ../aluemaski.nc . )
 EOF
+chmod 755 $k0/create_links.sh
 
 cat > $k0/README <<EOF
 It is necessary to run create_links.sh before attempting to run most codes elsewhere than in the root directory.
 
-The idea is that a directory always contains the data that is needed to run the codes
-and if data was created using other codes, those codes and their data are given one directory deeper.
-Codes that make data for other codes are in directories called create_*/.
+Each directory contains the data that is needed to run the codes
+and if data was created using other codes, those codes and their data are given one directory deeper in create_data
 The root directory contains all codes that make the final results used in the article.
+C-source files will compile without any special arguments (e.g. cc file.c) if Makefile is not given in that directory.
 
-If a file is needed in many levels, it is given in the uppermost directory
-and it has to be linked to deeper directories to run those codes.
+If a file is needed in many directories, it is given only once
+and it has to be linked to other directories to run those codes.
 That is automated in file create_links.sh which puts needed links to right directories.
 
 fig_11.py and table_8.py are the same file but given twice for naming reasons.
