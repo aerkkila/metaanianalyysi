@@ -513,6 +513,7 @@ int main(int argc, char** argv) {
     const int kirjpit = 1000;
     float* apu = malloc(kirjpit*vuosia_yht*kausia*sizeof(float));
     for(int lajinum=0; lajinum<lajeja; lajinum++) {
+	/* Jos !VUODET_ERIKSEEN, tämä for-lause ei merkitse mitään. */
 	for(int v=0; v<vuosia_yht; v++) {
 	    tee_aikapit(l1, l2, v);
 	    vuosia = aikapit / 365;

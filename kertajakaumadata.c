@@ -19,7 +19,7 @@
 #define ARRPIT(a) (sizeof(a)/sizeof(*(a)))
 #define MIN(a,b) (a)<(b)? (a): (b)
 #define ASTE 0.017453293
-const double r2 = 6371229.0*6371229.0;
+const double r2 = 6362132.0*6362132.0;
 #define SUHT_ALA(lat, hila) (sin((((double)lat)+(hila)*0.5) * ASTE) - sin((((double)lat)-(hila)*0.5) * ASTE))
 
 #ifndef VUODET_ERIKSEEN
@@ -44,9 +44,9 @@ static nct_vset *luok_vs;
 static int       aikapit;
 static char  *restrict luok_c;
 static double *restrict alat;
-static int ikirvuosi0, ikirvuosia, vuosia;
-static struct tm tm0 = {.tm_mon=8-1, .tm_mday=15};
-static struct tm tm1 = {.tm_mon=7-1, .tm_mday=25};
+static int ikirvuosi0, ikirvuosia, vuosia, l1;
+static struct tm tm0 = {.tm_mon=8-1, .tm_mday=15}; // vain vuotta muutetaan ohjelman aikana
+static struct tm tm1 = {.tm_mon=5-1, .tm_mday=1}; // vain vuotta muutetaan ohjelman aikana
 #define vuosi0 2012
 #if VUODET_ERIKSEEN
 #define vuosi1 2021
@@ -65,7 +65,7 @@ struct laskenta {
     char* kausiptr;
     int kuluva_kausi, kuluneita_kausia[kausia], lajinum, lukitse, vuosi;
     float *cdf[kausia];
-    float* päivät[kausia]; // järjestämisen vuoksi float eikä short
+    float* päivät[kausia];
     tmt kesän_alku;
     /* vuodet erikseen */
     long double päiv0sum[vuosi1-vuosi0][kausia], n_päiv0[vuosi1-vuosi0][kausia]; // painotettuina pinta-alalla
@@ -73,6 +73,8 @@ struct laskenta {
 };
 
 tmt* tee_päivä(tmt *aika, int ind_t);
+void tee_aikapit(int vuosi_ind);
+void tee_aikapit_talvi(int vuosi_ind);
 
 char aprintapu[256];
 char* aprintf(const char* muoto, ...) {
@@ -165,7 +167,8 @@ void alusta_lajin_laskenta(struct laskenta* args) {
 void päivä_keskiarvoon(struct laskenta* args, double ala, int kausi, int ind_t) {
     tmt aputmt;
     tee_päivä(&aputmt, ind_t);
-    if(!(aputmt.tm.tm_year+1900 <= vuosi0+args->vuosi)) asm("int $3");
+    if(!(aputmt.tm.tm_year+1900 <= vuosi0+args->vuosi))
+	asm("int $3");
     args->päiv0sum[args->vuosi][kausi] += aputmt.t * ala;
     args->n_päiv0[args->vuosi][kausi] += ala;
 
@@ -183,7 +186,8 @@ void päivä_keskiarvoon(struct laskenta* args, double ala, int kausi, int ind_t
 void päivä_keskiarvoon_w(struct laskenta* args, double ala, int kausi, int ind_t, double paino) {
     tmt aputmt;
     tee_päivä(&aputmt, ind_t);
-    if(!(aputmt.tm.tm_year+1900 <= vuosi0+args->vuosi)) asm("int $3");
+    if(!(aputmt.tm.tm_year+1900 <= vuosi0+args->vuosi))
+	asm("int $3");
     args->päiv0sum[args->vuosi][kausi] += aputmt.t * ala * paino;
     args->n_päiv0[args->vuosi][kausi] += ala * paino;
 
@@ -235,10 +239,15 @@ int tarkista_kausi(struct laskenta* args, int ind_t) {
     if(!args->lukitse)
 	args->kuluneita_kausia[args->kuluva_kausi] += lisäys;
     if((args->kuluva_kausi = args->kausiptr[ind_t]) == summer_e) {
-	if(VUODET_ERIKSEEN) aikapit = MIN(ind_t+365, aikapit);
-	else       	    tee_päivä(&args->kesän_alku, ind_t);
+	if(VUODET_ERIKSEEN)
+	    /* Päätepisteenä oli aikapit_talvi.
+	       Siirretään siihen, mikä kesälle on sopivaa (struct tm1). */
+	    tee_aikapit(args->vuosi);
+	else
+	    tee_päivä(&args->kesän_alku, ind_t);
     }
-    if(args->kuluneita_kausia[0] > 1 && VUODET_ERIKSEEN) asm("int $3");
+    if(args->kuluneita_kausia[0] > 1 && VUODET_ERIKSEEN)
+	asm("int $3");
     if(args->kuluneita_kausia[0] >= vuosia) return 0; // vuosien määrä täyttyi
     if(VUODET_ERIKSEEN && luokenum!=wetl_e)
 	päivä_keskiarvoon(args, alat[ind_t%resol/360], args->kuluva_kausi, ind_t);
@@ -248,6 +257,7 @@ int tarkista_kausi(struct laskenta* args, int ind_t) {
 #define ALKUUN(t,ala)							\
     int t;								\
     args->kuluva_kausi = 0;						\
+    tee_aikapit_talvi(args->vuosi);					\
     for(t=0; t<aikapit; t++)						\
 	if(kausiptr[t*resol+r] == 0)					\
 	    goto seuraava;						\
@@ -380,13 +390,28 @@ int hae_alku(nct_vset* vset, time_t t0) {
     return (t0-tn1.a.t) / 86400;
 }
 
-void tee_aikapit(int l1, int v) {
+/* Asettaa globaalin muuttujan aikapit, johon kesä viimeistään päätetään. */
+void tee_aikapit(int v) {
     tm0.tm_year = vuosi0-1+v-1900;
     tm1.tm_year = VUODET_ERIKSEEN? vuosi0+1+v-1900 : vuosi1-1900;
     time_t t0 = mktime(&tm0);
     aikapit = (mktime(&tm1)-t0) / 86400;
     if(aikapit > l1) {
-	printf("liikaa aikaa vuonna %i: maxpit=%i\n", vuosi0+v, l1);
+	printf("liikaa aikaa (%i) vuonna %i: maxpit=%i\n", aikapit, vuosi0+v, l1);
+	aikapit = l1;
+    }
+}
+
+/* Asettaan globaalin muuttujan aikapit, johon talvi viimeistään päätetään.
+   Jos t0-päivämääränä kesä ei ole alkanut,
+   talvi keskeytetään ja sitä jatketaan seuraavaan vuoteen kuuluvana.
+   Lähes aina sitä ennen kesä on alkanut ja on kutsuttu tee_aikapit,
+   joka on pidentänyt aikarajaa sellaiseksi, mikä kesälle katsotaan sopivaksi. */
+void tee_aikapit_talvi(int v) {
+    int vuosi = vuosi0+v;
+    aikapit = 365 + !(vuosi%4 || (vuosi%100 && !(vuosi%400)));
+    if(aikapit > l1) {
+	printf("liikaa aikaa (%i) vuonna %i: maxpit=%i\n", aikapit, vuosi0+v, l1);
 	aikapit = l1;
     }
 }
@@ -451,8 +476,8 @@ int main(int argc, char** argv) {
     }
     char* kausiptr = (char*)apuvar->data + k_alku*resol;
 	
-    int l1  = NCTDIM(*kausivset, "time").len - k_alku;
-    tee_aikapit(l1, 0);
+    l1 = NCTDIM(*kausivset, "time").len - k_alku;
+    tee_aikapit(0);
     int L1=l1;
     int vuosia_yht = vuosi1-vuosi0;
 
@@ -462,14 +487,16 @@ int main(int argc, char** argv) {
     float* apu = malloc(kirjpit*vuosia_yht*kausia*sizeof(float));
     for(int lajinum=0; lajinum<lajeja; lajinum++) {
 	for(int v=0; v<vuosia_yht; v++) {
-	    tee_aikapit(l1, v);
+	    tee_aikapit(v);
 	    vuosia = aikapit / 365;
-	    if(VUODET_ERIKSEEN) assert(vuosia == 1);
-	    else assert(vuosia_yht == vuosia);
+	    if(VUODET_ERIKSEEN)
+		assert(vuosia == 1);
+	    else
+		assert(vuosia_yht == vuosia);
 
 	    l_args.lajinimi = luoknimet[luokenum][lajinum];
-	    l_args.lajinum = lajinum;
-	    l_args.vuosi = v;
+	    l_args.lajinum  = lajinum;
+	    l_args.vuosi    = v;
 	    alusta_lajin_laskenta(&l_args);
 	    switch(luokenum) {
 	    case wetl_e: täytä_kosteikkodata(&l_args); break;
