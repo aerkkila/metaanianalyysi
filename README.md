@@ -25,9 +25,9 @@ They should be compiled with argument \`pkg-config --libs nctietue2\`
 	   Calculate distribution of methane fluxes in different areas and seasons. \
 	   If compiled with -DVUODET_ERIKSEEN=1 calculates all years separately \
 	   and makes csv-tables of yearly seasonal emission sums.
-   - **kertajakaumadata<area>.c** &rarr; kausijakaumadata/* \
-	   Like vuojakaumadata<area>.c but for season start days or similar with only 1 value per season in a cell. \
-	   Only tested with -DVUODET_ERIKSEEN=1.
+   - **alkupäivät_vuosittain.c** &rarr; kausijakaumadata/* \
+	   Like vuojakaumadata<area>.c but for season start days
+	   which are read straight from kausien_päivät.nc and therefore is much simpler.
    - **vuotaul_yleinen.c** &rarr; vuotaulukot/\*.csv \
 	   Calculate average methane fluxes in different areas and seasons. \
 	   **This has to be run twice to get standard deviations right.**

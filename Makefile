@@ -100,13 +100,13 @@ taulukot.target: vuotaul.target
 	./vuotaul.out
 
 # Näitä ei sisälly all-kohteeseen
-alkupäivät_vuosittain.out: kertajakaumadata.c
-	gcc -Wall kertajakaumadata.c -o $@ `pkg-config --libs nctietue2 gsl` -lm -g -O3 -DVUODET_ERIKSEEN=1
+alkupäivät_vuosittain.out: alkupäivät_vuosittain.c
+	gcc -Wall $< -o $@ `pkg-config --libs nctietue2 gsl` -lm -g -O3
 alkupäivät_vuosittain_ikir: alkupäivät_vuosittain.out
-	./alkupäivät_vuosittain.out ikir post
+	./alkupäivät_vuosittain.out ikir
 alkupäivät_vuosittain_köpp: alkupäivät_vuosittain.out
-	./alkupäivät_vuosittain.out köpp post
+	./alkupäivät_vuosittain.out köpp
 alkupäivät_vuosittain_wetl: alkupäivät_vuosittain.out
-	./alkupäivät_vuosittain.out wetl post
+	./alkupäivät_vuosittain.out wetl
 alkupäivät_vuosittain.target: alkupäivät_vuosittain_ikir alkupäivät_vuosittain_köpp alkupäivät_vuosittain_wetl
 	cat kausijakaumadata/alkupäivät_*.csv > alkupäivät_vuosittain.csv
