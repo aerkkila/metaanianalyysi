@@ -39,13 +39,6 @@ const char* pripost_sisaan[] = {"flux_bio_prior", "flux_bio_posterior"};
 const char* pripost_ulos[]   = {"pri", "post"};
 enum                           {kopp_e, ikir_e, wetl_e} luokenum;
 const char*** luoknimet;
-const char* kansio =
-#if VUODET_ERIKSEEN
-    "./vuojakaumadata/vuosittain"
-#else
-    "./vuojakaumadata"
-#endif
-    ;
 #define kausia 4
 #define wraja 0.05
 
@@ -53,7 +46,9 @@ static nct_vset *luok_vs;
 static int       ppnum;
 static char  *restrict luok_c;
 static double *restrict alat;
+static double* kost;
 static int ikirvuosi0, ikirvuosia, vuosi0, vuosi1, t1max;
+char* kansio;
 
 struct laskenta {
     const char* lajinimi;
@@ -108,6 +103,10 @@ int argumentit(int argc, char** argv) {
 	printf("Ei luettu pri/post-argumenttia\n");
 	return 1;
     }
+    if (argc <= 3)
+	return 0;
+    if (!strcmp(argv[3], "kost"))
+	kost = nct_read_from_ncfile("BAWLD1x1.nc", "wetland", nc_get_var_double, sizeof(double));
     return 0;
 }
 
@@ -151,65 +150,85 @@ int hae_raja(struct laskenta* args, int päivä) {
     return (mktime(&tm0) - args->vuo_t0) / 86400;
 }
 
-#define ALKUUN \
-    float päivä0 = args->kausiptr0[resol*args->vuosi+r]; \
-    if (päivä0 != päivä0) continue; \
-    float päivä1 = args->kausiptr1[resol*args->vuosi+r]; \
-    if (päivä1 != päivä1) continue; \
-    double ala = alat[r/360]; \
-    int t0 = hae_raja(args, päivä0); \
-    int t1 = hae_raja(args, päivä1); \
-    t1 = MIN(t1, t1max)
+int alkuun(struct laskenta* args, int r, int* t0, int* t1) {
+    float päivä0, päivä1;
+    päivä0 = args->kausiptr0[resol*args->vuosi+r];
+    if (päivä0 != päivä0)
+	return 1;
+    päivä1 = args->kausiptr1[resol*args->vuosi+r];
+    if (päivä1 != päivä1)
+	return 1;
+    *t0 = hae_raja(args, päivä0);
+    *t1 = hae_raja(args, päivä1);
+    *t1 = MIN(*t1, t1max);
+    return 0;
+}
+
+void aikasilmukka_kosteikko(struct laskenta* args, int r, double* kost, double* laji) {
+    int t0, t1;
+    if(alkuun(args, r, &t0, &t1)) return;
+    double ala = alat[r/360];
+    for(int t=t0; t<t1; t++) {
+	int ind_t = t*resol + r;
+	args->vuoulos[args->sijainti]   = args->vuoptr[ind_t] / kost[r];
+	args->cdf    [args->sijainti++] = ala * laji[r];
+	if(VUODET_ERIKSEEN)
+	    *args->emissio += args->vuoptr[ind_t] * ala * laji[r]/kost[r];
+    }
+}
+
+void aikasilmukka(struct laskenta* args, int r) {
+    int t0, t1;
+    if(alkuun(args, r, &t0, &t1)) return;
+    double ala = alat[r/360];
+    for(int t=t0; t<t1; t++) {
+	int ind_t = t*resol + r;
+	args->vuoulos[args->sijainti]   = args->vuoptr[ind_t];
+	args->cdf    [args->sijainti++] = ala;
+	if(VUODET_ERIKSEEN)
+	    *args->emissio += args->vuoptr[ind_t] * ala;
+    }
+}
 
 void täytä_kosteikkodata(struct laskenta* args) {
-    float* vuoptr = args->vuoptr;
     double *restrict osuus0ptr = NCTVAR(*luok_vs, "wetland").data;
     double *restrict osuus1ptr = NCTVAR(*luok_vs, wetlnimet[args->lajinum]).data;
     for(int r=0; r<resol; r++) {
-	if (osuus0ptr[r] < wraja) continue;
-	ALKUUN;
-	for(int t=t0; t<t1; t++) {
-	    int ind_t = t*resol + r;
-	    args->vuoulos[args->sijainti]   = vuoptr[ind_t] / osuus0ptr[r];
-	    args->cdf    [args->sijainti++] = osuus1ptr[r] * ala;
-	    if(VUODET_ERIKSEEN)
-		*args->emissio += vuoptr[ind_t] * osuus1ptr[r]/osuus0ptr[r] * ala;
-	}
+	if (osuus0ptr[r] < wraja)   continue;
+	aikasilmukka_kosteikko(args, r, osuus0ptr, osuus1ptr);
     }
 }
 
 void täytä_köppendata(struct laskenta* args) {
-    float* vuoptr = args->vuoptr;
-    for(int r=0; r<resol; r++) {
-	if(luok_c[r] != args->lajinum) continue;
-	ALKUUN;
-	for(int t=t0; t<t1; t++) {
-	    int ind_t = t*resol + r;
-	    args->vuoulos[args->sijainti]   = vuoptr[ind_t];
-	    args->cdf    [args->sijainti++] = ala;
-	    if(VUODET_ERIKSEEN)
-		*args->emissio += vuoptr[ind_t] * ala;
-	}
-    }
+    if (kost) goto kosteikko;
+
+    for (int r=0; r<resol; r++)
+	if (luok_c[r] == args->lajinum)
+	    aikasilmukka(args, r);
+    return;
+
+kosteikko:
+    for (int r=0; r<resol; r++)
+	if (luok_c[r] == args->lajinum)
+	    aikasilmukka_kosteikko(args, r, kost, kost);
 }
 
 /* Jos ikiroutaluokka vaihtuu, aloitettu kausi käydään kuitenkin loppuun samana ikiroutaluokkana. */
 void täytä_ikirdata(struct laskenta* args) {
-    float* vuoptr = args->vuoptr;
     int ikirv = vuosi0 + args->vuosi - ikirvuosi0;
     if (ikirv >= ikirvuosia)
 	ikirv = ikirvuosia-1;
-    for (int r=0; r<resol; r++) {
-	if (luok_c[ikirv*resol+r] != args->lajinum) continue;
-	ALKUUN;
-	for (int t=t0; t<t1; t++) {
-	    int ind_t = t*resol + r;
-	    args->vuoulos[args->sijainti]   = vuoptr[ind_t];
-	    args->cdf    [args->sijainti++] = ala;
-	    if(VUODET_ERIKSEEN)
-		*args->emissio += vuoptr[ind_t] * ala;
-	}
-    }
+    if (kost) goto kosteikko;
+
+    for (int r=0; r<resol; r++)
+	if (luok_c[ikirv*resol+r] == args->lajinum)
+	    aikasilmukka(args, r);
+    return;
+
+kosteikko:
+    for (int r=0; r<resol; r++)
+	if (luok_c[ikirv*resol+r] == args->lajinum)
+	    aikasilmukka_kosteikko(args, r, kost, kost);
 }
 
 float* pintaaloista_kertymäfunktio(float* data, float* cdfptr, int pit) {
@@ -224,8 +243,8 @@ float* pintaaloista_kertymäfunktio(float* data, float* cdfptr, int pit) {
 }
 
 void tallenna(struct laskenta* args, void* data, int kirjpit, int kausi) {
-    int fd = open(aprintf("./%s/%s_%s_%s.bin", kansio, args->lajinimi, kaudet[kausi], pripost_ulos[ppnum]),
-	    O_WRONLY|O_CREAT, 0644);
+    int fd = open(aprintf("%s/%s_%s_%s.bin", kansio, args->lajinimi, kaudet[kausi], pripost_ulos[ppnum]),
+		  O_WRONLY|O_CREAT, 0644);
     assert(fd>=0);
     if (
 	    (write(fd, &kirjpit, 4) != 4) |
@@ -253,7 +272,7 @@ float* laita_data(struct laskenta* args, float *kohde, int kirjpit) {
 }
 
 void laita_emissio(struct laskenta* args) {
-    FILE* f = fopen(aprintf("%s/emissio_%s_%s.csv", kansio, args->lajinimi, pripost_ulos[ppnum]), "w");
+    FILE* f = fopen(aprintf("%s/emissio_%s_%s.csv", kansio,  args->lajinimi, pripost_ulos[ppnum]), "w");
     assert(f);
     fprintf(f, "#%s %s\n", args->lajinimi, pripost_ulos[ppnum]);
     for(int v=vuosi0; v<vuosi1; v++)
@@ -268,9 +287,26 @@ void laita_emissio(struct laskenta* args) {
     fclose(f);
 }
 
+/* tekee saman kuin system(mkdir -p kansio) */
+void mkdir_p(const char *restrict nimi, int mode) {
+    char *restrict k1 = strdup(nimi);
+    char *restrict k2 = malloc(strlen(k1)+2);
+    *k2 = 0;
+    char* str = strtok(k1, "/");
+    do {
+	sprintf(k2+strlen(k2), "%s/", str);
+	assert(!mkdir(k2, mode) || errno == EEXIST);
+    } while((str=strtok(NULL, "/")));
+    free(k2);
+    free(k1);
+}
+
 int main(int argc, char** argv) {
     if(argumentit(argc, argv))
 	return 1;
+    char kansio_[60];
+    sprintf(kansio_, "vuojakaumadata%s%s", kost? "/kost": "", VUODET_ERIKSEEN? "/vuosittain": "");
+    kansio = kansio_;
     nct_vset vuo;
     nct_var* apuvar;
     const char** _luoknimet[] = { [kopp_e]=koppnimet, [ikir_e]=ikirnimet, [wetl_e]=wetlnimet, };
@@ -316,8 +352,7 @@ int main(int argc, char** argv) {
     float* cdftila = malloc(366*vuosia*resol*0.9*sizeof(float));
     assert(vuotila && cdftila);
 
-    if(mkdir(kansio, 0755) < 0 && errno != EEXIST)
-	err(1, "mkdir %s epäonnistui, rivi %i", kansio, __LINE__);
+    mkdir_p(kansio, 0755);
 
     const int kirjpit = 1000;
     float* apu = malloc(kirjpit*vuosia_yht*kausia*sizeof(float));
@@ -372,6 +407,7 @@ int main(int argc, char** argv) {
     free(apu);
     free(vuotila);
     free(cdftila);
+    free(kost);
     nct_free_vset(luok_vs);
     nct_free_vset(&vuo);
     return 0;
