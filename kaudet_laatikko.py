@@ -10,8 +10,9 @@ SPINTAALA = lambda _lat: np.sin((_lat+1)*aste) - np.sin(_lat*aste)
 
 kaudet = luokat.kaudet[1:]
 pd_muuttujat = [['%s_start' %k, '%s_end' %k] for k in kaudet]
-vuosi0 = 2012
+vuosi0 = 2011
 vuosi1 = 2021
+karkausvuosi = [not(i%4) and (bool(i%100) or not(i%400)) for i in range(vuosi0, vuosi1)]
 
 def muunna_aika(lista):
     r = np.empty(len(lista), object)
@@ -84,9 +85,20 @@ def main():
 
         vuodet     = päivädata['vuosi'][:]
         vuosimaski = (vuosi0<=vuodet) & (vuodet<vuosi1)
-        loput      = np.ma.getdata(päivädata[muutt[1]][:][vuosimaski]).flatten()
-        alut       = np.ma.getdata(päivädata[muutt[0]][:][vuosimaski]).flatten()
-        pitdet     = loput-alut
+        vuodet     = vuodet[vuosimaski]
+        loput      = np.ma.getdata(päivädata[muutt[1]][:][vuosimaski])
+        alut       = np.ma.getdata(päivädata[muutt[0]][:][vuosimaski])
+        pitdet     = (loput-alut).flatten()
+
+        # Poistetaan alkupäivistä sellaiset kohdat,
+        # joissa kausi kestää usean vuoden ja on katkaistu jonain päivänä.
+        # Tällöin kauden loppupäivä on sama kuin sen alkupäivä seuraavana vuonna + vuoden päivät.
+        for v in range(len(vuodet)-1):
+            päiviä = 365 + karkausvuosi[v]
+            loput[v, ...] -= päiviä
+        tmpmaski = (alut[1:, ...] == loput[:-1, ...])
+        alut[1:, ...] = np.where(tmpmaski, np.nan, alut[1:, ...])
+        alut = alut.flatten()
 
         for dt,nimi in zip([alut,pitdet], ['start','length']):
             for iluok in range(len(ikirluvut)):

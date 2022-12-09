@@ -50,8 +50,7 @@ struct laskenta {
     float* kausiptr;
     int kausi, lajinum, vuosi;
     /* *.bin-tiedostot */
-    float* cdf;
-    float* päivät;
+    float *cdf, *päivät;
     int pisteitä;
     /* *.csv-tiedostot */
     double *päiv0sum, *n_päiv0; // painotettuina pinta-alalla
@@ -163,10 +162,10 @@ void täytä_köppendata(struct laskenta* args) {
 }
 
 void täytä_ikirdata(struct laskenta* args) {
+    int ikirv = vuosi0 + args->vuosi - ikirvuosi0;
+    if (ikirv >= ikirvuosia)
+	ikirv = ikirvuosia-1;
     for(int r=0; r<resol; r++) {
-	int ikirv = vuosi0 + args->vuosi - ikirvuosi0;
-	if (ikirv >= ikirvuosia)
-	    ikirv = ikirvuosia-1;
 	if (luok_c[ikirv*resol+r] != args->lajinum) continue;
 	float päivä = args->kausiptr[args->vuosi*resol+r];
 	if (päivä != päivä) continue;
@@ -275,15 +274,34 @@ int main(int argc, char** argv) {
 	for(int kausi_ind=1; kausi_ind<kausia; kausi_ind++) {
 	    char varnimi[20];
 	    sprintf(varnimi, "%s_start", kaudet[kausi_ind]);
-	    nct_var* apuvar = nct_get_var(kausivset, varnimi);
-	    assert(apuvar->xtype == NC_FLOAT);
+	    nct_var* alkuvar = nct_get_var(kausivset, varnimi);
+	    assert(alkuvar->xtype == NC_FLOAT);
+
+	    /* Jos kausi kestää monta vuotta, se on katkaistu jostain päivästä,
+	       jotta emissio saadaan jaettua eri vuosille.
+	       Älköön siis huomioitako kohtia,
+	       joissa alkupäivä[vuosi] == loppupäivä[vuosi-1]-vuoden_päivät. */
+	    sprintf(varnimi, "%s_end", kaudet[kausi_ind]);
+	    nct_var* loppuvar = nct_get_var(kausivset, varnimi);
+	    float *ad=alkuvar->data, *ld=loppuvar->data;
+	    for(int v=1; v<vuosi1-vuosi0; v++) {
+		int vuosi = vuosi0+v;
+		int vuoden_päivät = 365 + (!(vuosi%4) && (vuosi%100 || !(vuosi%400)));
+		for(int i=0; i<resol; i++) {
+		    float *falku = ad + v*resol+i;
+		    float floppu = ld[(v-1)*resol+i];
+		    if(*falku != *falku || floppu != floppu) continue;
+		    if((int)*falku == (int)floppu-vuoden_päivät)
+			*falku = 0.0f/0.0f;
+		}
+	    }
 
 	    l_args = (struct laskenta) {
-		.kausiptr = apuvar->data,
+		.kausiptr = alkuvar->data,
 		.lajinimi = luoknimet[luokenum][lajinum],
 		.lajinum  = lajinum,
-		.päivät   = malloc(resol),
-		.cdf      = malloc(resol),
+		.päivät   = malloc(resol*sizeof(float)),
+		.cdf      = malloc(resol*sizeof(float)),
 		.kausi    = kausi_ind,
 		.päiv0sum = päivsum_tila,
 		.n_päiv0  = n_päiv_tila,

@@ -9,86 +9,134 @@
 #define kansio "ft_percent/"
 #define talvi 3
 #define jäätym 2
+#define syksy jäätym
 #define kesä 1
 
 #define jäätyykö(froz, part) ((froz)*9+(part) >= 0.9)
 //#define jäätyykö(froz, part) (froz >= 0.1)
 
-/* Jos aika0 on karkausvuonna, alkupäiviin tulee pieni virhe. */
 const char* aika0str = "days since 2010-08-01";
 struct tm aika0tm = {.tm_year=2010-1900, .tm_mon=8-1, .tm_mday=1};
-time_t t0;
+struct tm aikatm_kesä = {.tm_year=2011-1900, .tm_mon=2-1, .tm_mday=1};
 #define taitesekunteja 16
-time_t taitesekunnit[taitesekunteja];
+time_t taitesekunnit[2][taitesekunteja];
+int kausimerkki = kesä;
 
-int päiviä_taitteeseen(int t, int seur) {
+int päiviä_taitteeseen(int t, int vuosi) {
     struct tm aika1tm = aika0tm;
     aika1tm.tm_mday += t;
     time_t t1 = mktime(&aika1tm);
-    /*
-    aika1tm.tm_mon  = aika0tm.tm_mon;
-    aika1tm.tm_mday = aika0tm.tm_mday;
-    aika1tm.tm_year += seur;
-    time_t t2 = mktime(&aika1tm);
-    Yllä oleva korvataan valmiiksi lasketuilla taitesekunneilla. */
-    time_t t2 = taitesekunnit[aika1tm.tm_year - aika0tm.tm_year + seur];
+    time_t t2 = taitesekunnit[0][vuosi];
     return (t2-t1) / 86400;
 }
 
-int v_g, yday_g, t_alku_g, kark_g;
-void aikamuunnos(int t) {
+int t_alku_g; // t_alku sisään, yday ulos
+int aikamuunnos(int t, int vuosi) {
    struct tm aika1tm = aika0tm;
    aika1tm.tm_mday += t-t_alku_g;
-   mktime(&aika1tm);
-   int v = aika1tm.tm_year+1900;
-   kark_g = !(v%4) && (v%100 || !v%400);
-   if(aika1tm.tm_yday-kark_g >= aika0tm.tm_yday) { // syksy
-       v_g    = aika1tm.tm_year - aika0tm.tm_year;
-       yday_g = aika1tm.tm_yday - kark_g - 365;
-   }
-   else { // kevät
-       v_g    = aika1tm.tm_year - aika0tm.tm_year - 1;
-       yday_g = aika1tm.tm_yday;
-   }
+   time_t tnyt = mktime(&aika1tm);
+   struct tm vuoden_alku = {
+       .tm_year = vuosi + aika0tm.tm_year+1,
+       .tm_mon  = 0,
+       .tm_mday = 1,
+   };
+   time_t talku = mktime(&vuoden_alku);
+   return (tnyt - talku) / 86400;
 }
 
-int talven_pituus(float* fr, int aika0, int pit_xy) {
-    int ajan_huippu = päiviä_taitteeseen(aika0, 0);
-    if(ajan_huippu < 0)
-	ajan_huippu = päiviä_taitteeseen(aika0, 1);
+int talven_pituus(float* fr, float* pr, int aika0, int pit_xy, int t_pit, int vuosi) {
+    kausimerkki = kesä;
+    int ajan_huippu = päiviä_taitteeseen(aika0, vuosi+1);
+    if(ajan_huippu <= 0)
+	asm("int $3");
+    if(ajan_huippu + aika0 > t_pit)
+	ajan_huippu = t_pit - aika0;
     int pit = 0;
     for(int i=0; i<ajan_huippu; i++)
 	if(fr[i*pit_xy] >= 0.9)
 	    pit = i+1;
+    if(pit < ajan_huippu)
+	return pit;
+    /* Jos vuoden taitteeseen asti oli talvea,
+       tarkistetaan puoleen väliin asti kesän taitetta, onko talvi jatkuvaa
+       ja katkaistaan heti ellei ole eli käsitellään sitä niin kuin kesää.
+       Tällöin talvi saa vaihtua myös jäätymiskaudeksi, mikä yleensä ei ole mahdollista. */
+    ajan_huippu += (taitesekunnit[1][vuosi+1] - taitesekunnit[0][vuosi+1]) / 86400 / 2;
+    if(ajan_huippu + aika0 > t_pit)
+	ajan_huippu = t_pit - aika0;
+    for(int i=pit; i<ajan_huippu; i++)
+	if(!jäätyykö(fr[i*pit_xy], pr[i*pit_xy]))
+	    return i;
+	else if(fr[i*pit_xy] < 0.9) {
+	    kausimerkki = syksy;
+	    return i; }
+    kausimerkki = talvi;
     return pit;
 }
 
-/* Jos jatkuu kesään eikä talveen, lisättäköön pituuteen 10000 merkiksi siitä. */
-int jäätym_pituus(float* fr, float* pr, int aika0, int pit_xy) {
-    int ajan_huippu = päiviä_taitteeseen(aika0, 0);
-    if(ajan_huippu < 0)
-	ajan_huippu = päiviä_taitteeseen(aika0, 1);
+/* Tapausta, jossa vuoden taitteessa on jäätymiskausi meneillään, ei ole käsitelty. */
+int jäätym_pituus(float* fr, float* pr, int aika0, int pit_xy, int t_pit, int vuosi) {
+    kausimerkki = talvi;
+    int ajan_huippu = päiviä_taitteeseen(aika0, vuosi+1);
+    assert(ajan_huippu > 0);
+    if(ajan_huippu + aika0 > t_pit)
+	ajan_huippu = t_pit - aika0;
     int pit = 0;
     for(int i=0; i<ajan_huippu; i++)
 	if(fr[i*pit_xy] >= 0.9)
 	    return i;
 	else if(jäätyykö(fr[i*pit_xy], pr[i*pit_xy]))
 	    pit = i+1;
-    return pit+10000;
+    kausimerkki = kesä;
+    assert(pit != ajan_huippu);
+    return pit;
+}
+
+int kesän_pituus(float* fr, float* pr, int aika0, int pit_xy, int t_pit, int vuosi) {
+    /* Tätä funktiota kutsutaan vain vuoden taitteesta. */
+    int ajan_huippu = (taitesekunnit[1][vuosi] - taitesekunnit[0][vuosi]) / 86400;
+    if(ajan_huippu + aika0 > t_pit)
+	ajan_huippu = t_pit - aika0;
+    int i=0;
+    kausimerkki = kesä;
+    for(; i<ajan_huippu; i++)
+	if(fr[i*pit_xy] >= 0.9) {
+	    kausimerkki = talvi;
+	    return i; }
+	else if(jäätyykö(fr[i*pit_xy], pr[i*pit_xy])) {
+	    kausimerkki = syksy;
+	    return i; }
+    /* Tarkistettakoon vielä vuoden taitteeseen asti,
+       ettei talvi ala kesän taitetta myöhemmin joskus keväällä. */
+    ajan_huippu = i + (taitesekunnit[0][vuosi+1] - taitesekunnit[1][vuosi]) / 86400;
+    if(ajan_huippu + aika0 > t_pit)
+	ajan_huippu = t_pit - aika0;
+    int i_alkup = i;
+    for(; i<ajan_huippu; i++)
+	if(fr[i*pit_xy] >= 0.9) {
+	    kausimerkki = talvi;
+	    return i; }
+	else if(jäätyykö(fr[i*pit_xy], pr[i*pit_xy])) {
+	    kausimerkki = syksy;
+	    return i; }
+    return i_alkup;
 }
 
 int pit_xy_g;
-void vaihdepäivä(int t, int p, float* loppuva[2], float* alkava[2]) {
-    aikamuunnos(t);
-    loppuva[1][v_g*pit_xy_g+p] = yday_g;
-    alkava[0][v_g*pit_xy_g+p] = yday_g;
+void vaihdepäivä(int v, int t, int p, float* loppuva[2], float* alkava[2]) {
+    int yday = aikamuunnos(t, v);
+    if(yday > 600) {
+	asm("int $3");
+	aikamuunnos(t, v);
+    }
+    loppuva[1][v*pit_xy_g+p] = yday;
+    alkava[0][v*pit_xy_g+p] = yday;
 }
 
-void vaihdepäivä1(int t, int p, float* loppuva[2], float* alkava[2]) {
-    aikamuunnos(t);
-    alkava[0][v_g*pit_xy_g+p] = yday_g;
-    if(v_g > 0)
-	loppuva[1][(v_g-1)*pit_xy_g+p] = yday_g + 365 - kark_g;
+void vaihdepäivä1(int v, int t, int p, float* loppuva[2], float* alkava[2]) {
+    if(v > 0)
+	loppuva[1][(v-1)*pit_xy_g+p] = aikamuunnos(t, v-1);
+    alkava[0][v*pit_xy_g+p] = aikamuunnos(t, v);
 }
 
 struct päiväluvut {
@@ -109,9 +157,18 @@ void alusta_päiväluvut(struct päiväluvut* pl, int pit_xy, int tpit) {
 }
 
 void alusta_taitesekunnit() {
+    /* Kesän sekunti, johon asti tarkistetaan, tuleeko vielä jäätynyttä,
+       ja siten onko talvi päättynyt. */
     struct tm aikatm = aika0tm;
     for(int i=0; i<taitesekunteja; i++) {
-	taitesekunnit[i] = mktime(&aikatm);
+	taitesekunnit[0][i] = mktime(&aikatm);
+	aikatm.tm_year++;
+    }
+    /* Jos kesä kestää monta vuotta,
+       tällöin laitetaan yhden vuoden kesän pääte, ja seuraavan alku. */
+    aikatm = aikatm_kesä;
+    for(int i=0; i<taitesekunteja; i++) {
+	taitesekunnit[1][i] = mktime(&aikatm);
 	aikatm.tm_year++;
     }
 }
@@ -121,7 +178,8 @@ int main(int argc, char** argv) {
     nct_vset* frozen = nct_read_ncmultifile_regex(kansio "^frozen_percent_pixel_[0-9]*.nc$", 0, NULL);
     char* maski = nct_read_from_ncfile("aluemaski.nc", NULL, NULL, 0);
 
-    t0 = mktime(&aika0tm);
+    mktime(&aika0tm);
+    mktime(&aikatm_kesä);
     nct_convert_timeunits(nct_get_var(partly, "time"), aika0str); // käytännössä tämä vain lisää vakion aika-arvoihin
     nct_convert_timeunits(nct_get_var(frozen, "time"), aika0str);
     nct_var* aika = nct_get_var(partly, "time");
@@ -153,65 +211,74 @@ int main(int argc, char** argv) {
 	}
 	int t = t_alku;
 
-	for(; t<t_pit && froz[t*pit_xy+i] != froz[t*pit_xy+i]; t++)
-	    kausi[(t-t_alku)*pit_xy+i] = 0;
+	int vuosi = -1;
 
 kesä_loppuun:
-	for(; !jäätyykö(froz[t*pit_xy+i], part[t*pit_xy+i]); t++) {
-	    if(t >= t_pit+t_alku)
-		goto aika_päättyi;
+	int jäljellä = kesän_pituus(froz+t*pit_xy+i, part+t*pit_xy+i, t-t_alku, pit_xy, t_pit, vuosi+1);
+	for(int tt=0; tt<jäljellä; tt++, t++)
 	    kausi[(t-t_alku)*pit_xy+i] = kesä;
-	}
-	/* Ensimmäinen päivä talvesta tai syksystä pitää laittaa jo täällä,
-	 * koska muuten tämä kiertää loputtomasti ellei taitteessa ole kesä. */
-	if(froz[t*pit_xy+i] >= 0.9) {
-	    vaihdepäivä1(t, i, pl.k, pl.t);
-	    kausi[(t++-t_alku)*pit_xy+i] = talvi;
-	    if(t>=t_pit+t_alku)
-		goto aika_päättyi;
-	    goto talvi_loppuun; }
-
-	vaihdepäivä1(t, i, pl.k, pl.j);
-	kausi[(t++-t_alku)*pit_xy+i] = jäätym;
 	if(t>=t_pit+t_alku)
 	    goto aika_päättyi;
-	goto jäätyminen_loppuun;
+	/* Ensimmäinen päivä talvesta tai syksystä pitää laittaa jo täällä,
+	 * koska muuten tämä kiertää loputtomasti ellei taitteessa ole kesä. */
+	switch (kausimerkki) {
+	    case talvi:
+		vaihdepäivä1(++vuosi, t, i, pl.k, pl.t);
+		kausi[(t++-t_alku)*pit_xy+i] = talvi;
+		goto talvi_loppuun;
+	    case syksy:
+		vaihdepäivä1(++vuosi, t, i, pl.k, pl.j);
+		kausi[(t++-t_alku)*pit_xy+i] = jäätym;
+		goto jäätyminen_loppuun;
+	    case kesä:
+		vaihdepäivä1(++vuosi, t, i, pl.k, pl.k);
+		kausi[(t++-t_alku)*pit_xy+i] = kesä;
+		goto kesä_loppuun_keväällä;
+	    default:
+		asm("int $3");
+	}
 
 talvi_loppuun:
-	int jäljellä = talven_pituus(froz+t*pit_xy+i, t-t_alku, pit_xy);
-        if(t+jäljellä > t_pit+t_alku)
-	    jäljellä = t_pit+t_alku-t;
+	jäljellä = talven_pituus(froz+t*pit_xy+i, part+t*pit_xy+i, t-t_alku, pit_xy, t_pit, vuosi);
 	for(int tt=0; tt<jäljellä; tt++, t++)
 	    kausi[(t-t_alku)*pit_xy+i] = talvi;
 	if(t >= t_pit+t_alku)
 	    goto aika_päättyi;
-	vaihdepäivä(t, i, pl.t, pl.k);
-	goto kesä_loppuun_keväällä;
+	switch(kausimerkki) {
+	    case kesä:
+		vaihdepäivä(vuosi, t, i, pl.t, pl.k);
+		goto kesä_loppuun_keväällä;
+	    case talvi:
+		vaihdepäivä1(++vuosi, t, i, pl.t, pl.t);
+		kausi[(t++-t_alku)*pit_xy+i] = talvi;
+		goto talvi_loppuun;
+	    case syksy:
+		vaihdepäivä1(++vuosi, t, i, pl.t, pl.j);
+		kausi[(t++-t_alku)*pit_xy+i] = syksy;
+		goto jäätyminen_loppuun;
+	}
 
 jäätyminen_loppuun:
-	jäljellä = jäätym_pituus(froz+t*pit_xy+i, part+t*pit_xy+i, t-t_alku, pit_xy);
-	int seuraava = talvi;
-	if(jäljellä > 9999) { // tämä päätettiin merkitä näin
-	    seuraava = kesä;
-	    jäljellä -= 10000;
-	}
-        if(t+jäljellä > t_pit+t_alku)
-	    jäljellä = t_pit+t_alku-t;
+	jäljellä = jäätym_pituus(froz+t*pit_xy+i, part+t*pit_xy+i, t-t_alku, pit_xy, t_pit, vuosi);
 	for(int tt=0; tt<jäljellä; tt++, t++)
 	    kausi[(t-t_alku)*pit_xy+i] = jäätym;
 	if(t >= t_pit+t_alku)
 	    goto aika_päättyi;
-	if(seuraava == talvi) {
-	    vaihdepäivä(t, i, pl.j, pl.t);
-	    goto talvi_loppuun; }
-	vaihdepäivä(t, i, pl.j, pl.k);
-	goto kesä_loppuun_keväällä;
+	switch(kausimerkki) {
+	    case talvi:
+		vaihdepäivä(vuosi, t, i, pl.j, pl.t);
+		goto talvi_loppuun;
+	    case kesä:
+		vaihdepäivä(vuosi, t, i, pl.j, pl.k);
+		goto kesä_loppuun_keväällä;
+	    default:
+		assert(0);
+	}
 
 /* Toisin kuin kohdassa kesä_loppuun tässä mikään ei laukaise jäätymiskautta tai talvea. */
 kesä_loppuun_keväällä:
-	jäljellä = päiviä_taitteeseen(t-t_alku, 0);
-	if(jäljellä < 0)
-	    jäljellä = päiviä_taitteeseen(t-t_alku, 1);
+	jäljellä = päiviä_taitteeseen(t-t_alku, vuosi+1);
+	assert(jäljellä > 0);
         if(t+jäljellä > t_pit+t_alku)
 	    jäljellä = t_pit+t_alku-t;
 	for(int tt=0; tt<jäljellä; tt++, t++)

@@ -7,10 +7,8 @@ They should be compiled with argument \`pkg-config --libs nctietue2\`
 	   BAWLD classification
    - **ikirdata<area>.py** &rarr; ikirdata<area>.nc, ikirdata<area>.npy \
 	   permafrost classification
-   - **kaudet<area>.c* &rarr; kaudet<area>.nc, kausien_päivät<area>.nc \
-	   season classification (kaudet<area>.nc) \
-	   season start and end dates (kausien_päivät<area>.nc) \
-	   number is for three different freeze/thaw datasets
+   - **kaudet<area>.c* &rarr; kaudet<area>.nc, kausien_päivät.nc \
+	   ongoing season (kaudet<area>.nc) and season start and end dates (kausien_päivät.nc)
    - **pintaalat<area>.py** &rarr; pintaalat<area>.npy \
 	   a simple code: calculate area of each grid cell
    - **köppen.c** &rarr; köppen1x1maski<area>.nc \
@@ -37,8 +35,6 @@ They should be compiled with argument \`pkg-config --libs nctietue2\`
 3. **Following codes make final things using the preprocessed data from previous parts.**
    - **bawld_wetlosuuskartta.py** &rarr; bawld_wetlosuuskartta.png \
 	   map of wetland subcategories as fraction of total wetland
-   - **ikir_alkuloppu.py** &rarr; ikir[0123]_{season}_start.png \
-	   histogram of frequency of season start dates in different permafrost regions
    - **ikir_metaani_kartta.py** &rarr; ikir_metaani_kartta_['pri','post']\_{prf-class}_{season}_ft[012].png \
 	   Season average methane flux on map. Different map for each permafrost region, season and prior/posterior data.
    - **kaudet_laatikko.py** &rarr; kausilaatikko_{season}\_['length','start']\_ikirköpp.png \
@@ -69,3 +65,5 @@ They should be compiled with argument \`pkg-config --libs nctietue2\`
 
 **Other**
 - **köppenpintaalat<area>.c** areas of climate classes
+- **ikir_alkuloppu.py** &rarr; ikir[0123]_{season}_start.png \
+	   Unused. Histogram of frequency of season start dates in different permafrost regions.

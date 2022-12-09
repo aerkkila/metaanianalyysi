@@ -53,6 +53,10 @@ vuotaul_wetland_post02.csv: vuotaul_02.out
 	./vuotaul_02.out wetl post
 
 # vuojakaumadata
+# Jos tässä on optimointina -Ofast, saadaan muistialueen ylitys,
+# koska silloin on käytössä -ffast-math, joka sisältää -ffinite-math-only,
+# jolloin epälukujen tarkistus ei toimi.
+# Olisi hyvä vaihtaa liukuluvut int16:en ja käyttää sovittua täyttöarvoa epälukujen sijaan.
 vuojakaumadata.out: vuojakaumadata.c
 	gcc -Wall $< -o $@ `pkg-config --libs nctietue2 gsl` -g -O3
 vuojakauma_ikir: vuojakaumadata.out
