@@ -1,4 +1,4 @@
-# pintaalat.py ja kaudet.py pitää olla ajettuina ennen tätä
+# pintaalat.py ja kaudet.c pitää olla ajettuina ennen tätä
 all: vuotaul_00.target vuotaul_10.target vuotaul_01.target vuotaul_02.target vuojakaumadata.target vuojakaumadata_vuosittain.target kuvat taulukot.target
 
 vuotaul_00.target: vuotaul_köppen_pri.csv vuotaul_köppen_post.csv vuotaul_ikir_pri.csv vuotaul_ikir_post.csv vuotaul_wetland_pri.csv vuotaul_wetland_post.csv
@@ -65,7 +65,11 @@ vuojakauma_köpp: vuojakaumadata.out
 	./$< köpp post
 vuojakauma_wetl: vuojakaumadata.out
 	./$< wetl post
-vuojakaumadata.target: vuojakauma_ikir vuojakauma_köpp vuojakauma_wetl
+vuojakauma_köppkost: vuojakaumadata.out
+	./$< köpp post kost
+vuojakauma_ikirkost: vuojakaumadata.out
+	./$< ikir post kost
+vuojakaumadata.target: vuojakauma_ikir vuojakauma_köpp vuojakauma_wetl vuojakauma_ikirkost vuojakauma_köppkost
 
 # vuojakaumadata vuosittain
 vuojakaumadata_vuosittain.out: vuojakaumadata.c

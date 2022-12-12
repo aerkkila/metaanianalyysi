@@ -7,7 +7,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h> // mkdir
-#include <gsl/gsl_sort.h>
+//#include <gsl/gsl_sort.h> // korvattu omalla lajittelulla
 #include <gsl/gsl_statistics.h>
 #include <assert.h>
 #include <time.h>
@@ -49,6 +49,7 @@ static double *restrict alat;
 static double* kost;
 static int ikirvuosi0, ikirvuosia, vuosi0, vuosi1, t1max;
 char* kansio;
+char* aluemaski; // tarvitaan koko vuoden tuloksiin
 
 struct laskenta {
     const char* lajinimi;
@@ -74,10 +75,54 @@ int binsearch(const float* a, float f, int lower, int upper) {
 alku:
     int mid = (lower+upper)/2;
     if(upper-lower <= 1) return f<lower? lower: f<upper? upper: upper+1;
-    if(f<a[mid])         upper = mid-1;
-    else if(f>a[mid])    lower = mid+1;
+    if(f<a[mid])         upper = mid;
+    else if(f>a[mid])    lower = mid;
     else                 return mid;
     goto alku;
+}
+
+/* Voisin toki käyttää valmista funktiota gsl_sort2_float,
+   mutta tämä lomituslajittelu on paljon nopeampi kuin gsl:n käyttämä kekolajittelu. */
+void _lomlaj2(float* m0, float* m0_apu, float* m1, float* m1_apu, unsigned pit) {
+    if(pit <= 1) return;
+    unsigned jako = pit/2;
+    _lomlaj2(m0, m0_apu, m1, m1_apu, jako);
+    _lomlaj2(m0+jako, m0_apu+jako, m1+jako, m1_apu+jako, pit-jako);
+    float *m0a=m0, *m0b=m0+jako;
+    float *m1a=m1, *m1b=m1+jako;
+    int pit1 = jako, pit2 = pit-jako, ind=0;
+    while(pit1 && pit2) {
+	if(*m0a <= *m0b) {
+	    m0_apu[ind] = *m0a++;
+	    m1_apu[ind] = *m1a++;
+	    pit1--;
+	}
+	else {
+	    m0_apu[ind] = *m0b++;
+	    m1_apu[ind] = *m1b++;
+	    pit2--;
+	}
+	ind++;
+    }
+    if(pit1) {
+	memcpy(m0_apu+ind, m0a, pit1*sizeof(float));
+	memcpy(m1_apu+ind, m1a, pit1*sizeof(float));
+    }
+    else {
+	memcpy(m0_apu+ind, m0b, pit2*sizeof(float));
+	memcpy(m1_apu+ind, m1b, pit2*sizeof(float));
+    }
+    memcpy(m0, m0_apu, pit*sizeof(float));
+    memcpy(m1, m1_apu, pit*sizeof(float));
+}
+
+void lomituslajittele2_float(float* m0, float* m1, int pit) {
+    float *apu0 = malloc(pit*sizeof(float));
+    float *apu1 = malloc(pit*sizeof(float));
+    assert(apu0 && apu1);
+    _lomlaj2(m0, apu0, m1, apu1, pit);
+    free(apu0);
+    free(apu1);
 }
 
 int argumentit(int argc, char** argv) {
@@ -141,6 +186,10 @@ void* lue_luokitus() {
     return funktio[luokenum]();
 }
 
+int vuoden_päivät(int vuosi) {
+    return 365 + (!(vuosi%4) && ((vuosi%100) || !(vuosi%400)));
+}
+
 int hae_raja(struct laskenta* args, int päivä) {
     struct tm tm0 = {
 	.tm_year = vuosi0+args->vuosi-1900,
@@ -150,12 +199,17 @@ int hae_raja(struct laskenta* args, int päivä) {
     return (mktime(&tm0) - args->vuo_t0) / 86400;
 }
 
+/* Tämä hakee halutun kauden alkupäivän (t0) ja loppupäivän (t1) haluttuna vuonna
+   vuodatan aikakoordinaatiksi muunnetuna.
+   Jos kausi on whole_year_e, palautetaan kalenterivuoden alku- ja loppupäivä. */
 int alkuun(struct laskenta* args, int r, int* t0, int* t1) {
     float päivä0, päivä1;
-    päivä0 = args->kausiptr0[resol*args->vuosi+r];
+    if(!aluemaski[r])
+	return 1;
+    päivä0 = args->kausi==whole_year_e? 0: args->kausiptr0[resol*args->vuosi+r];
     if (päivä0 != päivä0)
 	return 1;
-    päivä1 = args->kausiptr1[resol*args->vuosi+r];
+    päivä1 = args->kausi==whole_year_e? vuoden_päivät(args->vuosi+vuosi0): args->kausiptr1[resol*args->vuosi+r];
     if (päivä1 != päivä1)
 	return 1;
     *t0 = hae_raja(args, päivä0);
@@ -166,6 +220,7 @@ int alkuun(struct laskenta* args, int r, int* t0, int* t1) {
 
 void aikasilmukka_kosteikko(struct laskenta* args, int r, double* kost, double* laji) {
     int t0, t1;
+    if(kost[r] < wraja) return;
     if(alkuun(args, r, &t0, &t1)) return;
     double ala = alat[r/360];
     for(int t=t0; t<t1; t++) {
@@ -193,10 +248,8 @@ void aikasilmukka(struct laskenta* args, int r) {
 void täytä_kosteikkodata(struct laskenta* args) {
     double *restrict osuus0ptr = NCTVAR(*luok_vs, "wetland").data;
     double *restrict osuus1ptr = NCTVAR(*luok_vs, wetlnimet[args->lajinum]).data;
-    for(int r=0; r<resol; r++) {
-	if (osuus0ptr[r] < wraja)   continue;
+    for(int r=0; r<resol; r++)
 	aikasilmukka_kosteikko(args, r, osuus0ptr, osuus1ptr);
-    }
 }
 
 void täytä_köppendata(struct laskenta* args) {
@@ -232,7 +285,8 @@ kosteikko:
 }
 
 float* pintaaloista_kertymäfunktio(float* data, float* cdfptr, int pit) {
-    gsl_sort2_float(data, 1, cdfptr, 1, pit);
+    //gsl_sort2_float(data, 1, cdfptr, 1, pit);
+    lomituslajittele2_float(data, cdfptr, pit);
     for(int i=1; i<pit; i++)
 	cdfptr[i] += cdfptr[i-1];
     float tmp0 = cdfptr[0];
@@ -260,13 +314,16 @@ void tallenna(struct laskenta* args, void* data, int kirjpit, int kausi) {
 float* laita_data(struct laskenta* args, float *kohde, int kirjpit) {
     float* data = args->vuoulos;
     int    pit  = args->sijainti;
-    float* cdf  = pintaaloista_kertymäfunktio(data, args->cdf, pit);
+    float* cdf  = args->cdf;
+    pintaaloista_kertymäfunktio(data, cdf, pit);
     if(pit < kirjpit)
 	printf("liian vähän dataa %i %s, %s\n", pit, args->lajinimi, kaudet[args->kausi]);
     int ind = 0;
     for(int i=0; i<kirjpit; i++) {
 	ind = binsearch(cdf, (float)i/kirjpit, ind, pit);
 	kohde[i] = data[ind]*1e9;
+	if(i && kohde[i] < kohde[i-1])
+	    asm("int $3");
     }
     return kohde;
 }
@@ -278,7 +335,7 @@ void laita_emissio(struct laskenta* args) {
     for(int v=vuosi0; v<vuosi1; v++)
 	fprintf(f, ",%i", v);
     fputc('\n', f);
-    for(int kausi=1; kausi<kausia; kausi++) {
+    for(int kausi=0; kausi<kausia; kausi++) {
 	fprintf(f, "%s", kaudet[kausi]);
 	for(int v=0; v<vuosi1-vuosi0; v++)
 	    fprintf(f, ",%.4lf", args->emissio[kausi*(vuosi1-vuosi0)+v] * SUHT2ABS_KERR(1) * 86400 * 16.0416 * 1e-12);
@@ -322,6 +379,7 @@ int main(int argc, char** argv) {
     float* vuoptr = (float*)apuvar->data;
 
     assert(lue_luokitus());
+    aluemaski = nct_read_from_ncfile("aluemaski.nc", NULL, nc_get_var_ubyte, 1);
 
     int lonpit = NCTVARDIM(*apuvar,2).len;
     int latpit = NCTVARDIM(*apuvar,1).len;
@@ -362,11 +420,12 @@ int main(int argc, char** argv) {
 	memset(emissiotila, 0, vuosia_yht*kausia*sizeof(double));
 	struct laskenta l_args;
 
-	for (int kausi_ind=1; kausi_ind<kausia; kausi_ind++) {
+	int ki0 = !VUODET_ERIKSEEN; // whole_year_e(==0) mukaan jos vuodet erikseen
+	for (int kausi_ind=ki0; kausi_ind<kausia; kausi_ind++) {
 	    l_args = (struct laskenta) {
 		.vuoptr   = vuoptr,
-		    .kausiptr0 = nct_get_var(kausivset, aprintf("%s_start", kaudet[kausi_ind]))->data,
-		    .kausiptr1 = nct_get_var(kausivset, aprintf("%s_end",   kaudet[kausi_ind]))->data,
+		    .kausiptr0 = kausi_ind? nct_get_var(kausivset, aprintf("%s_start", kaudet[kausi_ind]))->data: NULL,
+		    .kausiptr1 = kausi_ind? nct_get_var(kausivset, aprintf("%s_end",   kaudet[kausi_ind]))->data: NULL,
 		    .vuo_t0    = vuo_t0,
 		    .lajinimi  = luoknimet[luokenum][lajinum],
 		    .lajinum   = lajinum,
@@ -385,12 +444,13 @@ int main(int argc, char** argv) {
 		    case kopp_e: täytä_köppendata(&l_args);    break;
 		    case ikir_e: täytä_ikirdata(&l_args);      break;
 		}
+		/* Jos vuodet erikseen, otetaan data talteen jokaisen vuoden jälkeen. */
 		if(VUODET_ERIKSEEN) {
 		    laita_data(&l_args, apu+v*kirjpit, kirjpit);
 		    l_args.sijainti = 0;
 		}
 	    }
-
+	    /* Jos ei vuodet erikseen, otetaan data talteen vasta kaikkien vuosien jälkeen. */
 	    if(!VUODET_ERIKSEEN)
 		laita_data(&l_args, apu, kirjpit);
 	    tallenna(&l_args, apu, kirjpit, kausi_ind);
@@ -408,6 +468,7 @@ int main(int argc, char** argv) {
     free(vuotila);
     free(cdftila);
     free(kost);
+    free(aluemaski);
     nct_free_vset(luok_vs);
     nct_free_vset(&vuo);
     return 0;
