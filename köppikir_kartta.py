@@ -1,9 +1,7 @@
 #!/usr/bin/python3
 import cartopy.crs as ccrs
 from matplotlib.pyplot import *
-import matplotlib as mpl
 from netCDF4 import Dataset
-import matplotlib.patches as patches
 import matplotlib, re, sys, luokat
 
 luokat_köpp = ['C.b', 'D.a', 'D.b', 'D.c', 'D.d', 'ET']
