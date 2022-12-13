@@ -6,6 +6,21 @@ kansio=${kansio}/codedata
 k0=$kansio
 mkdir -p $kansio
 
+kansio=$k0/nctietue2
+mkdir -p $kansio
+cd $kansio
+git -C ~/nctietue2 archive master | tar -x -C $kansio
+rm -rf .gitignore tools
+echo Second paragraph at ../README > README
+ed -s $kansio/config.mk <<EOF
+/Uncomment
+;s/^/#/
+w
+q
+EOF
+cd -
+
+kansio=$k0
 cp -l \
     laatikkokuvaaja.py \
     luokat.py \
@@ -249,7 +264,7 @@ cat > $k0/create_links.sh <<EOF
 ( cd create_köppen;         ln -s ../köppen1x1maski.nc . )
 ( cd create_köppen/create_köppen1x1maski; ln -s ../../aluemaski.nc . )
 ( cd create_vuotaulukot;    ln -s ../köppenmaski.txt ../ikirdata.nc ../BAWLD1x1.nc ../flux1x1.nc ../kaudet.nc . )
-( cd create_vuojakaumadata; ln -s ../köppenmaski.txt ../ikirdata.nc ../BAWLD1x1.nc ../flux1x1.nc ../kaudet.nc . )
+( cd create_vuojakaumadata; ln -s ../köppenmaski.txt ../ikirdata.nc ../BAWLD1x1.nc ../flux1x1.nc ../kausien_päivät.nc . )
 ( cd create_kaudet;         ln -s ../aluemaski.nc . )
 ( cd create_kaudet/create_data/create_data; ln -s ../../../aluemaski.nc . )
 ( cd create_BAWLD1x1;       ln -s ../aluemaski.nc . )
@@ -259,21 +274,30 @@ chmod 755 $k0/create_links.sh
 cat > $k0/README <<EOF
 It is necessary to run create_links.sh before attempting to run most codes elsewhere than in the root directory.
 
+It is also necessary to install nctietue2-library before running some/most of the C-codes.
+That is a custom C-library to handle netcdf files.
+In nctietue2 directory, it can be installed normally with:
+make
+make install # as root
+If you don't want to install some random library to your computer, then this works as well:
+make
+export PKG_CONFIG_PATH=\$PWD
+export LD_LOAD_PATH=\$PWD
+sed -Ei "s|gcc (.*pkg-config.*nctietue2)|gcc -I\$PWD -L\$PWD \1|" \`find .. -name Makefile\`
+
 Each directory contains the data that is needed to run the codes
 and if data was created using other codes, those codes and their data are given one directory deeper in create_data
 The root directory contains all codes that make the final results used in the article.
-C-source files will compile without any special arguments (e.g. cc file.c) if Makefile is not given in that directory.
 
-If a file is needed in many directories, it is given only once
-and it has to be linked to other directories to run those codes.
-That is automated in file create_links.sh which puts needed links to right directories.
+C-source files will compile without any special arguments (e.g. cc file.c) if Makefile is not given in that directory.
 
 fig_11.py and table_8.py are the same file but given twice for naming reasons.
 
-Dictionary:
+File names:
 aluemaski			region mask
 ikirdata                        permafrost data
 kaudet                          seasons
+kausien_päivät			start and end days of seasons
 laatikkokuvaaja.py		a module for making whisker plots
 pintaalat			surface areas
 vuo				flux
