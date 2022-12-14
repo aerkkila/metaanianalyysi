@@ -274,22 +274,25 @@ chmod 755 $k0/create_links.sh
 cat > $k0/README <<EOF
 It is necessary to run create_links.sh before attempting to run most codes elsewhere than in the root directory.
 
-It is also necessary to install nctietue2-library before running some/most of the C-codes.
+It is also necessary to install nctietue2-library before running some of the C-codes.
 That is a custom C-library to handle netcdf files.
 In nctietue2 directory, it can be installed normally with:
 make
 make install # as root
-If you don't want to install some random library to your computer, then this works as well:
+Alternatively, this can be done without root privilidges, or if you don't want to install some random library to your computer:
 make
 export PKG_CONFIG_PATH=\$PWD
 export LD_LOAD_PATH=\$PWD
 sed -Ei "s|gcc (.*pkg-config.*nctietue2)|gcc -I\$PWD -L\$PWD \1|" \`find .. -name Makefile\`
+# sed command edits Makefiles and should be run only once, otherwise the changes will cumulate
 
 Each directory contains the data that is needed to run the codes
 and if data was created using other codes, those codes and their data are given one directory deeper in create_data
 The root directory contains all codes that make the final results used in the article.
 
-C-source files will compile without any special arguments (e.g. cc file.c) if Makefile is not given in that directory.
+C-source files will compile without any special arguments if Makefile is not given in that directory.
+Most C codes use non-ascii utf8 characters in variable names
+which gcc cannot compile if version < 10.1.
 
 fig_11.py and table_8.py are the same file but given twice for naming reasons.
 
@@ -300,6 +303,7 @@ kaudet                          seasons
 kausien_päivät			start and end days of seasons
 laatikkokuvaaja.py		a module for making whisker plots
 pintaalat			surface areas
+ttest_wcateg.py			this was used in the last paragraph before section Wetland classes on mixed and non-mixed permafrost
 vuo				flux
 vuojakaumadata			flux distribution data
 vuotaulukot			flux tables
