@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/bin/env python3
 import numpy as np
 from netCDF4 import Dataset
 from laatikkokuvaaja import laatikkokuvaaja
@@ -110,7 +110,7 @@ def main():
                 painostot_ikir[iluok] = painostot_ikir[iluok][maski]
 
             for iluok in range(len(luokat.köpp)):
-                maski  = ikirdata == ikirluvut[iluok]
+                maski  = köppdata[iluok]
                 pdatastot_köpp[iluok] = dt[maski]
                 painostot_köpp[iluok] = painot[maski]
                 maski = pdatastot_köpp[iluok] == pdatastot_köpp[iluok]
