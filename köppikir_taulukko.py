@@ -45,17 +45,30 @@ def main():
         taul[ii,ki+2] = taul[ii,ki+1] / np.sum(alat[ikir==ii]) * 1e6
 
     f = open('köppikir.tex', 'w')
-    f.write('\\begin{tabular}{l|%s}\nArea (1000 km²)' %('r'*(len(luokat.köpp)+2)))
+    f.write('\\begin{tabular}{l|%s' %('r'*(len(luokat.köpp)+1)))
+    f.write('|r}\nArea (1000 km²)')
     for k in luokat.köpp:
         f.write(' & ' + k)
     f.write(' & wetland & wetland ‰')
     f.write(' \\\\\n\\midrule\n')
-    luokat.ikir.extend(['wetland', 'wetland ‰'])
+
     for ii,i in enumerate(luokat.ikir):
         f.write(i.replace('_',' '))
-        for ki in range(len(luokat.köpp)+2*(ii<len(luokat.ikir)-2)):
+        for ki in range(len(luokat.köpp)+2):
             f.write(' & %i' %(taul[ii,ki]))
         f.write(' \\\\\n')
+
+    f.write('wetland')
+    for ki in range(len(luokat.köpp)):
+        f.write(' & %i' %(taul[len(luokat.ikir),ki]))
+    f.write(' & & \\\\\n')
+    f.write(' \\midrule\n')
+
+    f.write('wetland ‰')
+    for ki in range(len(luokat.köpp)):
+        f.write(' & %i' %(taul[len(luokat.ikir)+1,ki]))
+    f.write(' & & \\\\\n')
+
     f.write('\\end{tabular}\n')
     f.close()
 
