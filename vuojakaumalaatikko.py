@@ -69,9 +69,9 @@ def main():
     dt,nimet = lue(luokitus, np.zeros(len(luokitus), bool))
     aja(dt, nimet, '0')
 
-    luokitus = np.array([*luokitus, 'fen', 'tundra_wetland'])
+    luokitus = np.array([*luokitus, 'fen', 'permafrost_bog', 'tundra_wetland'])
     kost = np.ones(len(luokitus), bool)
-    kost[-2:] = False
+    kost[-3:] = False
     params()
     dt,nimet = lue(luokitus, kost)
     aja(dt, nimet, '1')
