@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/bin/env python
 from netCDF4 import Dataset
 import numpy as np
 import luokat, re
@@ -29,7 +29,7 @@ def lue_data():
 
 def main():
     ikir, köpp, wetl, alat = lue_data()
-    taul = np.empty([len(luokat.ikir)+1, len(luokat.köpp)+1], int) # +1 wetland-luokasta
+    taul = np.empty([len(luokat.ikir)+2, len(luokat.köpp)+2], int) # +2 wetland-luokasta, alue ja osuus
 
     for ki in range(len(luokat.köpp)):
         for ii in range(len(luokat.ikir)):
@@ -37,22 +37,24 @@ def main():
         # kosteikko tälle ilmastoluokalle
         tmpmaski = (köpp[ki]) & (wetl>=0.05)
         taul[ii+1,ki] = np.sum(alat[tmpmaski] * wetl[tmpmaski]) * 1e-3
+        taul[ii+2,ki] = taul[ii+1,ki] / np.sum(alat[köpp[ki]]) * 1e6
     # kosteikot kaikille ikiroutaluokille
     for ii in range(len(luokat.ikir)):
         tmpmaski = (ikir==ii) & (wetl>=0.05)
         taul[ii,ki+1] = np.sum(alat[tmpmaski] * wetl[tmpmaski]) * 1e-3
+        taul[ii,ki+2] = taul[ii,ki+1] / np.sum(alat[ikir==ii]) * 1e6
 
     f = open('köppikir.tex', 'w')
-    f.write('\\begin{tabular}{l|%s}\nArea (1000 km²)' %('r'*(len(luokat.köpp)+1)))
+    f.write('\\begin{tabular}{l|%s}\nArea (1000 km²)' %('r'*(len(luokat.köpp)+2)))
     for k in luokat.köpp:
         f.write(' & ' + k)
-    f.write(' & wetland')
+    f.write(' & wetland & wetland ‰')
     f.write(' \\\\\n\\midrule\n')
-    luokat.ikir.append('wetland')
+    luokat.ikir.extend(['wetland', 'wetland ‰'])
     for ii,i in enumerate(luokat.ikir):
         f.write(i.replace('_',' '))
-        for ki in range(len(luokat.köpp)+(ii<len(luokat.ikir)-1)):
-            f.write(' & %i' %taul[ii,ki])
+        for ki in range(len(luokat.köpp)+2*(ii<len(luokat.ikir)-2)):
+            f.write(' & %i' %(taul[ii,ki]))
         f.write(' \\\\\n')
     f.write('\\end{tabular}\n')
     f.close()
