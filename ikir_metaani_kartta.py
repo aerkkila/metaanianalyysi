@@ -6,7 +6,6 @@ import matplotlib.colors as mcolors
 import matplotlib, sys, luokat
 from matplotlib.pyplot import *
 from matplotlib.colors import ListedColormap as lcmap
-from multiprocessing import Process
 
 varoitusväri = '\033[1;33m'
 väri0        = '\033[0m'
@@ -102,10 +101,10 @@ def tee_alikuva(subplmuoto, subpl, **axes_kwargs):
 pripost_sis = ['flux_bio_prior', 'flux_bio_posterior'][::-1]
 pripost_ulos = ['pri', 'post'][::-1]
 
-def aja(ppind, ftnum):
+def aja(ppind):
     global ch4data, ikir_ind, vkartta
     ch4data1 = ch4data0[pripost_sis[ppind]]
-    kaudet   = xr.open_dataarray("./kaudet%i.nc" %(ftnum))
+    kaudet   = xr.open_dataarray("./kaudet.nc")
     for k,kausi in enumerate(luokat.kaudet):
         if k == 0:
             ch4data = ch4data1.where(kaudet).mean(dim='time')
@@ -117,22 +116,15 @@ def aja(ppind, ftnum):
         for ikir_ind in range(len(luokat.ikir)):
             sca(tee_alikuva([1,1], 0, projection=projektio))
             piirrä()
-            title("%s, %s, data %i" %(luokat.ikir[ikir_ind],
-                                      luokat.kaudet[k].replace('_', ' '), ftnum))
+            title("%s, %s" %(luokat.ikir[ikir_ind], luokat.kaudet[k].replace('_', ' ')))
             varipalkki()
             if not tallenna:
                 show()
                 continue
-            tunniste = "%s_%s_%s_ft%i" %(pripost_ulos[ppind], luokat.ikir[ikir_ind].replace(' ', '_'),
-                                         luokat.kaudet[k], ftnum)
+            tunniste = "%s_%s_%s_ft" %(pripost_ulos[ppind], luokat.ikir[ikir_ind].replace(' ', '_'),
+                                         luokat.kaudet[k])
             savefig("./kuvia/yksittäiset/%s_%s.png" %(sys.argv[0][:-3], tunniste))
             clf()
-
-def aja_(*args):
-    try:
-        aja(*args)
-    except KeyboardInterrupt:
-        sys.exit()
 
 def main():
     global projektio,platecarree,kattavuus,ikirouta,ch4data0
@@ -149,15 +141,8 @@ def main():
     projektio   = ccrs.LambertAzimuthalEqualArea(central_latitude=90)
     kattavuus   = [-180,180,30,90]
 
-    pr = np.empty(6, object)
-    i=0
     for ppind in range(2):
-        for ftnum in range(3):
-            pr[i] = Process(target=aja_, args=(ppind,ftnum))
-            pr[i].start()
-            i+=1
-    for p in pr:
-        p.join()
+        aja(ppind)
 
 if __name__=='__main__':
     try:
