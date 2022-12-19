@@ -55,19 +55,17 @@ nimet0='
 köppikir_kartta.py
 kaudet_laatikko.py
 permafrost_wetland_kartta.py
-xvuo_laatikko.py
 vuojakaumalaatikko.py
 vuojakaumalaatikko_vuosittain.py
 ttesti_luokat.py
 ttesti.py
 '
 nimet1='
-fig_1,2.py
-fig_3,4.py
-fig_5.py
-fig_6.py
-fig_7.py
-fig_11.py
+fig_1.py
+fig_2,3.py
+fig_4.py
+fig_5,6.py
+fig_10.py
 ttest_wcateg.py
 ttest_mixed-pure.py
 '
@@ -82,12 +80,12 @@ vuojakaumalaatikko_vuosittain.py
 nimet1='
 table_1.py
 table_2.c
-table_3,4,5,6.c
-table_8.py
+table_3-7.c
+table_9.py
 '
 kopioi
 
-kansio=$k0/table_7__figure_8,9,10
+kansio=$k0/table_8+figures_7-9
 regrdir=$kansio
 mkdir -p $kansio
 cd wregressio
@@ -102,11 +100,11 @@ Makefile
 laske.sh
 '
 nimet1='
-fig_8,9.c
-table_7.c
+fig_7,8.c
+table_8.c
 virhepalkit.pyx
 setup.py
-fig_10.py
+fig_9.py
 piirrä.py
 Makefile
 run.sh
@@ -277,14 +275,14 @@ It is necessary to run create_links.sh before attempting to run most codes elsew
 It is also necessary to install nctietue2-library before running some of the C-codes.
 That is a custom C-library to handle netcdf files.
 In nctietue2 directory, it can be installed normally with:
-make
-make install # as root
-Alternatively, this can be done without root privilidges, or if you don't want to install some random library to your computer:
-make
-export PKG_CONFIG_PATH=\$PWD
-export LD_LOAD_PATH=\$PWD
-sed -Ei "s|gcc (.*pkg-config.*nctietue2)|gcc -I\$PWD -L\$PWD \1|" \`find .. -name Makefile\`
-# sed command edits Makefiles and should be run only once, otherwise the changes will cumulate
+    make
+    make install # as root
+Alternatively, this can be done without root privilidges:
+    make
+    export PKG_CONFIG_PATH=\$PWD
+    export LD_LOAD_PATH=\$PWD
+    sed -Ei "s|gcc (.*pkg-config.*nctietue2)|gcc -I\$PWD -L\$PWD \1|" \`find .. -name Makefile\`
+Last sed command edits Makefiles and should be run only once, otherwise the changes will cumulate.
 
 Each directory contains the data that is needed to run the codes
 and if data was created using other codes, those codes and their data are given one directory deeper in create_data
@@ -294,7 +292,7 @@ C-source files will compile without any special arguments if Makefile is not giv
 Most C codes use non-ascii utf8 characters in variable names
 which gcc cannot compile if version < 10.1.
 
-fig_11.py and table_8.py are the same file but given twice for naming reasons.
+fig_10.py and table_9.py are the same file but given twice for naming reasons.
 
 File names:
 aluemaski			region mask
