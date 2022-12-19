@@ -87,7 +87,7 @@ kuvat:
 	./köppikir_kartta.py -s
 	./köppikir_kartta.py ikir -s
 	./kaudet_laatikko.py -s
-	./bawld_ikir_kartta.py -s
+	./permafrost_wetland_kartta.py -s
 	./xvuo_laatikko.py -s
 	./vuojakaumalaatikko.py -s
 	./vuojakaumalaatikko_vuosittain.py -s

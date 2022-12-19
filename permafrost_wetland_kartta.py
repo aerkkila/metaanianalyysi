@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/bin/env python
 import cartopy.crs as ccrs
 from matplotlib.pyplot import *
 import matplotlib as mpl
@@ -11,21 +11,16 @@ lajit = ['permafrost_bog', 'tundra_wetland']
 def tee_kuva(rajat):
     ax.coastlines()
     ax.set_extent(kattavuus, platecarree)
+    cm = get_cmap(cmap, 256)
     normi = mpl.colors.BoundaryNorm(boundaries=rajat, ncolors=256)
-    pcolormesh(mx, my, a, transform=platecarree, cmap=get_cmap(cmap, 256), norm=normi)
-
-def väripalkki(rajat):
-    nimet = ['non-prf wetland','both','prf wetland']
-    r = np.empty(len(rajat)-1, np.float32)
-    for i in range(len(rajat)-1):
-        r[i] = np.mean(rajat[i:i+2])
-    locator = mpl.ticker.FixedLocator(r)
-    cbar = colorbar(ticks=locator)
-    cbar.set_ticklabels(nimet)
+    pcolormesh(mx, my, a, transform=platecarree, cmap=cm, norm=normi)
+    for nimiö,arvo in zip(['non-permafrost wetland', 'both', 'permafrost wetland'], [0.01, 0.5, 0.99]):
+        plot(-1, -1, '.', markersize=25, transform=platecarree, color=cm(normi(arvo)), label=nimiö)
+    legend(loc='lower left')
 
 if __name__=='__main__':
     rcParams.update({'font.size': 18,
-                     'figure.figsize': (12,10)})
+                     'figure.figsize': (10,10)})
     ds          = Dataset('BAWLD1x1.nc', 'r')
     platecarree = ccrs.PlateCarree()
     projektio   = ccrs.LambertAzimuthalEqualArea(central_latitude=90)
@@ -45,9 +40,8 @@ if __name__=='__main__':
     ax = axes(projection=projektio)
     rajat = np.array([0,0.03,0.97,1])
     tee_kuva(rajat)
-    väripalkki(rajat)
     tight_layout()
     if('-s') in sys.argv:
-        savefig('kuvia/bawld_ikir_kartta.png')
+        savefig('kuvia/permafrost_wetland_kartta.png')
     else:
         show()
