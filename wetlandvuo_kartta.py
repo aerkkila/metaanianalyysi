@@ -3,6 +3,8 @@ from netCDF4 import Dataset
 import numpy as np
 from matplotlib.pyplot import *
 import cartopy.crs as ccrs
+import luokat
+from matplotlib.colors import ListedColormap as lcmap
 
 def tee_data():
     ds = Dataset('flux1x1.nc', 'r')
@@ -16,8 +18,15 @@ def tee_data():
     wet = np.ma.getdata(ds['wetland'][:])
     ds.close
 
-    vuo = np.where(wet<0.05, np.nan, vuo)
+    vuo = np.where(wet<0.05, 0, vuo)
     return vuo, lat, lon
+
+def lue_ikirouta():
+    ds = Dataset('ikirdata.nc', 'r')
+    ret = np.ma.getdata(ds['luokka'][:])
+    ret = np.round(np.mean(ret, axis=0)).astype(np.int8)
+    ds.close()
+    return ret
 
 def main():
     rcParams.update({'font.size': 15,
@@ -32,8 +41,11 @@ def main():
     ax.set_extent(kattavuus, platecarree)
     ax.coastlines()
 
-    pcolormesh(lon, lat, vuo, transform=platecarree, cmap=get_cmap('gnuplot2_r'))
+    ikir = lue_ikirouta()
+    pcolormesh(lon, lat, np.where(ikir==1,vuo,np.nan), transform=platecarree, cmap=get_cmap('gnuplot2_r'))
     colorbar()
+
+
     tight_layout()
     show()
 
