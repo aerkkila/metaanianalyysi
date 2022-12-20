@@ -10,7 +10,8 @@ from matplotlib.colors import ListedColormap as lcmap
 varoitusväri = '\033[1;33m'
 väri0        = '\033[0m'
 ikir_ind     = 0
-kost = True
+ikirjako = False
+kost     = True
 
 def luo_värikartta(ch4data):
     global pienin,suurin
@@ -44,14 +45,18 @@ def piirrä(ikir_ind):
 
     #Varsinainen data
     normi = mcolors.TwoSlopeNorm(0,max(pienin*6,-suurin),suurin)
-    data = np.where(ikirouta==ikir_ind, ch4data, np.nan)
+    if ikirjako:
+        data = np.where(ikirouta==ikir_ind, ch4data, np.nan)
+    else:
+        data = ch4data
     pcolormesh(lon, lat, data, transform=platecarree, cmap=vkartta, norm=normi)
     c = colorbar()
     c.set_label('nmol m$^{-2}$ s$^{-1}$')
 
     #Tämä asettaa muut ikiroutaluokka-alueet harmaaksi.
-    harmaa = lcmap(harmaaväri)
-    pcolormesh(lon, lat, np.where(ikirouta!=ikir_ind, 0, np.nan), transform=platecarree, cmap=harmaa)
+    if ikirjako:
+        harmaa = lcmap(harmaaväri)
+        pcolormesh(lon, lat, np.where(ikirouta!=ikir_ind, 0, np.nan), transform=platecarree, cmap=harmaa)
 
     #Tämä asettaa maskin ulkopuolisen alueen eri väriseksi
     harmaa = lcmap(ulkoväri)
@@ -67,21 +72,31 @@ def aja():
     ds.close()
     k = 0
     assert(k==0)
-    ch4data = np.nanmean(np.where(ch4data0!=0, ch4data0, np.nan), axis=0)
+    ch4data = np.nanmean(ch4data0, axis=0)
     if kost:
         ch4data = np.where((wetl>=0.05), ch4data/wetl, np.nan)
 
     vkartta = luo_värikartta(ch4data)
 
-    for ikir_ind in range(len(luokat.ikir)):
+    for ikir_ind in range(len(luokat.ikir) if ikirjako else 1):
         ax = axes(projection=projektio)
         piirrä(ikir_ind)
-        title("%s, %s" %(luokat.ikir[ikir_ind], luokat.kaudet[k].replace('_', ' ')))
+        if ikirjako:
+            if k:
+                tunniste = "%s, %s" %(luokat.ikir[ikir_ind], luokat.kaudet[k])
+            else:
+                tunniste("%s" %(luokat.ikir[ikir_ind]))
+        else:
+            if k:
+                tunniste("%s" %(luokat.kaudet[k]))
+            else:
+                tunniste = ''
+        title(tunniste)
         tight_layout()
         if not '-s' in sys.argv:
             show()
             continue
-        tunniste = "%s_%s" %(luokat.ikir[ikir_ind].replace(' ', '_'), luokat.kaudet[k])
+        tunniste = tunniste.replace(', ','_')
         savefig("./kuvia/yksittäiset/%s_%s.png" %(sys.argv[0][:-3], tunniste))
         clf()
 
@@ -110,7 +125,7 @@ def main():
 
     platecarree = ccrs.PlateCarree()
     projektio   = ccrs.LambertAzimuthalEqualArea(central_latitude=90)
-    kattavuus   = [-180,180,40,90]
+    kattavuus   = [-180,180,45,90]
 
     aja()
 
