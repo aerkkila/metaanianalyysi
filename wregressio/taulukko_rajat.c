@@ -80,7 +80,7 @@ int main() {
 	fprintf(f, " & \\multicolumn{2}{c}{%s}", kaudet[k]);
     fprintf(f, " \\\\\n");
     for(int k=0; k<kausia; k++)
-	fprintf(f, " & {non-permafrost} & {permafrost}");
+	fprintf(f, " & {nonpermafrost} & {permafrost}");
     fprintf(f, " \\\\\n\\midrule\n");
 
     kirjoita(f, "upper limit", ylä, 0);

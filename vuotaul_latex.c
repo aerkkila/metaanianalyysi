@@ -23,8 +23,8 @@
 const char* pripost[] = {"post", "pri"};
 const char* kaudet[] = {"summer", "freezing", "winter"};
 const char* ylänimet[] = {"wetland", "köppen", "ikir"};
-const char* wetlnimet[] = {"bog", "fen", "marsh", "permafrost_bog", "tundra_wetland", "wetland", "non-wetland"};
-const char* ikirnimet[] = {"non_permafrost", "sporadic", "discontinuous", "continuous"};
+const char* wetlnimet[] = {"bog", "fen", "marsh", "permafrost_bog", "tundra_wetland", "wetland", "nonwetland"};
+const char* ikirnimet[] = {"nonpermafrost", "sporadic", "discontinuous", "continuous"};
 const char* köppnimet[] = {"D.b", "D.c", "D.d", "ET"};
 int 
     pit_kaudet=ARRPIT(kaudet),
@@ -165,7 +165,7 @@ void kirjoita_data(int ppnum, float* taul) {
 
 #if !KOST_KAHTIA
     for(int i=0; i<pit_ikir; i++) {
-	K("%s", korvaa(ikirnimet[i], '_', ' '));
+	K("%s", ikirnimet[i]);
 	kirjoita_rivi(f, taul);
 	taul += pit_kaudet*2;
     }

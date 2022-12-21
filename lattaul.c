@@ -6,8 +6,8 @@
 
 #define K(...) fprintf(f, __VA_ARGS__)
 #define arrpit(a) ((sizeof(a)) / sizeof(*(a)))
-const char* wetlnimet[] = {"bog", "fen", "marsh", "permafrost_bog", "tundra_wetland", "wetland", "non-wetland"};
-const char* ikirnimet[] = {"non_permafrost", "sporadic", "discontinuous", "continuous"};
+const char* wetlnimet[] = {"bog", "fen", "marsh", "permafrost_bog", "tundra_wetland", "wetland", "nonwetland"};
+const char* ikirnimet[] = {"nonpermafrost", "sporadic", "discontinuous", "continuous"};
 const char* köppnimet[] = {"D.b", "D.c", "D.d", "ET"};
 int pit_wetl = arrpit(wetlnimet),
     pit_ikir = arrpit(ikirnimet),
@@ -44,7 +44,7 @@ void kirjoita_data(FILE* f) {
     kirjoita_osio(f, itaul, ikirnimet, 2); K("\\midrule\n");
     kirjoita_osio(f, ktaul, köppnimet, 2); K("\\midrule\n");
     _kirjoita_osio(f, wtaul, wetlnimet, 2, arrpit(wetlnimet)-1);
-    K("non wetland & %.3f \\\\\n", wtaul[arrpit(wetlnimet)-1][0]);
+    K("nonwetland & %.3f \\\\\n", wtaul[arrpit(wetlnimet)-1][0]);
     K("\\end{tabular}\n");
 }
 

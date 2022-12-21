@@ -13,8 +13,8 @@ if __name__=='__main__':
     #taulukko = np.empty([len(wnimet),len(prf)], np.float32)
     tied = open('%s_1000km2.csv' %(sys.argv[0][:-3]), 'w')
     tied1 = open('%s_prosentti.csv' %(sys.argv[0][:-3]), 'w')
-    tied.write(',non_permafrost,sporadic,discontinuous,continuous\n')
-    tied1.write(',non_permafrost,sporadic,discontinuous,continuous\n')
+    tied.write(',nonpermafrost,sporadic,discontinuous,continuous\n')
+    tied1.write(',nonpermafrost,sporadic,discontinuous,continuous\n')
     for w,wnimi in enumerate(wnimet):
         tied.write("%s" %(wnimi))
         tied1.write("%s" %(wnimi))

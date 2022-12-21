@@ -21,7 +21,7 @@ const double r2 = 6362132.0*6362132.0;
 
 const int resol = 19800;
 
-const char* ikirnimet[]      = {"non_permafrost", "sporadic", "discontinuous", "continuous"};
+const char* ikirnimet[]      = {"nonpermafrost", "sporadic", "discontinuous", "continuous"};
 const char* köppnimet[]      = {"D.b", "D.c", "D.d", "ET"};
 //const char* wetlnimet[]      = {"wetland", "bog", "fen", "marsh", "permafrost_bog", "tundra_wetland"};
 //enum                           {wetland_e, bog_e, fen_e, marsh_e, permafrost_bog_e, tundra_wetland_e};
@@ -599,7 +599,7 @@ int main(int argc, char** argv) {
 	    .kausiptr     = kausiptr,
 	    .alkuhetki    = (tmt){.t=t0, .tm=tm0},
 	    .lajinum      = luokkia,
-	    .lajinimi     = "non-wetland",
+	    .lajinimi     = "nonwetland",
 	};
 	memcpy(l_args.keskiarvo, keskiarvo, sizeof(avg_t));
 	laske_kuiva(&l_args);

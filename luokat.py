@@ -1,4 +1,4 @@
-ikir        = ['non_permafrost', 'sporadic', 'discontinuous', 'continuous']
+ikir        = ['nonpermafrost', 'sporadic', 'discontinuous', 'continuous']
 köpp        = ["D.b", "D.c", "D.d", "ET"]
 kopp        = köpp
 wetl        = ['wetland', 'bog', 'fen', 'marsh', 'permafrost_bog', 'tundra_wetland']

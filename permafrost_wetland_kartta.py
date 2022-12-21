@@ -14,7 +14,7 @@ def tee_kuva(rajat):
     cm = get_cmap(cmap, 256)
     normi = mpl.colors.BoundaryNorm(boundaries=rajat, ncolors=256)
     pcolormesh(mx, my, a, transform=platecarree, cmap=cm, norm=normi)
-    for nimiö,arvo in zip(['non-permafrost wetland', 'both', 'permafrost wetland'], [0.01, 0.5, 0.99]):
+    for nimiö,arvo in zip(['nonpermafrost wetland', 'both', 'permafrost wetland'], [0.01, 0.5, 0.99]):
         plot(-1, -1, '.', markersize=25, transform=platecarree, color=cm(normi(arvo)), label=nimiö)
     legend(loc='lower left')
 

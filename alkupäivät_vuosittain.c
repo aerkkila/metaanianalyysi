@@ -29,7 +29,7 @@ const double r2 = 6362132.0*6362132.0;
 
 const int resol = 19800;
 
-const char* ikirnimet[] = {"non_permafrost", "sporadic", "discontinuous", "continuous"};
+const char* ikirnimet[] = {"nonpermafrost", "sporadic", "discontinuous", "continuous"};
 const char* koppnimet[] = {"D.b", "D.c", "D.d", "ET"};
 const char* wetlnimet[] = {"wetland", "bog", "fen", "marsh", "tundra_wetland", "permafrost_bog"};
 const char* kaudet[]    = {"whole_year", "summer", "freezing", "winter"};
