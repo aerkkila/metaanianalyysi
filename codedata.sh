@@ -20,6 +20,10 @@ q
 EOF
 cd -
 
+kansio=$k0/latex_source_of_the_article
+mkdir -p $kansio
+git -C ~/metaanijulkaisu archive master | tar -x -C $kansio
+
 kansio=$k0
 cp -l \
     laatikkokuvaaja.py \
@@ -273,15 +277,19 @@ cat > $k0/README <<EOF
 It is necessary to run create_links.sh before attempting to run most codes elsewhere than in the root directory.
 
 It is also necessary to install nctietue2-library before running some of the C-codes.
-That is a custom C-library to handle netcdf files.
-In nctietue2 directory, it can be installed normally with:
+That is a custom C-library to handle netcdf files
+and given here as a directory.
+Go to nctietue2 directory and then it can be installed normally with:
     make
     make install # as root
+To remove the library, run:
+    make uninstall # as root
 Alternatively, this can be done without root privilidges:
     make
     export PKG_CONFIG_PATH=\$PWD
     export LD_LOAD_PATH=\$PWD
     sed -Ei "s|gcc (.*pkg-config.*nctietue2)|gcc -I\$PWD -L\$PWD \1|" \`find .. -name Makefile\`
+In this case nothing is intalled and therefore no need to uninstall.
 Last sed command edits Makefiles and should be run only once, otherwise the changes will cumulate.
 
 Each directory contains the data that is needed to run the codes
@@ -301,7 +309,7 @@ kaudet                          seasons
 kausien_päivät			start and end days of seasons
 laatikkokuvaaja.py		a module for making whisker plots
 pintaalat			surface areas
-ttest_wcateg.py			this was used in the last paragraph before section Wetland classes on mixed and non-mixed permafrost
+ttest_wcateg.py			t-tests in section Results: Total emission and average flux
 vuo				flux
 vuojakaumadata			flux distribution data
 vuotaulukot			flux tables
