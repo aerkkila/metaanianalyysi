@@ -51,7 +51,10 @@ def työstä_kausi(tiedosto, taul):
         f.seek(0)
         for i,suure2 in enumerate(luok):
             d2 = lue(f, suure2)
-            taul[j,i] = laske(d1,d2,suure1,suure2, (i<=imarsh or j<=imarsh) and (i>imarsh or j>imarsh))
+            eri = False if 'sama' in sys.argv else\
+                  True  if 'eri'  in sys.argv else\
+                  (i<=imarsh or j<=imarsh) and (i>imarsh or j>imarsh)
+            taul[j,i] = laske(d1,d2,suure1,suure2, eri)
     f.close()
     return taul
 
