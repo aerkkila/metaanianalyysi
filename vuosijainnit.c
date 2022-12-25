@@ -63,6 +63,36 @@ char* luo_alue(const double* prfwet, const double* WET, char* alue, int xyres) {
 const char* luokat[] = {"bog", "fen", "marsh", "permafrost_bog", "tundra_wetland"};
 const int luokkia = sizeof(luokat)/sizeof(char*);
 
+struct Arg {
+    struct tiedot tiedot;
+    nct_vset *tallenn, *bawvset;
+    int j;
+};
+int arg_luettu;
+
+void* tee_luokka(void* varg) {
+    struct Arg arg = *(struct Arg*)varg;
+    arg_luettu = 1;
+    arg.tiedot.wet = nct_load_data_with(arg.bawvset, luokat[arg.j], nc_get_var_double, sizeof(double));
+    const struct tiedot* restrict tiedot = &arg.tiedot;
+    double keskivuo = pisteettä_vuo(tiedot, -1);
+    printf("%lf, %s\033[K\n", keskivuo, luokat[arg.j]);
+    float *uusidata = malloc(tiedot->res*sizeof(float));
+
+    for(int i=0; i<tiedot->res; i++) {
+	if((i&((1<<5)-1)) == 0) {
+	    printf("\033[%iC %i/%i \r", arg.j*15, i, tiedot->res);
+	    fflush(stdout);
+	}
+	if(!tiedot->alue[i]) {
+	    uusidata[i] = 0.0f / 0.0f;
+	    continue; }
+	uusidata[i] = pisteettä_vuo(tiedot, i) - keskivuo;
+    }
+
+    return uusidata;
+}
+
 int main() {
     nct_vset *aluevset = nct_read_ncfile("aluemaski.nc"),
 	     *bawvset  = nct_read_ncfile_info("BAWLD1x1.nc"),
@@ -88,28 +118,37 @@ int main() {
     nct_vset tallenn = {0};
     nct_copy_var(&tallenn, nct_get_var(aluevset, "lat"), 1);
     nct_copy_var(&tallenn, nct_get_var(aluevset, "lon"), 1);
-    int varid[] = {0,1};
     lat = tallenn.vars[0]->data;
     lonpit = nct_get_varlen(tallenn.vars[1]);
     
-    for(int j=0; j<luokkia; j++) {
-        tiedot.wet = nct_load_data_with(bawvset, luokat[j], nc_get_var_double, sizeof(double));
-	double keskivuo = pisteettä_vuo(&tiedot, -1);
-	printf("%lf, %s\n", keskivuo, luokat[j]);
-	continue;
-	float *uusidata = malloc(xyres*sizeof(float));
-
-	for(int i=0; i<xyres; i++) {
-	    printf("%i/%i \r", i+xyres*j, xyres*luokkia);
-	    fflush(stdout);
-	    if(!tiedot.alue[i]) {
-		uusidata[i] = 0.0f / 0.0f;
-		continue; }
-	    uusidata[i] = pisteettä_vuo(&tiedot, i) - keskivuo;
-	}
-
-	nct_add_var(&tallenn, uusidata, NC_FLOAT, (char*)luokat[j], 2, varid);
+    pthread_t säikeet[luokkia-1];
+    for(int j=0; j<luokkia-1; j++) {
+	struct Arg arg = {
+	    .tiedot  = tiedot,
+	    .tallenn = &tallenn,
+	    .bawvset = bawvset,
+	    .j       = j,
+	};
+	arg_luettu = 0;
+	pthread_create(säikeet+j, NULL, tee_luokka, &arg);
+	while(!arg_luettu)
+	    asm("nop");
     }
+    struct Arg arg = {
+	.tiedot  = tiedot,
+	.tallenn = &tallenn,
+	.bawvset = bawvset,
+	.j       = luokkia-1,
+    };
+    void* loppudata = tee_luokka(&arg);
+    int varid[] = {0,1};
+    for(int i=0; i<luokkia-1; i++) {
+	void* data;
+	pthread_join(säikeet[i], &data);
+	nct_add_var(&tallenn, data, NC_FLOAT, (char*)luokat[i], 2, varid);
+    }
+    nct_add_var(&tallenn, loppudata, NC_FLOAT, (char*)luokat[luokkia-1], 2, varid);
+
     printf("\033[K");
     nct_write_ncfile(&tallenn, "vuosijainnit.nc");
 
