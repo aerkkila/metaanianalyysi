@@ -1,7 +1,7 @@
 #include <nctietue2.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <pthread.h>
+//#include <pthread.h>
 
 #include <math.h>
 const double r2 = 6362132.0*6362132.0;
@@ -33,12 +33,33 @@ struct tiedot {
     char* alue;
 };
 
-double pisteettä_vuo(const struct tiedot* restrict tiedot, int ipiste) {
-    double summa = 0, jakaja=0;
-    for(int i=0; i<tiedot->res; i++) {
-	double ala = pintaala(i);
-	if(!tiedot->alue[i] || i == ipiste)
+double yksi_piste(const struct tiedot* restrict tiedot, int i) {
+    static double jakaja, summa;
+    if(i<0)
+	return jakaja;
+    jakaja = summa = 0;
+    double ala = pintaala(i);
+    for(int v=0; v<tiedot->vuosia; v++) {
+	int alku  = montako_päivää(tiedot->aika0, tiedot->vuodet[v], tiedot->alut [v*tiedot->res + i]),
+	    loppu = montako_päivää(tiedot->aika0, tiedot->vuodet[v], tiedot->loput[v*tiedot->res + i]);
+	if(alku == VIRHE || loppu == VIRHE)
 	    continue;
+	for(int t=alku; t<loppu; t++)
+	    summa += tiedot->vuo[t*tiedot->res+i] / tiedot->WET[i] * tiedot->wet[i] * ala;
+	jakaja += tiedot->wet[i] * (loppu-alku) * ala;
+    }
+    return summa;
+}
+
+double summa_ja_jakaja(const struct tiedot* restrict tiedot, int kumpi) {
+    static double summa, jakaja;
+    if(kumpi)
+	return jakaja;
+    summa = jakaja = 0;
+    for(int i=0; i<tiedot->res; i++) {
+	if(!tiedot->alue[i])
+	    continue;
+	double ala = pintaala(i);
 	for(int v=0; v<tiedot->vuosia; v++) {
 	    int alku  = montako_päivää(tiedot->aika0, tiedot->vuodet[v], tiedot->alut [v*tiedot->res + i]),
 		loppu = montako_päivää(tiedot->aika0, tiedot->vuodet[v], tiedot->loput[v*tiedot->res + i]);
@@ -49,7 +70,7 @@ double pisteettä_vuo(const struct tiedot* restrict tiedot, int ipiste) {
 	    jakaja += tiedot->wet[i] * (loppu-alku) * ala;
 	}
     }
-    return summa*1e9 / jakaja;
+    return summa*1e9;
 }
 
 char* luo_alue(const double* prfwet, const double* WET, char* alue, int xyres) {
@@ -75,19 +96,19 @@ void* tee_luokka(void* varg) {
     arg_luettu = 1;
     arg.tiedot.wet = nct_load_data_with(arg.bawvset, luokat[arg.j], nc_get_var_double, sizeof(double));
     const struct tiedot* restrict tiedot = &arg.tiedot;
-    double keskivuo = pisteettä_vuo(tiedot, -1);
-    printf("%lf, %s\033[K\n", keskivuo, luokat[arg.j]);
+    double summa  = summa_ja_jakaja(tiedot, 0);
+    double jakaja = summa_ja_jakaja(tiedot, 1);
+    double keskivuo = summa / jakaja;
+    printf("%lf / %lf = %lf, %s\033[K\n", summa, jakaja, keskivuo, luokat[arg.j]);
     float *uusidata = malloc(tiedot->res*sizeof(float));
 
     for(int i=0; i<tiedot->res; i++) {
-	if((i&((1<<5)-1)) == 0) {
-	    printf("\033[%iC %i/%i \r", arg.j*15, i, tiedot->res);
-	    fflush(stdout);
-	}
 	if(!tiedot->alue[i]) {
 	    uusidata[i] = 0.0f / 0.0f;
 	    continue; }
-	uusidata[i] = pisteettä_vuo(tiedot, i) - keskivuo;
+	double summa1  = yksi_piste(tiedot, i);
+	double jakaja1 = yksi_piste(tiedot, -1);
+	uusidata[i] = (summa-summa1) / (jakaja-jakaja1) - keskivuo;
     }
 
     return uusidata;
@@ -121,7 +142,7 @@ int main() {
     lat = tallenn.vars[0]->data;
     lonpit = nct_get_varlen(tallenn.vars[1]);
     
-    pthread_t säikeet[luokkia-1];
+    //pthread_t säikeet[luokkia-1];
     for(int j=0; j<luokkia-1; j++) {
 	struct Arg arg = {
 	    .tiedot  = tiedot,
@@ -129,10 +150,15 @@ int main() {
 	    .bawvset = bawvset,
 	    .j       = j,
 	};
+	/*
 	arg_luettu = 0;
 	pthread_create(säikeet+j, NULL, tee_luokka, &arg);
 	while(!arg_luettu)
 	    asm("nop");
+	    */
+	void* data = tee_luokka(&arg);
+	int varid[] = {0,1};
+	nct_add_var(&tallenn, data, NC_FLOAT, (char*)luokat[j], 2, varid);
     }
     struct Arg arg = {
 	.tiedot  = tiedot,
@@ -142,14 +168,14 @@ int main() {
     };
     void* loppudata = tee_luokka(&arg);
     int varid[] = {0,1};
+    /*
     for(int i=0; i<luokkia-1; i++) {
 	void* data;
 	pthread_join(säikeet[i], &data);
 	nct_add_var(&tallenn, data, NC_FLOAT, (char*)luokat[i], 2, varid);
-    }
+    }*/
     nct_add_var(&tallenn, loppudata, NC_FLOAT, (char*)luokat[luokkia-1], 2, varid);
 
-    printf("\033[K");
     nct_write_ncfile(&tallenn, "vuosijainnit.nc");
 
     nct_free_vset(&tallenn);
