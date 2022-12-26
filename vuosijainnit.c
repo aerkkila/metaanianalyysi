@@ -1,7 +1,6 @@
 #include <nctietue2.h>
 #include <stdlib.h>
 #include <stdio.h>
-//#include <pthread.h>
 
 #include <math.h>
 const double r2 = 6362132.0*6362132.0;
@@ -142,7 +141,6 @@ int main() {
     lat = tallenn.vars[0]->data;
     lonpit = nct_get_varlen(tallenn.vars[1]);
     
-    //pthread_t säikeet[luokkia-1];
     for(int j=0; j<luokkia-1; j++) {
 	struct Arg arg = {
 	    .tiedot  = tiedot,
@@ -150,12 +148,6 @@ int main() {
 	    .bawvset = bawvset,
 	    .j       = j,
 	};
-	/*
-	arg_luettu = 0;
-	pthread_create(säikeet+j, NULL, tee_luokka, &arg);
-	while(!arg_luettu)
-	    asm("nop");
-	    */
 	void* data = tee_luokka(&arg);
 	int varid[] = {0,1};
 	nct_add_var(&tallenn, data, NC_FLOAT, (char*)luokat[j], 2, varid);
@@ -168,12 +160,6 @@ int main() {
     };
     void* loppudata = tee_luokka(&arg);
     int varid[] = {0,1};
-    /*
-    for(int i=0; i<luokkia-1; i++) {
-	void* data;
-	pthread_join(säikeet[i], &data);
-	nct_add_var(&tallenn, data, NC_FLOAT, (char*)luokat[i], 2, varid);
-    }*/
     nct_add_var(&tallenn, loppudata, NC_FLOAT, (char*)luokat[luokkia-1], 2, varid);
 
     nct_write_ncfile(&tallenn, "vuosijainnit.nc");
