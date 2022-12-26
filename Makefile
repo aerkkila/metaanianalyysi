@@ -1,5 +1,5 @@
 # pintaalat.py ja kaudet.c pitää olla ajettuina ennen tätä
-all: vuotaul_00.target vuotaul_10.target vuotaul_01.target vuotaul_02.target vuojakaumadata.target vuojakaumadata_vuosittain.target kuvat taulukot.target
+all: vuotaul_00.target vuotaul_10.target vuotaul_01.target vuotaul_02.target vuojakaumadata.target vuojakaumadata_vuosittain.target vuosijainnit.nc kuvat taulukot.target
 
 vuotaul_00.target: vuotaul_köppen_pri.csv vuotaul_köppen_post.csv vuotaul_ikir_pri.csv vuotaul_ikir_post.csv vuotaul_wetland_pri.csv vuotaul_wetland_post.csv
 	cat vuotaulukot/*_pri_*.csv > vuotaul_pri.csv
@@ -83,7 +83,12 @@ vuojakauma_vuosittain_wetl: vuojakaumadata_vuosittain.out
 vuojakaumadata_vuosittain.target: vuojakauma_vuosittain_ikir vuojakauma_vuosittain_köpp vuojakauma_vuosittain_wetl
 	cat vuojakaumadata/vuosittain/emissio_*_post.csv > emissio_vuosittain.csv
 
-kuvat:
+vuosijainnit.nc: vuosijainnit.out
+	./$<
+vuosijainnit.out: vuosijainnit.c
+	gcc -Wall -o $@ $< `pkg-config --libs nctietue2` -lm -O3
+
+kuvat: vuosijainnit.nc
 	./köppikir_kartta.py -s
 	./köppikir_kartta.py ikir -s
 	./kaudet_laatikko.py -s
@@ -91,6 +96,7 @@ kuvat:
 	./xvuo_laatikko.py -s
 	./vuojakaumalaatikko.py -s
 	./vuojakaumalaatikko_vuosittain.py -s
+	./vuosijainnit.py -s
 
 vuotaul.target:
 	gcc vuotaul_latex.c -O2 -o vuotaul.out

@@ -1,6 +1,5 @@
 #include <nctietue2.h>
 #include <stdlib.h>
-#include <stdio.h>
 
 #include <math.h>
 const double r2 = 6362132.0*6362132.0;
@@ -9,7 +8,7 @@ const double r2 = 6362132.0*6362132.0;
 double *lat;
 int lonpit;
 double pintaala(int i) {
-    return 1;//PINTAALA(lat[i/lonpit]*ASTE, 1);
+    return PINTAALA(lat[i/lonpit]*ASTE, ASTE);
 }
 
 #define VIRHE -1234567
@@ -98,7 +97,6 @@ void* tee_luokka(void* varg) {
     double summa  = summa_ja_jakaja(tiedot, 0);
     double jakaja = summa_ja_jakaja(tiedot, 1);
     double keskivuo = summa / jakaja;
-    printf("%lf / %lf = %lf, %s\033[K\n", summa, jakaja, keskivuo, luokat[arg.j]);
     float *uusidata = malloc(tiedot->res*sizeof(float));
 
     for(int i=0; i<tiedot->res; i++) {
@@ -107,7 +105,7 @@ void* tee_luokka(void* varg) {
 	    continue; }
 	double summa1  = yksi_piste(tiedot, i);
 	double jakaja1 = yksi_piste(tiedot, -1);
-	uusidata[i] = (summa-summa1) / (jakaja-jakaja1) - keskivuo;
+	uusidata[i] = (keskivuo - (summa-summa1) / (jakaja-jakaja1)) / pintaala(i) * 1e9;
     }
 
     return uusidata;
