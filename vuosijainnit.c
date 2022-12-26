@@ -47,7 +47,7 @@ double yksi_piste(const struct tiedot* restrict tiedot, int i) {
 	    summa += tiedot->vuo[t*tiedot->res+i] / tiedot->WET[i] * tiedot->wet[i] * ala;
 	jakaja += tiedot->wet[i] * (loppu-alku) * ala;
     }
-    return summa;
+    return summa * 1e9;
 }
 
 double summa_ja_jakaja(const struct tiedot* restrict tiedot, int kumpi) {
