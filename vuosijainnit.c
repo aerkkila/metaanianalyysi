@@ -139,7 +139,7 @@ int main() {
     lat = tallenn.vars[0]->data;
     lonpit = nct_get_varlen(tallenn.vars[1]);
     
-    for(int j=0; j<luokkia-1; j++) {
+    for(int j=0; j<luokkia; j++) {
 	struct Arg arg = {
 	    .tiedot  = tiedot,
 	    .tallenn = &tallenn,
@@ -150,15 +150,6 @@ int main() {
 	int varid[] = {0,1};
 	nct_add_var(&tallenn, data, NC_FLOAT, (char*)luokat[j], 2, varid);
     }
-    struct Arg arg = {
-	.tiedot  = tiedot,
-	.tallenn = &tallenn,
-	.bawvset = bawvset,
-	.j       = luokkia-1,
-    };
-    void* loppudata = tee_luokka(&arg);
-    int varid[] = {0,1};
-    nct_add_var(&tallenn, loppudata, NC_FLOAT, (char*)luokat[luokkia-1], 2, varid);
 
     nct_write_ncfile(&tallenn, "vuosijainnit.nc");
 

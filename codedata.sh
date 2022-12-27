@@ -43,6 +43,7 @@ cp -lr \
     kausien_päivät.nc \
     BAWLD1x1.nc \
     flux1x1.nc \
+    vuosijainnit.nc \
     $kansio
 
 nimet0=
@@ -60,6 +61,7 @@ köppikir_kartta.py
 kaudet_laatikko.py
 permafrost_wetland_kartta.py
 vuojakaumalaatikko.py
+vuosijainnit.py
 vuojakaumalaatikko_vuosittain.py
 ttesti_luokat.py
 ttesti.py
@@ -69,7 +71,8 @@ fig_1.py
 fig_2,3.py
 fig_4.py
 fig_5,6.py
-fig_10.py
+fig_7.py
+fig_11.py
 ttest_wcateg.py
 ttest_mixed-pure.py
 '
@@ -104,11 +107,11 @@ Makefile
 laske.sh
 '
 nimet1='
-fig_7,8.c
+fig_8,9.c
 table_8.c
 virhepalkit.pyx
 setup.py
-fig_9.py
+fig_10.py
 piirrä.py
 Makefile
 run.sh
@@ -195,6 +198,17 @@ vuotaul_wetland_post02.csv: vuotaul_02.out
 	./vuotaul_02.out wetl post
 EOF
 
+kansio=$k0/create_vuosijainnit
+mkdir -p $kansio
+cp vuosijainnit.c $kansio
+cat >$kansio/Makefile <<EOF
+all: vuosijainnit.nc
+vuosijainnit.out: vuosijainnit.c
+	gcc -Wall -o \$@ \$< \`pkg-config --libs nctietue2\` -lm -O3
+vuosijainnit.nc: vuosijainnit.out
+	./\$<
+EOF
+
 kansio=$k0/create_vuojakaumadata
 mkdir -p $kansio
 cp vuojakaumadata.c $kansio
@@ -270,6 +284,7 @@ cat > $k0/create_links.sh <<EOF
 ( cd create_kaudet;         ln -s ../aluemaski.nc . )
 ( cd create_kaudet/create_data/create_data; ln -s ../../../aluemaski.nc . )
 ( cd create_BAWLD1x1;       ln -s ../aluemaski.nc . )
+( cd create_vuosijainnit;   ln -s ../aluemaski.nc ../flux1x1.nc ../BAWLD1x1.nc ../kausien_päivät.nc . )
 EOF
 chmod 755 $k0/create_links.sh
 

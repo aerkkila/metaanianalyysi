@@ -86,7 +86,7 @@ vuojakaumadata_vuosittain.target: vuojakauma_vuosittain_ikir vuojakauma_vuositta
 vuosijainnit.nc: vuosijainnit.out
 	./$<
 vuosijainnit.out: vuosijainnit.c
-	gcc -Wall -o $@ $< `pkg-config --libs nctietue2` -lm -O3
+	gcc -Wall -o $@ $< `pkg-config --libs nctietue2` -lm -O3 -g
 
 kuvat: vuosijainnit.nc
 	./köppikir_kartta.py -s
