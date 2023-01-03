@@ -119,7 +119,7 @@ void* tee_luokka(void* varg) {
 }
 
 int main(int argc, char** argv) {
-    int kokoalue = argc > 1 && !strcmp(argv[1], "-a");
+    int kokoalue = argc < 2 || strcmp(argv[1], "--sekoitus");
     nct_vset *aluevset = nct_read_ncfile("aluemaski.nc"),
 	     *bawvset  = nct_read_ncfile_info("BAWLD1x1.nc"),
 	     *vuovset  = nct_read_ncfile_info("flux1x1.nc"),
@@ -161,7 +161,7 @@ int main(int argc, char** argv) {
 	nct_add_var(&tallenn, data, NC_FLOAT, (char*)luokat[j], 2, varid);
     }
 
-    nct_write_ncfile(&tallenn, kokoalue? "vuosijainnit_kaikki.nc": "vuosijainnit.nc");
+    nct_write_ncfile(&tallenn, kokoalue? "vuosijainnit.nc": "vuosijainnit_sekoitus.nc");
 
     nct_free_vset(&tallenn);
     nct_free_vset(aluevset);
