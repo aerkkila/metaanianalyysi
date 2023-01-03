@@ -1,5 +1,6 @@
 #include <nctietue2.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <math.h>
 const double r2 = 6362132.0*6362132.0;
@@ -79,6 +80,12 @@ char* luo_alue(const double* prfwet, const double* WET, char* alue, int xyres) {
     return alue;
 }
 
+char* luo_koko_alue(const double* WET, char* alue, int xyres) {
+    for(int i=0; i<xyres; i++)
+	alue[i] = alue[i] && WET[i] >= 0.05;
+    return alue;
+}
+
 const char* luokat[] = {"bog", "fen", "marsh", "permafrost_bog", "tundra_wetland"};
 const int luokkia = sizeof(luokat)/sizeof(char*);
 
@@ -111,7 +118,8 @@ void* tee_luokka(void* varg) {
     return uusidata;
 }
 
-int main() {
+int main(int argc, char** argv) {
+    int kokoalue = argc > 1 && !strcmp(argv[1], "-a");
     nct_vset *aluevset = nct_read_ncfile("aluemaski.nc"),
 	     *bawvset  = nct_read_ncfile_info("BAWLD1x1.nc"),
 	     *vuovset  = nct_read_ncfile_info("flux1x1.nc"),
@@ -131,7 +139,9 @@ int main() {
 	.aika0  = nct_mktime0(nct_get_var(vuovset, "time"), NULL).a.t,
     };
     tiedot.vuosia = 2021 - tiedot.vuodet[0];
-    tiedot.alue   = luo_alue(prfwet, tiedot.WET, maski->data, xyres);
+    tiedot.alue = kokoalue?
+	luo_koko_alue(   tiedot.WET, maski->data, xyres):
+	luo_alue(prfwet, tiedot.WET, maski->data, xyres);
 
     nct_vset tallenn = {0};
     nct_copy_var(&tallenn, nct_get_var(aluevset, "lat"), 1);
@@ -151,7 +161,7 @@ int main() {
 	nct_add_var(&tallenn, data, NC_FLOAT, (char*)luokat[j], 2, varid);
     }
 
-    nct_write_ncfile(&tallenn, "vuosijainnit.nc");
+    nct_write_ncfile(&tallenn, kokoalue? "vuosijainnit_kaikki.nc": "vuosijainnit.nc");
 
     nct_free_vset(&tallenn);
     nct_free_vset(aluevset);

@@ -14,7 +14,7 @@ def main():
     kattavuus   = [-180,180,45,90]
     lajit       = ['fen','marsh','permafrost_bog','tundra_wetland']
 
-    ds = Dataset("vuosijainnit.nc", "r")
+    ds = Dataset("vuosijainnit%s.nc" %('_kaikki' if '-a' in sys.argv[1:] else ''), "r")
     lat = np.ma.getdata(ds['lat'])
     lon = np.ma.getdata(ds['lon'])
     mx,my = np.meshgrid(lon,lat, sparse=True)
@@ -31,7 +31,7 @@ def main():
 
     tight_layout()
     if '-s' in sys.argv:
-        savefig('kuvia/vuosijainnit.png')
+        savefig('kuvia/vuosijainnit%s.png' %('_kaikki' if '-a' in sys.argv[1:] else ''))
     else:
         show()
 
