@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/bin/env python
 from virhepalkit import *
 from matplotlib.pyplot import *
 

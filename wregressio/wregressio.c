@@ -12,6 +12,8 @@
 #include <string.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <sys/stat.h> // mkdir
+#include <err.h>
 
 const char* wetlnimet_0[]    = {"wetland", "bog", "fen", "marsh"};
 const char* wetlandnimi_0    = "wetland";
@@ -107,6 +109,8 @@ void argumentit(int argc, char** argv) {
 	wetlandnimi = wetlandnimi_0;
     }
     if(tallenna) {
+	if(mkdir("tallenteet", 0755) && errno != EEXIST)
+	    warn("mkdir rivillä %i", __LINE__);
 	stdout = freopen(aprintf("tallenteet/%s_%i.txt", kaudet[kausi], ikir), "w", stdout);
 	printf("# %s\n", aprintapu);
 	assert(stdout);

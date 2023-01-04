@@ -4,7 +4,7 @@ kansio=$HOME
 
 kansio=${kansio}/codedata
 k0=$kansio
-mkdir -p $kansio
+mkdir -p $kansio/kuvia
 
 kansio=$k0/nctietue2
 mkdir -p $kansio
@@ -73,7 +73,7 @@ fig_4.py
 fig_5,6.py
 fig_7.py
 fig_11.py
-ttest_wcateg.py
+ttest_wetlcateg.py
 ttest_mixed-pure.py
 '
 kopioi
@@ -92,32 +92,31 @@ table_9.py
 '
 kopioi
 
-kansio=$k0/table_8+figures_7-9
-regrdir=$kansio
+kansio=$k0/table_8+figures_8-10
 mkdir -p $kansio
 cd wregressio
-nimet0='
-wregressio.c
-taulukko_rajat.c
-virhepalkit.pyx
-setup.py
-virhepalkit.py
-piirrä.py
-Makefile
-laske.sh
-'
-nimet1='
-fig_8,9.c
-table_8.c
-virhepalkit.pyx
-setup.py
-fig_10.py
-piirrä.py
-Makefile
-run.sh
-'
-kopioi
+cp laske.sh Makefile virhepalkit.pyx setup.py virhepalkit.py piirrä.py taulukko_rajat.c wregressio.c $kansio
+cp -r tallenteet sovitteet.txt $kansio
 cd ..
+cat >$kansio/README <<EOF
+By default, saved figures go to ../kuvia.
+Everything in this directory can be run automatically using laske.sh
+in which case, the rest of this file is not needed to read.
+
+make compiles wregressio.c into wregressio.out and virhepalkit.pyx into shared object
+wregressio.out conducts the linear regression and calls piirrä.py to draw figures 9 and 10.
+Command line arguments to wregressio.out include:
+    -k [0123] // which season is calculated
+    -s        // save: replaces stdout with a file and changes output a little
+    -p -s     // passes argument -s to python program piirrä.py to save the drawn figures
+    -i        // to calculate permafrost wetland instead of nonpermafrost wetland
+
+After wregressio.out one should run 'cat tallenteet/* > sovitteet.txt' to combine the files that wregressio.out created.
+
+Thereafter one can run the rest of codes:
+virhepalkit.py to create figure 8. That uses virhepalkit.pyx to read sovitteet.txt.
+taulukko_rajat.c to create table 8. This can be compiled normally without additional arguments.
+EOF
 
 kansio=$k0/create_ikirdata
 mkdir -p $kansio
@@ -276,7 +275,6 @@ EOF
 
 cat > $k0/create_links.sh <<EOF
 #!/bin/sh
-( cd ${regrdir};            ln -s ../BAWLD1x1.nc ../flux1x1.nc ../kaudet.nc . )
 ( cd create_köppen;         ln -s ../köppen1x1maski.nc . )
 ( cd create_köppen/create_köppen1x1maski; ln -s ../../aluemaski.nc . )
 ( cd create_vuotaulukot;    ln -s ../köppenmaski.txt ../ikirdata.nc ../BAWLD1x1.nc ../flux1x1.nc ../kaudet.nc . )
