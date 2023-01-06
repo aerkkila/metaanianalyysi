@@ -255,23 +255,34 @@ cp $a/kaudet.c $kansio
 cp -l $HOME/smos_uusi/ft_percent/frozen_percent_pixel_*.nc $kansio/data
 cp -l $HOME/smos_uusi/ft_percent/partly_frozen_percent_pixel_*.nc $kansio/data
 kansio=$kansio/create_data
-mkdir -p $kansio/data
+mkdir -p $kansio
 cp $a/ft_percents_pixel_ease.c $kansio
 cp -l $a/EASE_2_l*.nc $kansio
-cp -l $HOME/smos_uusi/FT_720_*.nc $kansio/data # isoja
+#cp -l $HOME/smos_uusi/FT_720_*.nc $kansio/data # isoja
+cat >$kansio/README <<EOF
+Compiler needs argument \`pkg-config --libs nctietue2\`.
+The code reads annual data files named as FT_720_yyyy.nc.
+Those are not given because they are quite similar than original data files
+which seem unfortunately not to have a free license to share.
+To download original data see ./create_data/README
+and run ./create_data/yhdistä_vuosittain.c to turn them into requested format.
+EOF
+
 kansio=$kansio/create_data
 mkdir -p $kansio
 cp $HOME/smos_uusi/yhdistä_vuosittain.c $kansio
 cat >$kansio/README <<EOF
-Here should be a link if data gets published.
-
-Original data was given as a separate file for each day (time step)
-and some days were missing.
 This is the code that was used to combine each year into one file
 and fill missing dates with values read from previous existing date.
+Compiler needs argument \`pkg-config --libs nctietue2\`.
 
-Needed files are not given because together they are large
-and almost the same as ../data.
+Data can be downloaded from
+https://nsdc.fmi.fi/services/SMOSService/
+(Rautiainen, K., Parkkinen, T., Lemmetyinen, J., Schwank, M., Wiesmann, A., Ikonen, J., Derksen, C., Davydov, S., Davydova, A., Boike, J., Langer, M., Drusch, M., and Pulliainen, J. 2016. SMOS prototype algorithm for detecting autumn soil freezing, Remote Sensing of Environment, 180, 346-360. DOI: 10.1016/j.rse.2016.01.012)
+
+Downloaded data files should be in netcdf form and renamed as FT_yyyymmdd.nc.
+We do not have a script to do that because we got our data straight from the authors in that form
+but something like 'mmv "W_XX-ESA,SMOS,NH_25KM_EASE2_*_[or]_*.nc" FT_#1.nc' should work.
 EOF
 
 kansio=$k0/create_BAWLD1x1

@@ -7,7 +7,6 @@
 #include <err.h>
 
 /*
- * Written based on a Python code which was written by Maria Tenkanen 
  * kääntäjälle `pkg-config --libs nctietue2` [-O3]
  * github.com/aerkkila/nctietue2 pitää olla asennettuna
  */
