@@ -11,7 +11,8 @@
 #include <err.h>
 
 /* Kääntäjä tarvitsee argumentit `pkg-config --libs nctietue2` -lm
-   nctietue2-kirjasto on osoitteessa https://github.com/aerkkila/nctietue2.git */
+   nctietue2-kirjasto on osoitteessa https://github.com/aerkkila/nctietue2.git
+   Tämä on tarpeettoman monimutkainen, koska tässä käytetään tiedostoa kaudet.nc eikä kausien_päivät.nc. */
 
 #define ARRPIT(a) sizeof(a)/sizeof(*(a))
 #define MIN(a,b) (a)<(b)? (a): (b)
@@ -311,12 +312,6 @@ void laske_kuiva(struct laskenta* args) {
     seuraava:;
     }
 }
-
-	/*
-	else if(args->lajinum == luokkia+1) {
-	    if(prf > 0.03) continue; } // wetland_nonprf
-	else if(args->lajinum == luokkia+2) {
-	if(prf < 0.97) continue; } // wetland_prf*/
 
 void laske_kosteikko(struct laskenta* args) {
     char* kausiptr = args->kausiptr;

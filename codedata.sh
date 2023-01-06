@@ -162,15 +162,21 @@ vuotaul_00.out:
 	gcc -Wall -g -O2 vuotaul_yleinen.c -o \$@ \`pkg-config --libs nctietue2\` -lm -DKOSTEIKKO=0 -Dkosteikko_kahtia=0
 vuotaul_wetland_post.csv: vuotaul_00.out
 	./vuotaul_00.out wetl post
+	./vuotaul_00.out wetl post
 vuotaul_wetland_pri.csv: vuotaul_00.out
+	./vuotaul_00.out wetl pri
 	./vuotaul_00.out wetl pri
 vuotaul_köppen_post.csv: vuotaul_00.out
 	./vuotaul_00.out köpp post
+	./vuotaul_00.out köpp post
 vuotaul_köppen_pri.csv: vuotaul_00.out
+	./vuotaul_00.out köpp pri
 	./vuotaul_00.out köpp pri
 vuotaul_ikir_post.csv: vuotaul_00.out
 	./vuotaul_00.out ikir post
+	./vuotaul_00.out ikir post
 vuotaul_ikir_pri.csv: vuotaul_00.out
+	./vuotaul_00.out ikir pri
 	./vuotaul_00.out ikir pri
 
 # calculates climate and permafrost class data with only their wetland areas into vuotaulukot/*k1.csv
@@ -179,7 +185,9 @@ vuotaul_10.out:
 	gcc -Wall -g -O2 vuotaul_yleinen.c -o \$@ \`pkg-config --libs nctietue2\` -lm -DKOSTEIKKO=1 -Dkosteikko_kahtia=0
 vuotaul_köppen_post10.csv: vuotaul_10.out
 	./vuotaul_10.out köpp post
+	./vuotaul_10.out köpp post
 vuotaul_ikir_post10.csv: vuotaul_10.out
+	./vuotaul_10.out ikir post
 	./vuotaul_10.out ikir post
 
 # calculates wetland data without the mixed area into vuotaulukot/kahtia/*
@@ -188,12 +196,14 @@ vuotaul_01.out:
 	gcc -Wall -g -O2 vuotaul_yleinen.c -o \$@ \`pkg-config --libs nctietue2\` -lm -DKOSTEIKKO=0 -Dkosteikko_kahtia=1
 vuotaul_wetland_post01.csv: vuotaul_01.out
 	./vuotaul_01.out wetl post
+	./vuotaul_01.out wetl post
 
 # calculates wetland data with only the mixed area into vuotaulukot/kahtia_keskiosa/*
 vuotaul_02.target: vuotaul_wetland_post02.csv
 vuotaul_02.out:
 	gcc -Wall -g -O2 vuotaul_yleinen.c -o \$@ \`pkg-config --libs nctietue2\` -lm -DKOSTEIKKO=0 -Dkosteikko_kahtia=2
 vuotaul_wetland_post02.csv: vuotaul_02.out
+	./vuotaul_02.out wetl post
 	./vuotaul_02.out wetl post
 EOF
 
@@ -268,7 +278,7 @@ kansio=$k0/create_BAWLD1x1
 mkdir -p $kansio
 cp bawld/*.[ch] bawld/Makefile $kansio
 cat > $kansio/README <<EOF
-Used data is BAWLD_V1___Shapefile.zip from https://doi.org/10.18739/A2C824F9X (Olefeldt et al., 2021) which should be extracted into directory data. Makefile downloads and extracts it automatically.
+Used data is BAWLD_V1___Shapefile.zip from https://doi.org/10.18739/A2C824F9X (Olefeldt et al., 2021) which should be extracted into directory called data. Makefile downloads and extracts it automatically.
 
 Olefeldt, D., Hovemyr, M., Kuhn, M. A., Bastviken, D., Bohn, T. J., Connolly, J., Crill, P., Euskirchen, E. S., Finkelstein, S. A., Genet, H., Grosse, G., Harris, L. I., Heffernan, L., Helbig, M., Hugelius, G., Hutchins, R., Juutinen, S., Lara, M. J., Malhotra, A., Manies, K., McGuire, A. D., Natali, S. M., O'Donnell, J. A., Parmentier, F.-J. W., Räsänen, A., Schädel, C., Sonnentag, O., Strack, M., Tank, S. E., Treat, C., Varner, R. K., Virtanen, T., Warren, R. K., and Watts, J. D.: The Boreal–Arctic Wetland and Lake Dataset (BAWLD), Earth Syst. Sci. Data, 13, 5127–5149, https://doi.org/10.5194/essd-13-5127-2021, 2021.
 EOF
@@ -305,7 +315,7 @@ Alternatively, this can be done without root privilidges:
 In this case nothing is intalled and therefore no need to uninstall.
 Last sed command edits Makefiles and should be run only once, otherwise the changes will cumulate.
 
-Each directory contains the data that is needed to run the codes
+Each directory contains the data that is needed to run the codes.
 and if data was created using other codes, those codes and their data are given one directory deeper in create_data
 The root directory contains all codes that make the final results used in the article.
 
@@ -313,7 +323,7 @@ C-source files will compile without any special arguments if Makefile is not giv
 Most C codes use non-ascii utf8 characters in variable names
 which gcc cannot compile if version < 10.1.
 
-fig_10.py and table_9.py are the same file but given twice for naming reasons.
+fig_11.py and table_9.py are the same file but given twice for naming reasons.
 
 File names:
 aluemaski			region mask
@@ -322,7 +332,7 @@ kaudet                          seasons
 kausien_päivät			start and end days of seasons
 laatikkokuvaaja.py		a module for making whisker plots
 pintaalat			surface areas
-ttest_wcateg.py			t-tests in section Results: Total emission and average flux
+ttest_wetlcateg.py		t-tests in section Results: Total emission and average flux
 vuo				flux
 vuojakaumadata			flux distribution data
 vuotaulukot			flux tables
