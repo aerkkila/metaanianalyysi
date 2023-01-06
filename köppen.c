@@ -1,5 +1,6 @@
-/* Pitää asentaa https://github.com/OSGeo/shapelib.git (shapefil.h)
+/*
    Kääntäjä tarvitsee argumentit -lm -lnetcdf -lshp -pthread
+   Shapelib (shapefil.h) ja netcdf pitää olla asennettuina.
 */
 
 #include <shapefil.h>
@@ -33,26 +34,24 @@ typedef struct{ int alku; int loppu; int nro; } Arg;
 void* selaa_oliot(void*);
 void kirjoita_netcdf();
 int piste_polygonissa(double x, double y, SHPObject* olio);
-double kulma(piste keha1, piste keha2, piste kanta);
+double kulma(piste kehä1, piste kehä2, piste kanta);
 double ristitulo(piste p0, piste p1);
 int sign(double);
 piste suuntavektori(piste p0, piste p1);
 double vektpituus(piste p);
 double pistetulo(piste a, piste b);
 
-static const char* tiednimi = "köppen_shp/1976-2000";
+static const char* tiednimi      = "köppen_shp/1976-2000";
 static const char* nc_luett_nimi = "aluemaski.nc";
-static const char* nc_kirj_nimi0 = "köppen1x1maski.nc";
-static const char* dbfnimi = "GRIDCODE";
+static const char* nc_kirj_nimi  = "köppen1x1maski.nc";
+static const char* dbfnimi       = "GRIDCODE";
 
 static int nEnt, shptype, verbose, njobs=1, ncpalaute, arg_luettu, ncid;
-static int lukeva_saie = -1, i_kopp = 0;
+static int lukeva_säie = -1, i_köpp = 0;
 static char* lmaskit;
-static char* nc_kirj_nimi;
-static double hila, hila_lon, hila_lat;
 SHPObject** shpoliot;
 size_t pit_lat, pit_lon, pit_latlon;
-int koppluokkia;
+int köppluokkia;
 double *lat, *lon;
 nc_kirj_tyyppi* nc_kirj_data;
 dbftyyppi* dbfdata;
@@ -60,8 +59,8 @@ dbftyyppi* dbfdata;
 struct {
     int id;
     char* str;
-} kopptunnisteet[] =
-{
+}
+köpptunnisteet[] = {
 #include "köppentunnisteet.h"
 };
 
@@ -79,19 +78,14 @@ int main(int argc, char** argv) {
 	Case("-j", "--njobs") {
 	    sscanf(argv[++i], "%i", &njobs);
 	    continue; }
-	Case("-g", "--grid") {
-	    sscanf(argv[++i], "%lf", &hila);
-	    continue; }
 	Case("-o", "-o") {
-	    nc_kirj_nimi = strdup(argv[++i]);
+	    nc_kirj_nimi = argv[++i];
 	    continue; }
 	End;
     }
 #undef Switch
 #undef Case
 #undef End
-    if(!nc_kirj_nimi)
-	nc_kirj_nimi = strdup(nc_kirj_nimi0);
 
     /* Luetaan ja tarkistetaan shapefilen tiedot. */
     Printf("Luetaan %s\n", tiednimi);
@@ -113,7 +107,7 @@ int main(int argc, char** argv) {
     }
     SHPClose(shpkahva);
   
-    /*luetaan vastaava .dbf-tiedosto, joka sisältää shapefilen geometriaan kuuluvan datan*/
+    /* luetaan vastaava .dbf-tiedosto, joka sisältää shapefilen geometriaan kuuluvan datan */
     DBFHandle dbfkahva = DBFOpen( tiednimi, "rb" );
     id = DBFGetFieldIndex( dbfkahva, dbfnimi );
     if(id < 0) {
@@ -137,50 +131,47 @@ int main(int argc, char** argv) {
 	dbfdata[i] = DBFRead_tyyppi_Attribute( dbfkahva, i, id );
     DBFClose(dbfkahva);
 
-    /*luetaan netcdf ellei hilaa ole annettu*/
-    if(!hila) {
-	Printf("Luetaan %s\n", nc_luett_nimi);
-	NCFUNK(nc_open, nc_luett_nimi, NC_NOWRITE, &ncid);
-	NCFUNK(nc_inq_dimid, ncid, "lat", &id);            //lat
-	NCFUNK(nc_inq_dim, ncid, id, NULL, &pit_lat);
-	lat = malloc(pit_lat*sizeof(double));
-	NCFUNK(nc_inq_varid, ncid, "lat", &id);
-	NCFUNK(nc_get_var, ncid, id, lat);
-	NCFUNK(nc_inq_dimid, ncid, "lon", &id);            //lon
-	NCFUNK(nc_inq_dim, ncid, id, NULL, &pit_lon);
-	lon = malloc(pit_lon*sizeof(double));
-	NCFUNK(nc_inq_varid, ncid, "lon", &id);
-	NCFUNK(nc_get_var, ncid, id, lon);
-	NCFUNK(nc_close, ncid);
-    }
-    else {
-	pit_lon = (shpmax[0]-shpmin[0]) / hila;
-	hila_lon = (shpmax[0]-shpmin[0]) / pit_lon; //muutetaan niin, että rajat osuvat, vaikka pit_lon on kokonaisluku
-	lon = malloc(pit_lon*sizeof(double));
-	for(size_t i=0; i<pit_lon; i++)
-	    lon[i] = shpmin[0] + i*hila_lon;
-	pit_lat = (shpmax[1]-shpmin[1]) / hila;
-	hila_lat = (shpmax[1]-shpmin[1]) / pit_lat; //muutetaan niin, että rajat osuvat, vaikka pit_lat on kokonaisluku
-	lat = malloc(pit_lat*sizeof(double));
-	for(size_t i=0; i<pit_lat; i++)
-	    lat[i] = shpmin[1] + i*hila_lat;
-    }
+    /* luetaan netcdf-tiedostosta koordinaatit */
+    Printf("Luetaan %s\n", nc_luett_nimi);
+    NCFUNK(nc_open, nc_luett_nimi, NC_NOWRITE, &ncid);
+    NCFUNK(nc_inq_dimid, ncid, "lat", &id);            // lat
+    NCFUNK(nc_inq_dim, ncid, id, NULL, &pit_lat);
+    lat = malloc(pit_lat*sizeof(double));
+    NCFUNK(nc_inq_varid, ncid, "lat", &id);
+    NCFUNK(nc_get_var, ncid, id, lat);
+    NCFUNK(nc_inq_dimid, ncid, "lon", &id);            // lon
+    NCFUNK(nc_inq_dim, ncid, id, NULL, &pit_lon);
+    lon = malloc(pit_lon*sizeof(double));
+    NCFUNK(nc_inq_varid, ncid, "lon", &id);
+    NCFUNK(nc_get_var, ncid, id, lon);
+    NCFUNK(nc_close, ncid);
+
     pit_latlon = pit_lat*pit_lon;
     Printf("pit_lat = %zu\t pit_lon = %zu\t pit_latlon = %zu\n", pit_lat, pit_lon, pit_latlon);
     nc_kirj_data = calloc(pit_latlon, sizeof(nc_kirj_tyyppi));
-    koppluokkia = sizeof(kopptunnisteet)/sizeof(*kopptunnisteet);
-    lmaskit = malloc(pit_latlon*koppluokkia);
+    köppluokkia = sizeof(köpptunnisteet)/sizeof(*köpptunnisteet);
+    lmaskit = malloc(pit_latlon*köppluokkia);
 
-    /*Luodaan säikeet*/
-    pthread_t saikeet[njobs];
-    for(int i=0; i<njobs; i++) {
-	Arg arg = { .alku=pit_lon*i/njobs, .loppu=pit_lon*(i+1)/njobs, .nro=i };
+    /* Luodaan säikeet */
+    pthread_t saikeet[njobs-1];
+    for(int i=0; i<njobs-1; i++) {
+	Arg arg = {
+	    .alku  = pit_lon*i     / njobs,
+	    .loppu = pit_lon*(i+1) / njobs,
+	    .nro   = i,
+	};
 	pthread_create(saikeet+i, NULL, selaa_oliot, &arg);
 	while(!arg_luettu)
 	    usleep(10);
 	arg_luettu = 0;
     }
-    for(int i=0; i<njobs; i++)
+    Arg arg = {
+	.alku  = pit_lon*(njobs-1) / njobs,
+	.loppu = pit_lon,
+	.nro   = njobs-1,
+    };
+    selaa_oliot(&arg);
+    for(int i=0; i<njobs-1; i++)
 	pthread_join(saikeet[i], NULL);
   
     for(int i=0; i<nEnt; i++)
@@ -189,7 +180,6 @@ int main(int argc, char** argv) {
     kirjoita_netcdf();
     free(dbfdata);
     free(nc_kirj_data);
-    free(nc_kirj_nimi);
     free(lmaskit);
     free(lat);
     free(lon);
@@ -202,32 +192,34 @@ int main(int argc, char** argv) {
 }
 
 void luo_netcdf_maski(int monesko) {
-    size_t pit = pit_latlon; //int restrict
+    size_t pit = pit_latlon;
     char* lmaski = lmaskit+pit*monesko;
-    nc_kirj_tyyppi tunniste = kopptunnisteet[monesko].id;
+    nc_kirj_tyyppi tunniste = köpptunnisteet[monesko].id;
     for(int i=0; i<pit; i++)
 	lmaski[i] = nc_kirj_data[i]==tunniste;
 }
 
+/* Ei ole mitään objektiivista perustetta,
+   miksi goto olisi tässä tapauksessa epäselvempi kuin while(1). */
 void* tee_maskit(void* arg) {
-    int saie = *(int*)arg;
+    int säie = *(int*)arg;
     arg_luettu = 1;
     int monesko;
 loop:
     while(1) {
-	while(lukeva_saie >= 0)
+	while(lukeva_säie >= 0)
 	    usleep(1);
-	lukeva_saie = saie;
+	lukeva_säie = säie;
 	usleep(3);
-	if(lukeva_saie==saie) {
-	    monesko = i_kopp++;
-	    lukeva_saie = -1;
+	if(lukeva_säie==säie) {
+	    monesko = i_köpp++;
+	    lukeva_säie = -1;
 	    break;
 	}
 	else
-	    Printf("Säie %i ei saanut lukuvuoroa\n", saie);
+	    Printf("Säie %i ei saanut lukuvuoroa\n", säie);
     }
-    if(monesko >= koppluokkia)
+    if(monesko >= köppluokkia)
 	return NULL;
     luo_netcdf_maski(monesko);
     goto loop;
@@ -244,26 +236,26 @@ void kirjoita_netcdf_maski(int ncid, int latid, int lonid) {
     int latlonid[] = {latid,lonid}, varid;
     for(int i=0; i<njobs; i++)
 	pthread_join(saikeet[i],NULL);
-    for(int i=0; i<koppluokkia; i++) {
-	NCFUNK( nc_def_var, ncid, kopptunnisteet[i].str, NC_BYTE, 2, latlonid, &varid );
-	NCFUNK( nc_put_var, ncid, varid, lmaskit+pit_latlon*i );
+    for(int i=0; i<köppluokkia; i++) {
+	NCFUNK(nc_def_var, ncid, köpptunnisteet[i].str, NC_BYTE, 2, latlonid, &varid);
+	NCFUNK(nc_put_var, ncid, varid, lmaskit+pit_latlon*i);
     }
 }
 
 void kirjoita_netcdf() {
     int ncid, latid, lonid, varid;
-    NCFUNK( nc_create, nc_kirj_nimi, NC_CLOBBER|NC_NETCDF4, &ncid );
-    NCFUNK( nc_def_dim, ncid, "lat", pit_lat, &latid );
-    NCFUNK( nc_def_var, ncid, "lat", NC_DOUBLE, 1, &latid, &varid );
-    NCFUNK( nc_put_var, ncid, varid, lat );
-    NCFUNK( nc_def_dim, ncid, "lon", pit_lon, &lonid );
-    NCFUNK( nc_def_var, ncid, "lon", NC_DOUBLE, 1, &lonid, &varid );
-    NCFUNK( nc_put_var, ncid, varid, lon );
+    NCFUNK(nc_create, nc_kirj_nimi, NC_CLOBBER|NC_NETCDF4, &ncid);
+    NCFUNK(nc_def_dim, ncid, "lat", pit_lat, &latid);
+    NCFUNK(nc_def_var, ncid, "lat", NC_DOUBLE, 1, &latid, &varid);
+    NCFUNK(nc_put_var, ncid, varid, lat);
+    NCFUNK(nc_def_dim, ncid, "lon", pit_lon, &lonid);
+    NCFUNK(nc_def_var, ncid, "lon", NC_DOUBLE, 1, &lonid, &varid);
+    NCFUNK(nc_put_var, ncid, varid, lon);
     int latlonid[] = {latid,lonid};
-    NCFUNK( nc_def_var, ncid, "luokka", NC_KIRJTYYPPI_ENUM, 2, latlonid, &varid );
-    NCFUNK( nc_put_var, ncid, varid, nc_kirj_data );
+    NCFUNK(nc_def_var, ncid, "luokka", NC_KIRJTYYPPI_ENUM, 2, latlonid, &varid);
+    NCFUNK(nc_put_var, ncid, varid, nc_kirj_data);
     kirjoita_netcdf_maski(ncid, latid, lonid);
-    NCFUNK( nc_close, ncid );
+    NCFUNK(nc_close, ncid);
 }
 
 void* selaa_oliot(void *restrict varg) {
@@ -275,7 +267,7 @@ void* selaa_oliot(void *restrict varg) {
     arg_luettu = 1;
     for(int yi=0; yi<pit_lat; yi++)
 	for(int xi=alku; xi<loppu; xi++)
-	    for(int i=0; i<nEnt; i++) //tätä voisi optimoida lämpimällä aloituksella
+	    for(int i=0; i<nEnt; i++)
 		if (piste_polygonissa(lon[xi],lat[yi],shpoliot[i])) {
 		    nc_kirj_data[ yi*pit_lon + xi ] = (nc_kirj_tyyppi)dbfdata[i];
 		    break;
@@ -296,8 +288,8 @@ int piste_polygonissa(double x, double y, SHPObject* olio) {
     y += 0.09;
     if (x < olio->dfXMin || x >= olio->dfXMax || y < olio->dfYMin || y >= olio->dfYMax)
 	return 0;
-    //return 1; //Tämä riittää, jos alueitten tiedetään olevan suorakulmioita
-    /*Tämä taas toimii minkä tahansa muotoiselle alueelle*/
+    // return 1; // Tämä riittää, jos alueitten tiedetään olevan suorakulmioita
+    /* Tämä taas toimii minkä tahansa muotoiselle alueelle */
     double kierrosluku = 0;
     for(int ring=0; ring<olio->nParts; ring++) {
 	int i = olio->panPartStart[ring];
@@ -309,13 +301,13 @@ int piste_polygonissa(double x, double y, SHPObject* olio) {
 	    reuna1 = reuna2;
 	}
     }
-    kierrosluku /= 2*3.14159265358979;
-    return (int)round(kierrosluku); //tämä on 1 tai 0 sen mukaan onko piste alueella
+    kierrosluku /= 2*3.14159265358979; // periaatteessa turha
+    return (int)round(kierrosluku); // tämä on 1 tai 0 sen mukaan onko piste alueella
 }
 
-double kulma(piste keha1, piste keha2, piste p) {
-    piste sv1 = suuntavektori(p, keha1);
-    piste sv2 = suuntavektori(p, keha2);
+double kulma(piste kehä1, piste kehä2, piste p) {
+    piste sv1 = suuntavektori(p, kehä1);
+    piste sv2 = suuntavektori(p, kehä2);
     double abs_kulma = acos(pistetulo(sv1,sv2) / (vektpituus(sv1)*vektpituus(sv2)));
     return abs_kulma * sign(ristitulo(sv1,sv2));
 }
