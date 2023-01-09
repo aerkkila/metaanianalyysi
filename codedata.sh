@@ -2,6 +2,10 @@
 kansio=$HOME
 #lsblk |grep -q $kansio || { echo ei kovalevyä; exit 1; }
 
+if [ $1 = 'rm' ]; then
+    rm -rf ~/codedata
+    rm -rf ~/codedata1
+fi
 kansio=${kansio}/codedata
 k0=$kansio
 mkdir -p $kansio/kuvia
@@ -249,12 +253,12 @@ vuojakaumadata_vuosittain.target: vuojakauma_vuosittain_ikir vuojakauma_vuositta
 EOF
 
 kansio=$k0/create_kaudet
-mkdir -p $kansio/data
+mkdir -p $kansio/ft_percent
 a=/home/aerkkila/smos_uusi/
 cp $a/kaudet.c $kansio
-cp -l $HOME/smos_uusi/ft_percent/frozen_percent_pixel_*.nc $kansio/data
-cp -l $HOME/smos_uusi/ft_percent/partly_frozen_percent_pixel_*.nc $kansio/data
-kansio=$kansio/create_data
+cp -l $HOME/smos_uusi/ft_percent/frozen_percent_pixel_*.nc $kansio/ft_percent
+cp -l $HOME/smos_uusi/ft_percent/partly_frozen_percent_pixel_*.nc $kansio/ft_percent
+kansio=$kansio/create_ft_percent
 mkdir -p $kansio
 cp $a/ft_percents_pixel_ease.c $kansio
 cp -l $a/EASE_2_l*.nc $kansio
@@ -262,9 +266,7 @@ cp -l $a/EASE_2_l*.nc $kansio
 cat >$kansio/README <<EOF
 Compiler needs argument \`pkg-config --libs nctietue2\`.
 The code reads annual data files named as FT_720_yyyy.nc.
-Those are not given because they are quite similar than original data files
-which seem unfortunately not to have a free license to share.
-To download original data see ./create_data/README
+To run the codes, go to ./create data first.
 and run ./create_data/yhdistä_vuosittain.c to turn them into requested format.
 EOF
 
@@ -289,7 +291,9 @@ kansio=$k0/create_BAWLD1x1
 mkdir -p $kansio
 cp bawld/*.[ch] bawld/Makefile $kansio
 cat > $kansio/README <<EOF
-Used data is BAWLD_V1___Shapefile.zip from https://doi.org/10.18739/A2C824F9X (Olefeldt et al., 2021) which should be extracted into directory called data. Makefile downloads and extracts it automatically.
+Used data is BAWLD_V1___Shapefile.zip from https://doi.org/10.18739/A2C824F9X (Olefeldt et al., 2021) which should be extracted into directory called data.
+Makefile downloads and extracts it automatically.
+User may want to edit Makefile to give wanted number of threds as an argument to bawld.out on line 3.
 
 Olefeldt, D., Hovemyr, M., Kuhn, M. A., Bastviken, D., Bohn, T. J., Connolly, J., Crill, P., Euskirchen, E. S., Finkelstein, S. A., Genet, H., Grosse, G., Harris, L. I., Heffernan, L., Helbig, M., Hugelius, G., Hutchins, R., Juutinen, S., Lara, M. J., Malhotra, A., Manies, K., McGuire, A. D., Natali, S. M., O'Donnell, J. A., Parmentier, F.-J. W., Räsänen, A., Schädel, C., Sonnentag, O., Strack, M., Tank, S. E., Treat, C., Varner, R. K., Virtanen, T., Warren, R. K., and Watts, J. D.: The Boreal–Arctic Wetland and Lake Dataset (BAWLD), Earth Syst. Sci. Data, 13, 5127–5149, https://doi.org/10.5194/essd-13-5127-2021, 2021.
 EOF
@@ -301,7 +305,7 @@ cat > $k0/create_links.sh <<EOF
 ( cd create_vuotaulukot;    ln -s ../köppenmaski.txt ../ikirdata.nc ../BAWLD1x1.nc ../flux1x1.nc ../kaudet.nc . )
 ( cd create_vuojakaumadata; ln -s ../köppenmaski.txt ../ikirdata.nc ../BAWLD1x1.nc ../flux1x1.nc ../kausien_päivät.nc . )
 ( cd create_kaudet;         ln -s ../aluemaski.nc . )
-( cd create_kaudet/create_data/create_data; ln -s ../../../aluemaski.nc . )
+( cd create_kaudet/create_ft_percent/create_data; ln -s ../../../aluemaski.nc . )
 ( cd create_BAWLD1x1;       ln -s ../aluemaski.nc . )
 ( cd create_vuosijainnit;   ln -s ../aluemaski.nc ../flux1x1.nc ../BAWLD1x1.nc ../kausien_päivät.nc . )
 EOF
@@ -311,9 +315,7 @@ cat > $k0/README <<EOF
 It is necessary to run create_links.sh before attempting to run most codes elsewhere than in the root directory.
 
 It is also necessary to install nctietue2-library before running some of the C-codes.
-That is a custom C-library to handle netcdf files
-and given here as a directory.
-Go to nctietue2 directory and then it can be installed normally with:
+Go to nctietue2 directory which is included here and then it can be installed normally with:
     make
     make install # as root
 To remove the library, run:
@@ -322,15 +324,16 @@ Alternatively, this can be done without root privilidges:
     make
     export PKG_CONFIG_PATH=\$PWD
     export LD_LOAD_PATH=\$PWD
-    sed -Ei "s|gcc (.*pkg-config.*nctietue2)|gcc -I\$PWD -L\$PWD \1|" \`find .. -name Makefile\`
+    export cflags="-I\$PWD -L\$PWD"
+    sed -Ei "s|gcc (.*pkg-config.*nctietue2)|gcc \$cflags \1|" \`find .. -name Makefile\`
+Then to compile without a Makefile, use 'gcc \$cflags ...', if nctietue2 is used in the code.
 In this case nothing is intalled and therefore no need to uninstall.
 Last sed command edits Makefiles and should be run only once, otherwise the changes will cumulate.
 
-Each directory contains the data that is needed to run the codes.
-and if data was created using other codes, those codes and their data are given one directory deeper in create_data
 The root directory contains all codes that make the final results used in the article.
+Codes needed to create \$data are one level deeper in directory called create_\$data.
 
-C-source files will compile without any special arguments if Makefile is not given in that directory.
+If nctietue2-library is used in C code, it should be compiled with argument \`pkg-config --libs nctietue2\`.
 Most C codes use non-ascii utf8 characters in variable names
 which gcc cannot compile if version < 10.1.
 
@@ -349,3 +352,8 @@ vuojakaumadata			flux distribution data
 vuotaulukot			flux tables
 vuosittain			annually
 EOF
+
+# Lopuksi koodit ilman suuria tiedostoja
+k1=$HOME/codedata1
+cp -rl $k0 $k1
+rm -r $k1/flux1x1.nc $k1/kaudet.nc $k1/create_kaudet/ft_percent $k1/create_kaudet/create_ft_percent/EASE*.nc
