@@ -44,6 +44,9 @@ struct tiedot {
     double (*jakajan_kerroin)(const struct tiedot* restrict, int);
     /* wetland */
     double* wet;
+    /* ikirouta */
+    char* ikir;
+    int luokka;
 };
 
 struct tulos {
@@ -105,6 +108,8 @@ double laske_piste(const struct tiedot* restrict tiedot, int i) {
 	int alku  = montako_päivää(tiedot->aika0, tiedot->vuodet[v], tiedot->alut [v*tiedot->res + i]),
 	    loppu = montako_päivää(tiedot->aika0, tiedot->vuodet[v], tiedot->loput[v*tiedot->res + i]);
 	if(alku == VIRHE || loppu == VIRHE)
+	    continue;
+	if(luokenum==ikir_e && tiedot->ikir[v*tiedot->res+i]!=tiedot->luokka)
 	    continue;
 
 	vuosia++;
@@ -355,6 +360,21 @@ int main(int argc, char** argv) {
     tiedot.vuosia = 2021 - tiedot.vuodet[0];
     rajaa_aluetta(tiedot.alue, &tiedot);
 
+    /* Jatketaan puuttuvat vuodet ikiroutadataan tietäen, että vuosia puuttuu vain lopusta. */
+    if(luokenum == ikir_e) {
+	int siirto = tiedot.vuodet[0] - ikirvuosi0;
+	int vuosi1 = tiedot.vuodet[tiedot.vuosia-1] + 1;
+	int ikirv1 = ikirvuosi0 + ikirvuosia;
+	int puuttuu = vuosi1 - ikirv1;
+	memmove(luokitus+siirto*tiedot.res, luokitus, (ikirvuosia-siirto)*tiedot.res); // laitetaan sama alkukohta
+	luokitus = realloc(luokitus, tiedot.res*tiedot.vuosia);
+	if(!luokitus)
+	    err(1, "realloc luokitus %i", tiedot.res*tiedot.vuosia);
+	for(int v=ikirvuosia-siirto; v<puuttuu; v++)
+	    memcpy(luokitus+v*tiedot.res, luokitus+(v-1)*tiedot.res, tiedot.res);
+	tiedot.ikir = luokitus;
+    }
+
     FILE* f[kausia];
     for(int i=0; i<kausia; i++)
 	f[i] = alusta_csv(i);
@@ -362,17 +382,22 @@ int main(int argc, char** argv) {
     char* toinen_aluemaski = NULL;
 
     for(int laji=0; laji<luokkia; laji++) {
-	if(luokenum == wetl_e) {
-	    tiedot.wet = nct_get_var(bawvset, wetlnimet[laji])->data;
-	    tiedot.summan_kerroin = _summan_kerroin_wetl;
-	    tiedot.jakajan_kerroin = _jakajan_kerroin_wetl;
-	}
-	else {
-	    if(!toinen_aluemaski)
-		toinen_aluemaski = malloc(tiedot.res);
-	    tiedot.alue = toinen_aluemaski;
-	    for(int i=0; i<tiedot.res; i++)
-		tiedot.alue[i] = ((char*)maski->data)[i] && ((char*)luokitus)[i]==laji;
+	switch(luokenum) {
+	    case wetl_e:
+		tiedot.wet = nct_get_var(bawvset, wetlnimet[laji])->data;
+		tiedot.summan_kerroin = _summan_kerroin_wetl;
+		tiedot.jakajan_kerroin = _jakajan_kerroin_wetl;
+		break;
+	    case köpp_e:
+		if(!toinen_aluemaski)
+		    toinen_aluemaski = malloc(tiedot.res);
+		tiedot.alue = toinen_aluemaski;
+		for(int i=0; i<tiedot.res; i++)
+		    tiedot.alue[i] = ((char*)maski->data)[i] && ((char*)luokitus)[i]==laji;
+		break;
+	    case ikir_e:
+		tiedot.luokka = laji;
+		break;
 	}
 
 	for(int kausi=0; kausi<kausia; kausi++) {

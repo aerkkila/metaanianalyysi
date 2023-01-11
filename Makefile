@@ -1,6 +1,9 @@
 # pintaalat.py ja kaudet.c pitää olla ajettuina ennen tätä
 all: vuotaul_00.target vuotaul_10.target vuotaul_01.target vuotaul_02.target vuojakaumadata.target vuojakaumadata_vuosittain.target vuosijainnit.nc kuvat taulukot.target
 
+vuotaul.out: vuotaul.c
+	gcc -Wall -o $@ $< -lm `pkg-config --libs nctietue2` -O3
+
 vuotaul_00.target: vuotaul_köppen_pri.csv vuotaul_köppen_post.csv vuotaul_ikir_pri.csv vuotaul_ikir_post.csv vuotaul_wetland_pri.csv vuotaul_wetland_post.csv
 	cat vuotaulukot/*_pri_*.csv > vuotaul_pri.csv
 	cat vuotaulukot/*_post_*.csv > vuotaul_post.csv
