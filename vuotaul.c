@@ -205,28 +205,31 @@ void* lue_luokitus() {
     return funktio[luokenum]();
 }
 
-void rajaa_aluetta(char* alue, const struct tiedot* restrict td) {
-    if(luokenum != wetl_e && !kosteikko)
-	return;
-    for(int i=0; i<td->res; i++)
-	alue[i] &= td->WET[i] >= 0.05;
+#define nonwetl_flag (1<<0)
+void rajaa_aluetta_kosteikon_perusteella(char* alue, const struct tiedot* restrict td, int flags) {
     double* mix;
     switch(alueenum) {
 	case mixed_e:
 	    mix = nct_read_from_ncfile("BAWLD1x1.nc", "wetland_prf", nc_get_var_double, sizeof(double));
 	    for(int i=0; i<td->res; i++)
-		alue[i] &= (0.03 < mix[i] && mix[i] < 0.97);
+		alue[i] &= (0.03 < mix[i]/td->WET[i] && mix[i]/td->WET[i] < 0.97);
 	    free(mix);
 	    break;
 	case pure_e:
 	    mix = nct_read_from_ncfile("BAWLD1x1.nc", "wetland_prf", nc_get_var_double, sizeof(double));
 	    for(int i=0; i<td->res; i++)
-		alue[i] &= !(0.03 < mix[i] && mix[i] < 0.97);
+		alue[i] &= !(0.03 < mix[i]/td->WET[i] && mix[i]/td->WET[i] < 0.97);
 	    free(mix);
 	    break;
 	default:
 	    break;
     }
+    if(flags & nonwetl_flag)
+	for(int i=0; i<td->res; i++)
+	    alue[i] &= td->WET[i] < 0.05;
+    else if(luokenum == wetl_e || kosteikko)
+	for(int i=0; i<td->res; i++)
+	    alue[i] &= td->WET[i] >= 0.05;
 }
 
 void aseta_alku_ja_loppu(struct tiedot* restrict td, nct_vset* kauvset, int kausi) {
@@ -312,8 +315,8 @@ double varianssi(struct tulos* restrict tulos) {
     return summa / jakaja;
 }
 
-void kirjoita_csvhen(FILE* f, struct tulos* tulos, int luokka) {
-    fprintf(f, "%s,%.4lf,%.5lf,%.4lf,%.4lf,%i,%.5f\n", (*luoknimet)[luokka],
+void kirjoita_csvhen(FILE* f, struct tulos* tulos, const char* luoknimi) {
+    fprintf(f, "%s,%.4lf,%.5lf,%.4lf,%.4lf,%i,%.5f\n", luoknimi,
 	    tulos->sum1 * 86400 * 16.0416 * 1e-6, // Tg (km² -> m²) && (g -> Tg) = (1e3)² * 1e-12 = 1e-6
 	    tulos->sum1 / tulos->jak1 * 1e9,      // nmol/s/m²
 	    tulos->jak1 / koko_vuoden_jakaja,     // 1
@@ -321,6 +324,19 @@ void kirjoita_csvhen(FILE* f, struct tulos* tulos, int luokka) {
 	    tulos->pisteitä,                      // 1
 	    varianssi(tulos)                      // (nmol/s/m²)²
 	   );
+}
+
+void tee_lajin_kaudet(struct tiedot* tiedot, const char* luoknimi, nct_vset* kauvset, FILE** f) {
+    for(int kausi=0; kausi<kausia; kausi++) {
+	aseta_alku_ja_loppu(tiedot, kauvset, kausi);
+	struct tulos tulos;
+	laske(tiedot, &tulos);
+	if(!kausi)
+	    koko_vuoden_jakaja = tulos.jak1;
+	kirjoita_csvhen(f[kausi], &tulos, luoknimi);
+	vapauta_tulos(&tulos);
+	poista_alku_ja_loppu(tiedot, kausi);
+    }
 }
 
 int main(int argc, char** argv) {
@@ -358,7 +374,7 @@ int main(int argc, char** argv) {
 	.jakajan_kerroin = kosteikko? _jakajan_kerroin_kost: _palauta_1,
     };
     tiedot.vuosia = 2021 - tiedot.vuodet[0];
-    rajaa_aluetta(tiedot.alue, &tiedot);
+    rajaa_aluetta_kosteikon_perusteella(tiedot.alue, &tiedot, 0);
 
     /* Jatketaan puuttuvat vuodet ikiroutadataan tietäen, että vuosia puuttuu vain lopusta. */
     if(luokenum == ikir_e) {
@@ -399,17 +415,15 @@ int main(int argc, char** argv) {
 		tiedot.luokka = laji;
 		break;
 	}
-
-	for(int kausi=0; kausi<kausia; kausi++) {
-	    aseta_alku_ja_loppu(&tiedot, kauvset, kausi);
-	    struct tulos tulos;
-	    laske(&tiedot, &tulos);
-	    if(!kausi)
-		koko_vuoden_jakaja = tulos.jak1;
-	    kirjoita_csvhen(f[kausi], &tulos, laji);
-	    vapauta_tulos(&tulos);
-	    poista_alku_ja_loppu(&tiedot, kausi);
-	}
+	tee_lajin_kaudet(&tiedot, (*luoknimet)[laji], kauvset, f);
+    }
+    if(luokenum == wetl_e) {
+	tiedot.alue = nct_read_from_ncfile("aluemaski.nc", "maski", NULL, 0);
+	rajaa_aluetta_kosteikon_perusteella(tiedot.alue, &tiedot, nonwetl_flag);
+	tiedot.summan_kerroin = _palauta_1;
+	tiedot.jakajan_kerroin = _palauta_1;
+	tee_lajin_kaudet(&tiedot, "nonwetland", kauvset, f);
+	free(tiedot.alue);
     }
 
     for(int i=0; i<kausia; i++)
