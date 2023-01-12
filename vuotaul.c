@@ -27,17 +27,20 @@ const char* pripost_sisään[] = {"flux_bio_prior", "flux_bio_posterior"};
 const char* pripost_ulos[]   = {"pri", "post"};
 #define kausia 4
 #define wraja 0.05
+#define vuosi1_ 2021
+#define vuosi0_ 2011
 
 enum alue_e     {kokoalue_e, pure_e, mixed_e} alueenum;
 enum luokitus_e luokenum;
-int ppnum=1, kosteikko, ikirvuosi0, ikirvuosia, luokkia;
+int ppnum=1, kosteikko, vuosittain;                // argumentteja
+int ikirvuosi0, ikirvuosia, vuosi1kaikki, luokkia; // määritettäviä
 typeof(&ikirnimet) luoknimet;
 double lat0, koko_vuoden_jakaja;
 
 struct tiedot {
     double *vuo, *WET;
     float *alut, *loput;
-    int *vuodet, vuosia, res;
+    int *vuodet, res, v0, v1;
     time_t aika0;
     char* alue;
     double (*summan_kerroin)(const struct tiedot* restrict, int);
@@ -71,6 +74,8 @@ int argumentit(int argc, char** argv) {
 	    ppnum = 1;
 	else if(!strcmp(argv[i], "kosteikkoalue"))
 	    kosteikko = 1;
+	else if(!strcmp(argv[i], "vuosittain"))
+	    vuosittain = 1;
 	else if(!strcmp(argv[i], "mixed"))
 	    alueenum = mixed_e;
 	else if(!strcmp(argv[i], "pure"))
@@ -104,11 +109,12 @@ double laske_piste(const struct tiedot* restrict tiedot, int i) {
     jakaja = summa = 0;
     double ala = Pintaala(i);
     int vuosia = 0;
-    for(int v=0; v<tiedot->vuosia; v++) {
+    for(int v=tiedot->v0; v<tiedot->v1; v++) {
 	int alku  = montako_päivää(tiedot->aika0, tiedot->vuodet[v], tiedot->alut [v*tiedot->res + i]),
 	    loppu = montako_päivää(tiedot->aika0, tiedot->vuodet[v], tiedot->loput[v*tiedot->res + i]);
 	if(alku == VIRHE || loppu == VIRHE)
 	    continue;
+	/* Tässä voisi tarkistaa vuopäivien kelvollisuuden. */
 	if(luokenum==ikir_e && tiedot->ikir[v*tiedot->res+i]!=tiedot->luokka)
 	    continue;
 
@@ -234,9 +240,10 @@ void rajaa_aluetta_kosteikon_perusteella(char* alue, const struct tiedot* restri
 
 void aseta_alku_ja_loppu(struct tiedot* restrict td, nct_vset* kauvset, int kausi) {
     if(kausi == whole_year_e) {
-	td->alut =  malloc(    td->res*td->vuosia*2*sizeof(float));
-	td->loput = td->alut + td->res*td->vuosia;
-	for(int i=0; i<td->vuosia; i++) {
+	int vuosia = td->v1 - td->v0;
+	td->alut =  malloc(    td->res*vuosia*2*sizeof(float));
+	td->loput = td->alut + td->res*vuosia;
+	for(int i=td->v0; i<td->v1; i++) {
 	    int karkaus = !(td->vuodet[i]%4) && (td->vuodet[i]%100 || !(td->vuodet[i]%400));
 	    float* alk = td->alut  + i*td->res;
 	    float* lop = td->loput + i*td->res;
@@ -254,7 +261,7 @@ void aseta_alku_ja_loppu(struct tiedot* restrict td, nct_vset* kauvset, int kaus
     apu = nct_get_var(kauvset, nimi);
     if(!apu->data)
 	nct_load_var_with(apu, -1, nc_get_var_float, sizeof(float));
-    td->alut  = apu->data;
+    td->alut = apu->data;
 
     sprintf(nimi, "%s_end", kaudet[kausi]);
     apu = nct_get_var(kauvset, nimi);
@@ -301,7 +308,34 @@ FILE* alusta_csv(int kausi) {
     return f;
 }
 
-double varianssi(struct tulos* restrict tulos) {
+#define buff_size 2048
+/* Toisin kuin yllä, tässä kirjoitetaan muistiin ja lopussa koko pötkö viedään yhteen tiedostoon.
+   Erillisiä tiedostoja tulisi liian paljon auki kerralla. */
+int alusta_csv_vuosittain(const char* luoknimi, int var, int v0, int v1, char* buf) {
+    FILE* f = fmemopen(buf, buff_size, "w+");
+    extern const char* varnimet[];
+    char* kansio = (alueenum==pure_e?  "vuotaulukot/vuosittain/puhdas":
+	            alueenum==mixed_e? "vuotaulukot/vuosittain/sekoitus":
+		    "vuotaulukot/vuosittain");
+    //mkdir_p(kansio, 0755);
+    fprintf(f, "#%s/%s%s_%s%s", kansio,
+	    ppnum==0? "prior_": "", varnimet[var], luoknimi, kosteikko? "_kost": "");
+    if(kosteikko)
+	fprintf(f, "_kosteikko");
+    if(!ppnum)
+	fprintf(f, "_priori");
+    fprintf(f, "\n");
+    for(; v0<v1; v0++)
+	fprintf(f, ",%i", v0);
+    fprintf(f, "\n");
+    int ret = ftell(f);
+    fclose(f);
+    return ret;
+}
+
+typedef const struct tulos* restrict vakiotulos;
+
+double varianssi(vakiotulos tulos) {
     double avg = tulos->sum1 / tulos->jak1 * 1e9; // erotus² voi olla pieni ellei kerrota 1e9:llä
     double summa = 0;
     double jakaja = 0;
@@ -315,8 +349,12 @@ double varianssi(struct tulos* restrict tulos) {
     return summa / jakaja;
 }
 
-void kirjoita_csvhen(FILE* f, struct tulos* tulos, const char* luoknimi) {
-    fprintf(f, "%s,%.4lf,%.5lf,%.4lf,%.4lf,%i,%.5f\n", luoknimi,
+double Tg_fun   (vakiotulos tulos) { return tulos->sum1 * 86400 * 16.0416 * 1e-6; }
+double vuo_fun  (vakiotulos tulos) { return tulos->sum1 / tulos->jak1 * 1e9; }
+double osuus_fun(vakiotulos tulos) { return tulos->jak1 / koko_vuoden_jakaja; }
+
+void kirjoita_csvhen(FILE* f, vakiotulos tulos, const char* luoknimi) {
+    fprintf(f, "%s,%.4lf,%.5lf,%.4lf,%.4lf,%i,%.5lf\n", luoknimi,
 	    tulos->sum1 * 86400 * 16.0416 * 1e-6, // Tg (km² -> m²) && (g -> Tg) = (1e3)² * 1e-12 = 1e-6
 	    tulos->sum1 / tulos->jak1 * 1e9,      // nmol/s/m²
 	    tulos->jak1 / koko_vuoden_jakaja,     // 1
@@ -324,6 +362,16 @@ void kirjoita_csvhen(FILE* f, struct tulos* tulos, const char* luoknimi) {
 	    tulos->pisteitä,                      // 1
 	    varianssi(tulos)                      // (nmol/s/m²)²
 	   );
+}
+
+const char* muoto[] = {",%.5lf", ",%.5lf", ",%.6lf", ",%.6lf"};
+double (*varfun[])(vakiotulos) = {Tg_fun, vuo_fun, osuus_fun, varianssi};
+const char* varnimet[] = {"emissio", "vuo", "kausiosuus", "varianssi"};
+int nvars = sizeof(muoto)/sizeof(*muoto);
+
+void kirjoita_csvhen_vuosittain(char* buf[nvars], int sij[nvars], vakiotulos tulos) {
+    for(int var=0; var<nvars; var++)
+	sij[var] += sprintf(buf[var]+sij[var], muoto[var], varfun[var](tulos));
 }
 
 void tee_lajin_kaudet(struct tiedot* tiedot, const char* luoknimi, nct_vset* kauvset, FILE** f) {
@@ -337,6 +385,46 @@ void tee_lajin_kaudet(struct tiedot* tiedot, const char* luoknimi, nct_vset* kau
 	vapauta_tulos(&tulos);
 	poista_alku_ja_loppu(tiedot, kausi);
     }
+}
+
+/* Täällä asetetaan, mitkä vuodet käydään ja voidaan poiketa eivuosittain-tilanteesta. */
+void tee_lajin_kaudet_vuosittain(struct tiedot* tiedot, nct_vset* kauvset, char* buf[nvars], int sij[nvars]) {
+    const int v00 = tiedot->v0;
+    for(int kausi=0; kausi<kausia; kausi++) {
+	aseta_alku_ja_loppu(tiedot, kauvset, kausi);
+	for(int var=0; var<nvars; var++)
+	    sij[var] += sprintf(buf[var]+sij[var], "%s", kaudet[kausi]);
+
+	for(tiedot->v0=v00; tiedot->v0<tiedot->v1; tiedot->v0++) {
+	    struct tulos tulos;
+	    laske(tiedot, &tulos);
+	    if(!kausi)
+		koko_vuoden_jakaja = tulos.jak1;
+	    kirjoita_csvhen_vuosittain(buf, sij, &tulos);
+	    vapauta_tulos(&tulos);
+	}
+	for(int i=0; i<nvars; i++)
+	    buf[i][sij[i]++] = '\n';
+	poista_alku_ja_loppu(tiedot, kausi);
+    }
+    tiedot->v0 = v00;
+}
+
+void vie_tiedostoksi(char* buf[][nvars], int sij[][nvars]) {
+    mkdir_p("vuotaulukot/vuosittain", 0755);
+    char nimi[128];
+    char* aluenimi = alueenum==mixed_e?"_sekoitus": alueenum==pure_e?"_puhdas": "";
+    sprintf(nimi, "vuotaulukot/vuosittain/%s%s%s%s.csv",
+	    luokitus_ulos[luokenum], kosteikko?"_kosteikko":"", aluenimi, !ppnum?"_priori":"");
+    int fd = open(nimi, O_WRONLY|O_CREAT|O_TRUNC, 0644);
+    if(fd < 0)
+	err(1, "open ${ulostulo}.csv");
+    for(int j=0; j<luokkia; j++)
+	for(int i=0; i<nvars; i++) {
+	    if(write(fd, buf[j][i], sij[j][i]) != sij[j][i])
+		warn("write");
+	}
+    close(fd);
 }
 
 int main(int argc, char** argv) {
@@ -373,27 +461,36 @@ int main(int argc, char** argv) {
 	.summan_kerroin  = _palauta_1,
 	.jakajan_kerroin = kosteikko? _jakajan_kerroin_kost: _palauta_1,
     };
-    tiedot.vuosia = 2021 - tiedot.vuodet[0];
+    tiedot.v0 = vuosi0_ - tiedot.vuodet[0];
+    tiedot.v1 = vuosi1_ - tiedot.vuodet[0];
     rajaa_aluetta_kosteikon_perusteella(tiedot.alue, &tiedot, 0);
+
+    //vuosi1kaikki = nct_get_integer(nct_get_var(kauvset, "vuosi"), -1) + 1;
 
     /* Jatketaan puuttuvat vuodet ikiroutadataan tietäen, että vuosia puuttuu vain lopusta. */
     if(luokenum == ikir_e) {
 	int siirto = tiedot.vuodet[0] - ikirvuosi0;
-	int vuosi1 = tiedot.vuodet[tiedot.vuosia-1] + 1;
 	int ikirv1 = ikirvuosi0 + ikirvuosia;
-	int puuttuu = vuosi1 - ikirv1;
+	int puuttuu = vuosi1kaikki - ikirv1;
 	memmove(luokitus+siirto*tiedot.res, luokitus, (ikirvuosia-siirto)*tiedot.res); // laitetaan sama alkukohta
-	luokitus = realloc(luokitus, tiedot.res*tiedot.vuosia);
+	luokitus = realloc(luokitus, tiedot.res*(tiedot.v1-tiedot.v0));
 	if(!luokitus)
-	    err(1, "realloc luokitus %i", tiedot.res*tiedot.vuosia);
+	    err(1, "realloc luokitus %i", tiedot.res*(tiedot.v1-tiedot.v0));
 	for(int v=ikirvuosia-siirto; v<puuttuu; v++)
 	    memcpy(luokitus+v*tiedot.res, luokitus+(v-1)*tiedot.res, tiedot.res);
 	tiedot.ikir = luokitus;
     }
 
-    FILE* f[kausia];
-    for(int i=0; i<kausia; i++)
-	f[i] = alusta_csv(i);
+    FILE* f[kausia];      // ei vuosittain
+    char* buf[10][nvars]; // vuosittain
+    char* bufbuf = NULL;  // vuosittain
+    int sij[10][nvars];   // vuosittain
+
+    if(vuosittain)
+	assert((bufbuf = malloc(luokkia*nvars*buff_size)));
+    else
+	for(int i=0; i<kausia; i++)
+	    f[i] = alusta_csv(i);
 
     char* toinen_aluemaski = NULL;
 
@@ -415,22 +512,42 @@ int main(int argc, char** argv) {
 		tiedot.luokka = laji;
 		break;
 	}
-	tee_lajin_kaudet(&tiedot, (*luoknimet)[laji], kauvset, f);
+	if(vuosittain) {
+	    for(int i=0; i<nvars; i++) {
+		buf[laji][i] = bufbuf + buff_size*nvars*laji + buff_size*i;
+		sij[laji][i] = alusta_csv_vuosittain((*luoknimet)[laji], i, vuosi0_, vuosi1_, buf[laji][i]);
+	    }
+	    tee_lajin_kaudet_vuosittain(&tiedot, kauvset, buf[laji], sij[laji]);
+	}
+	else
+	    tee_lajin_kaudet(&tiedot, (*luoknimet)[laji], kauvset, f);
     }
     if(luokenum == wetl_e) {
 	tiedot.alue = nct_read_from_ncfile("aluemaski.nc", "maski", NULL, 0);
 	rajaa_aluetta_kosteikon_perusteella(tiedot.alue, &tiedot, nonwetl_flag);
 	tiedot.summan_kerroin = _palauta_1;
 	tiedot.jakajan_kerroin = _palauta_1;
-	tee_lajin_kaudet(&tiedot, "nonwetland", kauvset, f);
+	if(vuosittain) {
+	    for(int i=0; i<nvars; i++) {
+		buf[luokkia][i] = bufbuf + buff_size*nvars*luokkia + buff_size*i;
+		sij[luokkia][i] = alusta_csv_vuosittain("nonwetland", i, tiedot.vuodet[0], vuosi1kaikki, buf[luokkia][i]);
+	    }
+	    tee_lajin_kaudet_vuosittain(&tiedot, kauvset, buf[luokkia], sij[luokkia]);
+	}
+	else
+	    tee_lajin_kaudet(&tiedot, "nonwetland", kauvset, f);
 	free(tiedot.alue);
     }
 
-    for(int i=0; i<kausia; i++)
-	fclose(f[i]);
+    if(vuosittain)
+	vie_tiedostoksi(buf, sij);
+    else
+	for(int i=0; i<kausia; i++)
+	    fclose(f[i]);
 
     free(luokitus);
     free(toinen_aluemaski);
+    free(bufbuf);
     nct_free_vset(aluevset);
     nct_free_vset(bawvset);
     nct_free_vset(vuovset);
