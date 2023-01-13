@@ -21,31 +21,43 @@ struct taul {
     double data[KAUSIA][15];
 };
 
-enum palaute {kelpaa, ei_löytynyt, eof};
+enum palaute {kelpaa, ei_löytynyt_ensinkään, ei_löytynyt_enää, aikainen_eof};
 
-#define dir "/home/aerkkila/koodit/vuotaulukot/vuosittain/"
+#define dir "../vuotaulukot/vuosittain/"
 
 static enum palaute _lue(str nimi, str muuttuja, struct taul* dest) {
+    static int monesko_laji = 0;
     int apu, fd, ret = kelpaa;
+    str ptr;
+
+    /* Luetaan tiedosto muistiin. */
     if((fd = open(nimi, O_RDONLY)) < 0)
 	err(1, "open %s", nimi);
     struct stat stat;
     fstat(fd, &stat);
     const int pit = stat.st_size;
-    str tied;
+    char* tied;
     tied = mmap(NULL, pit, PROT_READ, MAP_PRIVATE, fd, 0);
     close(fd);
     if(!tied)
 	err(1, "mmap");
+
+    /* Haetaan oikea kohta. */
+    monesko_laji++;
     char haku[64];
     sprintf(haku, "#%s_", muuttuja);
-    str ptr = strstr(tied, haku);
+    ptr = strstr(tied, haku);
     if(!ptr) {
-	ret = ei_löytynyt; goto palaa; }
+	ret = ei_löytynyt_ensinkään; goto palaa; }
+    for(int i=0; i<monesko_laji; i++) {
+	ptr = strstr(ptr, haku);
+	if(!ptr) {
+	    ret = ei_löytynyt_enää; goto palaa; }
+	ptr += strlen(haku);
+    }
     str loppu = tied+pit;
 
     /* Luetaan lajinimi siirtyen vuosirivin alkuun. */
-    ptr += strlen(haku);
     apu = 0;
     while((dest->lajinimi[apu++]=*ptr++) != '\n');
     dest->lajinimi[apu-1] = '\0';
@@ -62,11 +74,11 @@ static enum palaute _lue(str nimi, str muuttuja, struct taul* dest) {
 	while(*ptr <= ' ') ptr++;
 	sscanf(ptr, "%[^,]%n", dest->kausinimet[kausi], &apu), ptr+=apu;
 	if(ptr >= loppu) {
-	    ret = eof; goto palaa; }
+	    ret = aikainen_eof; goto palaa; }
 	for(int i=0; i<vuosia; i++) {
 	    sscanf(ptr, ",%lf%n", dest->data[kausi]+i, &apu), ptr+=apu;
 	    if(ptr >= loppu) {
-		ret = eof; goto palaa; }
+		ret = aikainen_eof; goto palaa; }
 	}
     }
 
@@ -81,15 +93,18 @@ static char* _palauta_nimi(enum luokitus_e luok, int kosteikko) {
     return tmpnimi;
 }
 
-static void lue_tahan(str muuttuja, enum luokitus_e luok, int kosteikko, struct taul* dest) {
+static int lue_tahan(str muuttuja, enum luokitus_e luok, int kosteikko, struct taul* dest) {
     switch(_lue(_palauta_nimi(luok, kosteikko), muuttuja, dest)) {
 	case kelpaa:
+	    return 0;
+	case ei_löytynyt_enää:
 	    break;
-	case ei_löytynyt:
-	    printf("Muuttujaa %s ei löytynyt (%s).\n", muuttuja, tmpnimi);
+	case ei_löytynyt_ensinkään:
+	    printf("Muuttujaa %s ei löytynyt\n", muuttuja);
 	    break;
-	case eof:
+	case aikainen_eof:
 	    printf("Tiedosto loppui kesken %s : %s.\n", tmpnimi, muuttuja);
 	    break;
     }
+    return 1;
 }
