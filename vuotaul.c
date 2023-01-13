@@ -16,7 +16,7 @@ const double r2 = 6362.1320*6362.1320; // km, jotta luvut ovat maltillisempia
 #define Pintaala(i) PINTAALA(Lat(i)*ASTE, ASTE)
 
 const char* ikirnimet[]      = {"nonpermafrost", "sporadic", "discontinuous", "continuous"};
-const char* köppnimet[]      = {"D.b", "D.c", "D.d", "ET"};
+const char* köppnimet[]      = {"Db", "Dc", "Dd", "ET"};
 const char* wetlnimet[]      = {"wetland", "bog", "fen", "marsh", "permafrost_bog", "tundra_wetland"};
 enum                           {wetland_e, bog_e, fen_e, marsh_e, permafrost_bog_e, tundra_wetland_e};
 const char* kaudet[]         = {"whole_year", "summer", "freezing", "winter"};
@@ -72,7 +72,7 @@ int argumentit(int argc, char** argv) {
 	    ppnum = 0;
 	else if(!strcmp(argv[i], "post"))
 	    ppnum = 1;
-	else if(!strcmp(argv[i], "kosteikkoalue"))
+	else if(!strcmp(argv[i], "kosteikko"))
 	    kosteikko = 1;
 	else if(!strcmp(argv[i], "vuosittain"))
 	    vuosittain = 1;
@@ -314,16 +314,19 @@ FILE* alusta_csv(int kausi) {
 int alusta_csv_vuosittain(const char* luoknimi, int var, int v0, int v1, char* buf) {
     FILE* f = fmemopen(buf, buff_size, "w+");
     extern const char* varnimet[];
-    char* kansio = (alueenum==pure_e?  "vuotaulukot/vuosittain/puhdas":
-	            alueenum==mixed_e? "vuotaulukot/vuosittain/sekoitus":
-		    "vuotaulukot/vuosittain");
-    //mkdir_p(kansio, 0755);
-    fprintf(f, "#%s/%s%s_%s%s", kansio,
-	    ppnum==0? "prior_": "", varnimet[var], luoknimi, kosteikko? "_kost": "");
+    fprintf(f, "#%s_%s", varnimet[var], luoknimi);
     if(kosteikko)
 	fprintf(f, "_kosteikko");
     if(!ppnum)
 	fprintf(f, "_priori");
+    switch(alueenum) {
+	case pure_e:
+	    fprintf(f, "_puhdas"); break;
+	case mixed_e:
+	    fprintf(f, "_sekoitus"); break;
+	default:
+	    break;
+    }
     fprintf(f, "\n");
     for(; v0<v1; v0++)
 	fprintf(f, ",%i", v0);
@@ -481,13 +484,13 @@ int main(int argc, char** argv) {
 	tiedot.ikir = luokitus;
     }
 
-    FILE* f[kausia];      // ei vuosittain
-    char* buf[10][nvars]; // vuosittain
-    char* bufbuf = NULL;  // vuosittain
-    int sij[10][nvars];   // vuosittain
+    FILE* f[kausia];             // ei vuosittain
+    char* buf[luokkia+1][nvars]; // vuosittain
+    char* bufbuf = NULL;         // vuosittain
+    int sij[luokkia+1][nvars];   // vuosittain
 
     if(vuosittain)
-	assert((bufbuf = malloc(luokkia*nvars*buff_size)));
+	assert((bufbuf = malloc((luokkia+1)*nvars*buff_size)));
     else
 	for(int i=0; i<kausia; i++)
 	    f[i] = alusta_csv(i);
