@@ -10,6 +10,7 @@ testi*
 *.cmp/
 *.png
 *.out
+*.out.*
 *.tex
 *.so
 *.swp
@@ -24,4 +25,3 @@ vuotaulukot/
 wregressio/virhepalkit.c
 */build/
 bawld/data/
-trendit/mannk.c
