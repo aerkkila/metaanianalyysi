@@ -17,8 +17,8 @@ static int monesko_laji = 0;
 
 struct taul {
     int vuodet[15];
-    char lajinimi[40];
-    char kausinimet[KAUSIA][32];
+    char lajinimi[24];
+    char kausinimet[KAUSIA][16];
     double data[KAUSIA][15];
 };
 
