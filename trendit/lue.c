@@ -7,12 +7,13 @@
 #include <err.h>
 
 static const char* luokitus[] = {"köppen", "ikir", "wetland"};
-enum luokitus_e          {köpp_e,   ikir_e, wetl_e, luokituksia};
+enum luokitus_e                 {köpp_e,   ikir_e, wetl_e, luokituksia_e};
 
 #define KAUSIA 4
 #define str const char* restrict
 static int kausia = KAUSIA;
 static int vuosia;
+static int monesko_laji = 0;
 
 struct taul {
     int vuodet[15];
@@ -26,7 +27,6 @@ enum palaute {kelpaa, ei_löytynyt_ensinkään, ei_löytynyt_enää, aikainen_eo
 #define dir "../vuotaulukot/vuosittain/"
 
 static enum palaute _lue(str nimi, str muuttuja, struct taul* dest) {
-    static int monesko_laji = 0;
     int apu, fd, ret = kelpaa;
     str ptr;
 
@@ -89,7 +89,7 @@ palaa:
 
 static char tmpnimi[128];
 static char* _palauta_nimi(enum luokitus_e luok, int kosteikko) {
-    sprintf(tmpnimi, dir"%s%s.csv", luokitus[luok], kosteikko?"_kosteikko":"");
+    sprintf(tmpnimi, dir"%s%s.csv", luokitus[luok], kosteikko?"W":"");
     return tmpnimi;
 }
 
@@ -107,4 +107,10 @@ static int lue_tahan(str muuttuja, enum luokitus_e luok, int kosteikko, struct t
 	    break;
     }
     return 1;
+}
+
+static void alusta_luenta() {
+    struct taul a;
+    lue_tahan("vuo", 0, 0, &a); // asettaa tarvittavat globaalit muuttujat
+    monesko_laji = 0;
 }

@@ -1,18 +1,18 @@
 # pintaalat.py ja kaudet.c pitää olla ajettuina ennen tätä
 all: vuotaul_00.target vuotaul_10.target vuotaul_01.target vuotaul_02.target vuojakaumadata.target vuojakaumadata_vuosittain.target vuosijainnit.nc kuvat taulukot.target
 
-vuotaul.out: vuotaul.c
+vuodata.out: vuotaul.c
 	gcc -Wall -o $@ $< -lm `pkg-config --libs nctietue2` -O3
 vvt.target: vvk vvw vvi vvkk vvik
-vvk: vuotaul.out
+vvk: vuodata.out
 	./$< vuosittain köpp
-vvi: vuotaul.out
+vvi: vuodata.out
 	./$< vuosittain ikir
-vvw: vuotaul.out
+vvw: vuodata.out
 	./$< vuosittain wetl
-vvkk: vuotaul.out
+vvkk: vuodata.out
 	./$< vuosittain köpp kosteikko
-vvik: vuotaul.out
+vvik: vuodata.out
 	./$< vuosittain ikir kosteikko
 
 vuotaul_00.target: vuotaul_köppen_pri.csv vuotaul_köppen_post.csv vuotaul_ikir_pri.csv vuotaul_ikir_post.csv vuotaul_wetland_pri.csv vuotaul_wetland_post.csv

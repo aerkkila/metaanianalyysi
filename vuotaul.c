@@ -316,7 +316,7 @@ int alusta_csv_vuosittain(const char* luoknimi, int var, int v0, int v1, char* b
     extern const char* varnimet[];
     fprintf(f, "#%s_%s", varnimet[var], luoknimi);
     if(kosteikko)
-	fprintf(f, "_kosteikko");
+	fprintf(f, "W");
     if(!ppnum)
 	fprintf(f, "_priori");
     switch(alueenum) {
@@ -418,7 +418,7 @@ void vie_tiedostoksi(char* buf[][nvars], int sij[][nvars]) {
     char nimi[128];
     char* aluenimi = alueenum==mixed_e?"_sekoitus": alueenum==pure_e?"_puhdas": "";
     sprintf(nimi, "vuotaulukot/vuosittain/%s%s%s%s.csv",
-	    luokitus_ulos[luokenum], kosteikko?"_kosteikko":"", aluenimi, !ppnum?"_priori":"");
+	    luokitus_ulos[luokenum], kosteikko?"W":"", aluenimi, !ppnum?"_priori":"");
     int fd = open(nimi, O_WRONLY|O_CREAT|O_TRUNC, 0644);
     if(fd < 0)
 	err(1, "open ${ulostulo}.csv");
