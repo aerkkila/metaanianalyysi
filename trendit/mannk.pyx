@@ -90,40 +90,48 @@ cpdef tulosta_listalista(listalista):
 
 rcParams.update({'font.size':14})
 
+cdef tee_tulmaar():
+    global maar
+    cdef i
+    for i in range(len(kaudet_ulos)):
+        maar.kaudet_ulos[i] = kaudet_ulos[i]
+    for i in range(len(muuttujat)):
+        maar.muuttujat[i] = muuttujat[i]
+        maar.variables[i] = bvariables[i]
+        maar.latexmuutt[i] = 1
+    for i in range(len(latexmuutt)):
+        maar.latexmuutt[i] = latexmuutt[i]
+    maar.nmuutt = len(muuttujat)
+    maar.kausia = len(kaudet)
+
 kaudet      = [b"whole_year", b"summer", b"freezing", b"winter"]
 kaudet_ulos = [b'wh',b'su',b'fr',b'wi']
 muuttujat   = [b"emissio", b"vuo", b"varianssi"]
 variables   = ["emission", "flux", "variance"]
 bvariables  = [b"emission", b"flux", b"variance"]
 latexmuutt  = [1,1,0]
+
 foo = lambda x: x
 
-cdef i
-for i in range(len(kaudet_ulos)):
-    maar.kaudet_ulos[i] = kaudet_ulos[i]#[k for k in kaudet_ulos]
-for i in range(len(muuttujat)):
-    maar.muuttujat[i] = muuttujat[i]
-    maar.variables[i] = bvariables[i]
-    maar.latexmuutt[i] = 1
-for i in range(len(latexmuutt)):
-    maar.latexmuutt[i] = latexmuutt[i]
-maar.nmuutt = len(muuttujat)
-maar.kausia = 4
-
+tee_tulmaar()
 assert(not aloita_luenta())
 listalista = aja()
 alusta_lista(&maar, b"trendit0")
 tulosta_listalista(listalista)
 lopeta_lista()
 
-'''
 kaudet      = kaudet[1:]
 kaudet_ulos = kaudet_ulos[1:]
-muuttujat  = [b"kausiosuus"]
+muuttujat   = [b"kausiosuus"]
 variables   = ["length"]
-latexmuutt  = [0]
+bvariables  = [b"length"]
+latexmuutt  = [1]
 foo = lambda x: x*365.25
 
 poista_kausi(0)
-aja()
-'''
+tee_tulmaar()
+assert(not aloita_luenta())
+listalista = aja()
+alusta_lista(&maar, b"trendit1")
+tulosta_listalista(listalista)
+lopeta_lista()
