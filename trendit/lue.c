@@ -6,111 +6,198 @@
 #include <string.h>
 #include <err.h>
 
+/* Käyttö:
+   Pythonilta kutsuttavat funktiot ovat tiedoston lopussa.
+   Valinnaisesti, jos halutaan valikoida kausia, käytetään funktiota poista_kausi(num)
+   Valinnaisesti, jos halutaan ennalta asettaa muuttujat vuosia ja vuodet, voidaan kutsua aloita_luenta()
+   Sitten esimerkiksi:
+   *    for muuttuja in ["emissio", "vuo"]
+   *        while(!lue_seuraava(muuttuja))
+   *            foo(kohde_$jotain)
+
+   lue_seuraava() pitää aina kutsua kunnes se palauttaa toden, koska silloin resurssit vapautetaan.
+   Vapauttamiselle ei ole erillistä funktiota.
+   */
+
+/*
 static const char* luokitus[] = {"köppen", "ikir", "wetland"};
 enum luokitus_e                 {köpp_e,   ikir_e, wetl_e, luokituksia_e};
+*/
 
 #define KAUSIA 4
 #define str const char* restrict
 static int kausia = KAUSIA;
 static int vuosia;
-static int monesko_laji = 0;
+static int vuodet[15];
+char kohde_lajinimi[24];
+char kohde_kausinimet[KAUSIA][16];
+double kohde_data[KAUSIA][15];
 
-struct taul {
-    int vuodet[15];
-    char lajinimi[24];
-    char kausinimet[KAUSIA][16];
-    double data[KAUSIA][15];
-};
+static char ckaudet[] = {1,1,1,1,1,1,1};
+
+typedef struct {
+    char muuttuja[40];
+    int lajinum;
+} määrite;
 
 enum palaute {kelpaa, ei_löytynyt_ensinkään, ei_löytynyt_enää, aikainen_eof};
 
-#define dir "../vuotaulukot/vuosittain/"
+#define dirmakro "../vuotaulukot/vuosittain/"
 
-static enum palaute _lue(str nimi, str muuttuja, struct taul* dest) {
-    int apu, fd, ret = kelpaa;
+int lue_vuodet(str tied) {
+    vuosia = 0;
+    str ptr = tied;
+    while(*ptr++ != '\n');
+    /* lasketaan vuodet, ptr ei saa muuttua vielä */
+    for(const char* p=ptr; *p!='\n'; vuosia += *p++==',');
+    /* Luetaan vuodet. Nyt ptr saa muuttua. */
+    for(int i=0; i<vuosia; i++)
+	sscanf(ptr, ",%i", vuodet+i);
+}
+
+static enum palaute lue(str tied, int tiedpit, määrite* määr) {
+    int apu, ret = kelpaa;
     str ptr;
 
-    /* Luetaan tiedosto muistiin. */
-    if((fd = open(nimi, O_RDONLY)) < 0)
-	err(1, "open %s", nimi);
-    struct stat stat;
-    fstat(fd, &stat);
-    const int pit = stat.st_size;
-    char* tied;
-    tied = mmap(NULL, pit, PROT_READ, MAP_PRIVATE, fd, 0);
-    close(fd);
-    if(!tied)
-	err(1, "mmap");
-
     /* Haetaan oikea kohta. */
-    monesko_laji++;
     char haku[64];
-    sprintf(haku, "#%s_", muuttuja);
+    sprintf(haku, "#%s_", määr->muuttuja);
     ptr = strstr(tied, haku);
     if(!ptr) {
 	ret = ei_löytynyt_ensinkään; goto palaa; }
-    for(int i=0; i<monesko_laji; i++) {
+    for(int i=0; i<määr->lajinum; i++) {
+	ptr += strlen(haku);
 	ptr = strstr(ptr, haku);
 	if(!ptr) {
 	    ret = ei_löytynyt_enää; goto palaa; }
-	ptr += strlen(haku);
     }
-    str loppu = tied+pit;
+    str loppu = tied+tiedpit;
 
     /* Luetaan lajinimi siirtyen vuosirivin alkuun. */
     apu = 0;
-    while((dest->lajinimi[apu++]=*ptr++) != '\n');
-    dest->lajinimi[apu-1] = '\0';
+    *ptr++; // ohitetaan alusta '#'-merkki
+    while((kohde_lajinimi[apu++]=*ptr++) != '\n');
+    kohde_lajinimi[apu-1] = '\0';
 
-    vuosia = 0;
-    for(const char* p=ptr; *p!='\n'; vuosia += *p++==','); // lasketaan vuodet, ptr ei saa muuttua vielä
-
-    /* Luetaan vuodet. Nyt ptr saa muuttua. */
-    for(int i=0; i<vuosia; i++)
-	sscanf(ptr, ",%i%n", dest->vuodet+i, &apu), ptr+=apu;
+    while(*ptr++ != '\n'); // ohitetaan vuosirivi
 
     /* Luetaan data. */
-    for(int kausi=0; kausi<kausia; kausi++) {
-	while(*ptr <= ' ') ptr++;
-	sscanf(ptr, "%[^,]%n", dest->kausinimet[kausi], &apu), ptr+=apu;
+    int k_ind=0;
+    for(int kausi=0; kausi<KAUSIA; kausi++) {
+	if(!ckaudet[kausi]) {
+	    while(*ptr++ != '\n');
+	    continue; }
+	while(*ptr <= ' ') ptr++; // ei kai tässä voi olla sanavälejä
+	sscanf(ptr, "%[^,]%n", kohde_kausinimet[k_ind], &apu), ptr+=apu;
 	if(ptr >= loppu) {
 	    ret = aikainen_eof; goto palaa; }
 	for(int i=0; i<vuosia; i++) {
-	    sscanf(ptr, ",%lf%n", dest->data[kausi]+i, &apu), ptr+=apu;
+	    sscanf(ptr, ",%lf%n", kohde_data[k_ind]+i, &apu), ptr+=apu;
 	    if(ptr >= loppu) {
 		ret = aikainen_eof; goto palaa; }
 	}
+	k_ind++;
     }
 
 palaa:
-    munmap((void*)tied, pit);
     return ret;
 }
 
-static char tmpnimi[128];
-static char* _palauta_nimi(enum luokitus_e luok, int kosteikko) {
-    sprintf(tmpnimi, dir"%s%s.csv", luokitus[luok], kosteikko?"W":"");
-    return tmpnimi;
+static char* tiedosto;
+static int tiedpit;
+static char* nimet[] = {"ikir.csv", "köppen.csv", "wetland.csv", NULL};
+static char** ptr = nimet;
+
+int seuraava_tiedosto(int *määr_lajinum) {
+    /* Poistetaan vanha. */
+    if(tiedosto)
+	munmap(tiedosto, tiedpit);
+    tiedosto = NULL;
+
+    if(!*ptr)
+	return 1;
+
+    /* Luetaan tiedosto muistiin. */
+    char nimi[128];
+    int fd;
+    sprintf(nimi, "%s/%s", dirmakro, *ptr);
+    if((fd = open(nimi, O_RDONLY)) < 0)
+	err(1, "open %s", *ptr);
+    struct stat stat;
+    fstat(fd, &stat);
+    tiedpit = stat.st_size;
+    tiedosto = mmap(NULL, tiedpit, PROT_READ, MAP_PRIVATE, fd, 0);
+    close(fd);
+    if(!tiedosto)
+	err(1, "mmap");
+
+    ptr++;
+    *määr_lajinum = 0;
+    return 0;
 }
 
-static int lue_tahan(str muuttuja, enum luokitus_e luok, int kosteikko, struct taul* dest) {
-    switch(_lue(_palauta_nimi(luok, kosteikko), muuttuja, dest)) {
-	case kelpaa:
-	    return 0;
-	case ei_löytynyt_enää:
-	    break;
-	case ei_löytynyt_ensinkään:
-	    printf("Muuttujaa %s ei löytynyt\n", muuttuja);
-	    break;
-	case aikainen_eof:
-	    printf("Tiedosto loppui kesken %s : %s.\n", tmpnimi, muuttuja);
-	    break;
+static määrite määr;
+
+/* Vain alla olevia kutsuttakoon toisesta ohjelmasta. */
+
+static int aloita_luenta();
+
+static int lue_seuraava(str muuttuja) {
+    if(strcmp(määr.muuttuja, muuttuja)) // eri kuin ennen
+	if(aloita_luenta()) {
+	    fprintf(stderr, "Jotain on vialla, ei päästy edes alkuun %s: %i\n", __FILE__, __LINE__);
+	    return 1; }
+    strcpy(määr.muuttuja, muuttuja);
+    while(1) {
+	switch(lue(tiedosto, tiedpit, &määr)) {
+	    case kelpaa:
+		goto onnistui;
+	    case ei_löytynyt_enää:
+		if(seuraava_tiedosto(&määr.lajinum))
+		    return 1;
+		break;
+	    case ei_löytynyt_ensinkään:
+		printf("Muuttujaa %s ei löytynyt\n", muuttuja);
+		return 1;
+	    case aikainen_eof:
+		printf("Tiedosto loppui kesken muuttujalla %s\n", muuttuja);
+		return 1;
+	}
     }
-    return 1;
+onnistui:
+    määr.lajinum++;
+    return 0;
 }
 
-static void alusta_luenta() {
-    struct taul a;
-    lue_tahan("vuo", 0, 0, &a); // asettaa tarvittavat globaalit muuttujat
-    monesko_laji = 0;
+#if 0
+static char* anna_kausinimi(int kausi) {
+    return kohde_kausinimet[kausi];
+}
+
+static char* anna_lajinimi() {
+    return kohde_lajinimi;
+}
+#endif
+
+static double* anna_data(int kausi) {
+    return kohde_data[kausi];
+}
+
+static void poista_kausi(int kausi) {
+    kausia -= ckaudet[kausi];
+    ckaudet[kausi] = 0;
+}
+
+static void palauta_kausi(int kausi) {
+    kausia += !ckaudet[kausi];
+    ckaudet[kausi] = 1;
+}
+
+static int aloita_luenta() {
+    ptr = nimet;
+    määr = (määrite){0};
+    if(seuraava_tiedosto(&määr.lajinum))
+	return 1;
+    lue_vuodet(tiedosto);
+    return 0;
 }
