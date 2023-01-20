@@ -31,14 +31,14 @@ static void alusta_lista(const struct tul_maarite* restrict m, const char* kanta
 	if(!m->latexmuutt[i])
 	    continue;
         fputc('|', tex);
-	for(int j=0; j<kausia; j++)
+	for(int j=0; j<m->kausia; j++)
 	    fputc('r', tex);
     }
     fprintf(tex, "}\n");
     for(int i=0; i<m->nmuutt; i++) {
 	if(!m->latexmuutt[i])
 	    continue;
-        fprintf(tex, " & \\multicolumn{%i}{c}{%s}", kausia, m->variables[i]);
+        fprintf(tex, " & \\multicolumn{%i}{c}{%s}", m->kausia, m->variables[i]);
     }
     fprintf(tex, " \\\\\n");
     for(int i=0; i<m->nmuutt; i++) {
@@ -52,7 +52,7 @@ static void alusta_lista(const struct tul_maarite* restrict m, const char* kanta
     // csv:n alustaminen
     for(int i=0; i<m->nmuutt; i++) {
         fprintf(csv, ",%s", m->muuttujat[i]);
-	for(int j=0; j<kausia-1; j++)
+	for(int j=0; j<m->kausia-1; j++)
 	    fputc(',', csv);
     }
     fputc('\n', csv);

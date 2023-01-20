@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 #include <string.h>
 #include <err.h>
+#include <unistd.h>
 
 /* Käyttö:
    Pythonilta kutsuttavat funktiot ovat tiedoston lopussa.
@@ -19,19 +20,22 @@
    Vapauttamiselle ei ole erillistä funktiota.
    */
 
-/*
-static const char* luokitus[] = {"köppen", "ikir", "wetland"};
-enum luokitus_e                 {köpp_e,   ikir_e, wetl_e, luokituksia_e};
-*/
-
-#define KAUSIA 4
+#define KAUSIA_KAU 3
+#define KAUSIA_VUO 4
 #define str const char* restrict
-static int kausia = KAUSIA;
+#define ARRPIT(a) sizeof(a) / sizeof(*(a))
+static int kausia_kau = KAUSIA_KAU;
+static int kausia_vuo = KAUSIA_VUO;
 static int vuosia;
 static int vuodet[15];
-char kohde_lajinimi[24];
-char kohde_kausinimet[KAUSIA][16];
-double kohde_data[KAUSIA][15];
+char kohde_lajinimi[40];
+char kohde_kausinimet[KAUSIA_VUO][16];
+double kohde_data[KAUSIA_VUO][15];
+
+/* Bittimaski, jonka jäseniä voidaan asettaa pythonilla funktioilla luenta_olkoon() ja luenta_ei() */
+static unsigned valinnat;
+enum {antro_e, kausi_e, valintoja};
+str valintanimet[] = {"antro", "kausi"};
 
 static char ckaudet[] = {1,1,1,1,1,1,1};
 
@@ -45,12 +49,13 @@ enum palaute {kelpaa, ei_löytynyt_ensinkään, ei_löytynyt_enää, aikainen_eo
 int lue_vuodet(str tied) {
     vuosia = 0;
     str ptr = tied;
+    int apu;
     while(*ptr++ != '\n');
     /* lasketaan vuodet, ptr ei saa muuttua vielä */
     for(const char* p=ptr; *p!='\n'; vuosia += *p++==',');
     /* Luetaan vuodet. Nyt ptr saa muuttua. */
     for(int i=0; i<vuosia; i++)
-	sscanf(ptr, ",%i", vuodet+i);
+	sscanf(ptr, ",%i%n", vuodet+i, &apu), ptr+=apu;
 }
 
 static enum palaute lue(str tied, int tiedpit, määrite* määr) {
@@ -59,7 +64,10 @@ static enum palaute lue(str tied, int tiedpit, määrite* määr) {
 
     /* Haetaan oikea kohta. */
     char haku[64];
-    sprintf(haku, "#%s_", määr->muuttuja);
+    if(valinnat & 1<<kausi_e)
+	strcpy(haku, "#");
+    else
+	sprintf(haku, "#%s_", määr->muuttuja);
     ptr = strstr(tied, haku);
     if(!ptr) {
 	ret = ei_löytynyt_ensinkään; goto palaa; }
@@ -70,6 +78,10 @@ static enum palaute lue(str tied, int tiedpit, määrite* määr) {
 	    ret = ei_löytynyt_enää; goto palaa; }
     }
     str loppu = tied+tiedpit;
+    if(ptr < tied)
+	printf("Virhe %s: %i\n", __FILE__, __LINE__);
+    if(ptr >= loppu)
+	printf("Virhe %s: %i\n", __FILE__, __LINE__);
 
     /* Luetaan lajinimi siirtyen vuosirivin alkuun. */
     apu = 0;
@@ -81,20 +93,28 @@ static enum palaute lue(str tied, int tiedpit, määrite* määr) {
 
     /* Luetaan data. */
     int k_ind=0;
-    for(int kausi=0; kausi<KAUSIA; kausi++) {
+    for(int kausi=0; ; kausi++) {
 	if(!ckaudet[kausi]) {
 	    while(*ptr++ != '\n');
 	    continue; }
-	while(*ptr <= ' ') ptr++; // ei kai tässä voi olla sanavälejä
-	sscanf(ptr, "%[^,]%n", kohde_kausinimet[k_ind], &apu), ptr+=apu;
+	while(*ptr <= ' ') ptr++;
+	if(*ptr == '#')
+	    break;
+	if(!('a'<=*ptr && *ptr <= 'z'))
+	    asm("int $3");
+	sscanf(ptr, "%[^,],%n", kohde_kausinimet[k_ind], &apu), ptr+=apu;
 	if(ptr >= loppu) {
 	    ret = aikainen_eof; goto palaa; }
 	for(int i=0; i<vuosia; i++) {
-	    if(sscanf(ptr, ",%lf%n", kohde_data[k_ind]+i, &apu) == 1)
-		ptr+=apu;
-	    if(ptr >= loppu) {
-		ret = aikainen_eof; goto palaa; }
+	    if(sscanf(ptr, "%lf%n", kohde_data[k_ind]+i, &apu) != 1) {
+		kohde_data[k_ind][i] = 0.0/0.0;
+		ptr += *ptr==',';
+	    }
+	    else
+		ptr += apu+1;
 	}
+	if(ptr >= loppu)
+	    goto palaa;
 	k_ind++;
     }
 
@@ -102,17 +122,13 @@ palaa:
     return ret;
 }
 
-#define dirmakro "../vuodata2301/vuosittain/"
+#define vuodirmakro "../vuodata2301/vuosittain/"
 #define kausidirmakro "../kausidata2301/"
 static char* tiedosto;
 static int tiedpit;
-static char* nimet[] = {"ikir.csv", "köppen.csv", "wetland.csv", "total.csv", NULL};
-static char** ptr = nimet;
-
-/* Bittimaski, jonka jäseniä voidaan asettaa pythonilla funktioilla luenta_olkoon() ja luenta_ei() */
-static unsigned valinnat;
-enum {antro_e, valintoja};
-str valintanimet[] = {"antro"};
+static char* nimet_vuo[] = {"ikir.csv", "köppen.csv", "wetland.csv", "total.csv", NULL};
+static char* nimet_kausi[] = {"start", "end", "length", NULL};
+static char** ptr;
 
 int seuraava_tiedosto(int *määr_lajinum) {
     /* Poistetaan vanha. */
@@ -126,7 +142,11 @@ int seuraava_tiedosto(int *määr_lajinum) {
     /* Luetaan tiedosto muistiin. */
     char nimi[128];
     int fd;
-    sprintf(nimi, "%s%s/%s", dirmakro, valinnat&1<<antro_e? "antro/": "", *ptr);
+
+    if(valinnat&1<<kausi_e)
+	sprintf(nimi, kausidirmakro"%s.csv", *ptr);
+    else
+	sprintf(nimi, vuodirmakro"%s%s", valinnat&1<<antro_e? "antro/": "", *ptr);
     puts(nimi);
     if((fd = open(nimi, O_RDONLY)) < 0)
 	err(1, "open %s", *ptr);
@@ -191,17 +211,23 @@ static double* anna_data(int kausi) {
 }
 
 static void poista_kausi(int kausi) {
-    kausia -= ckaudet[kausi];
+    if(valinnat & 1<<kausi_e)
+	kausia_kau -= !ckaudet[kausi];
+    else
+	kausia_vuo -= !ckaudet[kausi];
     ckaudet[kausi] = 0;
 }
 
 static void palauta_kausi(int kausi) {
-    kausia += !ckaudet[kausi];
+    if(valinnat & 1<<kausi_e)
+	kausia_kau += !ckaudet[kausi];
+    else
+	kausia_vuo += !ckaudet[kausi];
     ckaudet[kausi] = 1;
 }
 
 static int aloita_luenta() {
-    ptr = nimet;
+    ptr = valinnat&1<<kausi_e? nimet_kausi: nimet_vuo;
     määr = (määrite){0};
     if(seuraava_tiedosto(&määr.lajinum))
 	return 1;

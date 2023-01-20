@@ -7,7 +7,7 @@ from matplotlib.pyplot import *
 import os
 
 cdef extern from "lue.c":
-    int kausia, vuosia
+    int kausia_kau, kausia_vuo, vuosia
     int *vuodet
     char kohde_lajinimi[24]
     char **kohde_kausinimet;
@@ -32,7 +32,7 @@ cdef extern from "tulosta.c":
     void lopeta_lista()
     void tulosta_jasen(tul_jasen*, tul_maarite*)
 
-cdef int tee_kuvat = 1
+cdef int tee_kuvat = 0
 
 kuvakansio0 = 'kuvat'
 kuvakansio = kuvakansio0
@@ -61,7 +61,7 @@ cdef aja():
                 tulos = tul_jasen(kulmak=a.slope, parvot=a.p)
                 strcpy(tulos.lajinimi, kohde_lajinimi)
                 if(kohde_kausinimet[i] != kaudet[i]):
-                    fprintf(stderr, "\033[91mVirhe:\033[0m %s != %s\n", bytes(kohde_kausinimet[i]), bytes(kaudet[i]))
+                    fprintf(stderr, "\033[91mVirhe:\033[0m \"%s\" != \"%s\"\n", bytes(kohde_kausinimet[i]), bytes(kaudet[i]))
                 listalista[varnum].append(tulos)
 
                 if tee_kuvat:
@@ -118,6 +118,7 @@ latexmuutt  = [1,1,0]
 
 foo = lambda x: x
 
+cdef int kausia = kausia_vuo
 tee_tulmaar()
 assert(not aloita_luenta())
 listalista = aja()
