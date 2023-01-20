@@ -42,8 +42,6 @@ typedef struct {
 
 enum palaute {kelpaa, ei_löytynyt_ensinkään, ei_löytynyt_enää, aikainen_eof};
 
-#define dirmakro "../vuotaulukot/vuosittain/"
-
 int lue_vuodet(str tied) {
     vuosia = 0;
     str ptr = tied;
@@ -92,7 +90,8 @@ static enum palaute lue(str tied, int tiedpit, määrite* määr) {
 	if(ptr >= loppu) {
 	    ret = aikainen_eof; goto palaa; }
 	for(int i=0; i<vuosia; i++) {
-	    sscanf(ptr, ",%lf%n", kohde_data[k_ind]+i, &apu), ptr+=apu;
+	    if(sscanf(ptr, ",%lf%n", kohde_data[k_ind]+i, &apu) == 1)
+		ptr+=apu;
 	    if(ptr >= loppu) {
 		ret = aikainen_eof; goto palaa; }
 	}
@@ -103,10 +102,17 @@ palaa:
     return ret;
 }
 
+#define dirmakro "../vuodata2301/vuosittain/"
+#define kausidirmakro "../kausidata2301/"
 static char* tiedosto;
 static int tiedpit;
-static char* nimet[] = {"ikir.csv", "köppen.csv", "wetland.csv", NULL};
+static char* nimet[] = {"ikir.csv", "köppen.csv", "wetland.csv", "total.csv", NULL};
 static char** ptr = nimet;
+
+/* Bittimaski, jonka jäseniä voidaan asettaa pythonilla funktioilla luenta_olkoon() ja luenta_ei() */
+static unsigned valinnat;
+enum {antro_e, valintoja};
+str valintanimet[] = {"antro"};
 
 int seuraava_tiedosto(int *määr_lajinum) {
     /* Poistetaan vanha. */
@@ -120,7 +126,8 @@ int seuraava_tiedosto(int *määr_lajinum) {
     /* Luetaan tiedosto muistiin. */
     char nimi[128];
     int fd;
-    sprintf(nimi, "%s/%s", dirmakro, *ptr);
+    sprintf(nimi, "%s%s/%s", dirmakro, valinnat&1<<antro_e? "antro/": "", *ptr);
+    puts(nimi);
     if((fd = open(nimi, O_RDONLY)) < 0)
 	err(1, "open %s", *ptr);
     struct stat stat;
@@ -200,4 +207,22 @@ static int aloita_luenta() {
 	return 1;
     lue_vuodet(tiedosto);
     return 0;
+}
+
+static void luenta_olkoon(str nimi) {
+    for(int i=0; i<valintoja; i++)
+	if(!strcmp(valintanimet[i], nimi)) {
+	    valinnat |= 1<<i;
+	    return;
+	}
+    printf("\033[93mVaroitus:\033[0m tuntematon valinta %s\n", nimi);
+}
+
+static void luenta_ei(str nimi) {
+    for(int i=0; i<valintoja; i++)
+	if(!strcmp(valintanimet[i], nimi)) {
+	    valinnat &= ~(1<<i);
+	    return;
+	}
+    printf("\033[93mVaroitus:\033[0m tuntematon valinta %s\n", nimi);
 }

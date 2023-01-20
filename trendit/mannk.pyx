@@ -15,6 +15,8 @@ cdef extern from "lue.c":
     int aloita_luenta()
     int lue_seuraava(char* muuttuja)
     void poista_kausi(int)
+    void luenta_olkoon(char* valinta)
+    void luenta_ei(char* valinta)
 
 cdef extern from "tulosta.c":
     struct tul_maarite:
@@ -30,7 +32,10 @@ cdef extern from "tulosta.c":
     void lopeta_lista()
     void tulosta_jasen(tul_jasen*, tul_maarite*)
 
-cdef int tee_kuvat = 0
+cdef int tee_kuvat = 1
+
+kuvakansio0 = 'kuvat'
+kuvakansio = kuvakansio0
 
 cdef aja():
     cdef tul_jasen tulos
@@ -46,7 +51,7 @@ cdef aja():
     for varnum in range(len(muuttujat)):
         listalista.append([])
         if tee_kuvat:
-            os.system("mkdir -p kuvat/%s" %variables[varnum])
+            os.system("mkdir -p %s/%s" %(kuvakansio,variables[varnum]))
         while not lue_seuraava(muuttujat[varnum]):
             for i in range(kausia):
                 apudata = anna_data(i)
@@ -66,10 +71,10 @@ cdef aja():
                             kohde_kausinimet[i].decode('utf-8'),
                             kohde_lajinimi.replace(muuttujat[varnum],b'').decode('utf-8').replace('_',' ')
                             )
-                    title(nimi.replace(',',', '))
+                    title('%s, p=%.4f' %(nimi.replace(',',', '),a.p))
                     ylabel(variables[varnum])
                     tight_layout()
-                    savefig('kuvat/%s/%s.png' %(variables[varnum],nimi.replace(' ','_')))
+                    savefig('%s/%s/%s.png' %(kuvakansio,variables[varnum],nimi.replace(' ','_')))
                     clf()
     return listalista
 
@@ -120,18 +125,13 @@ alusta_lista(&maar, b"trendit0")
 tulosta_listalista(listalista)
 lopeta_lista()
 
-kaudet      = kaudet[1:]
-kaudet_ulos = kaudet_ulos[1:]
-muuttujat   = [b"kausiosuus"]
-variables   = ["length"]
-bvariables  = [b"length"]
-latexmuutt  = [1]
-foo = lambda x: x*365.25
-
-poista_kausi(0)
 tee_tulmaar()
+luenta_olkoon(b"antro")
+kuvakansio = '%s/antro' %(kuvakansio0)
 assert(not aloita_luenta())
 listalista = aja()
-alusta_lista(&maar, b"trendit1")
+alusta_lista(&maar, b"trendit0_antro")
 tulosta_listalista(listalista)
 lopeta_lista()
+luenta_ei(b"antro");
+kuvakansio = kuvakansio0
