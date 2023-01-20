@@ -13,33 +13,27 @@
 #include <time.h>
 #include <err.h>
 
-// kääntäjä tarvitsee argumentit `pkg-config --libs nctietue2 gsl`
-// lisäksi tarvittaessa -DVUODET_ERIKSEEN=1
-// nctietue2-kirjasto on osoitteessa https://github.com/aerkkila/nctietue2.git
-
 #define ARRPIT(a) (sizeof(a)/sizeof(*(a)))
 #define MIN(a,b) (a)<(b)? (a): (b)
 #define ASTE 0.017453293
 const double r2 = 6362132.0*6362132.0;
 #define SUHT_ALA(lat, hila) (sin((((double)lat)+(hila)*0.5) * ASTE) - sin((((double)lat)-(hila)*0.5) * ASTE))
 
-#ifndef VUODET_ERIKSEEN
-#define VUODET_ERIKSEEN 0
-#endif
-
 const int resol = 19800;
 
 const char* ikirnimet[] = {"nonpermafrost", "sporadic", "discontinuous", "continuous"};
-const char* koppnimet[] = {"D.b", "D.c", "D.d", "ET"};
+const char* köppnimet[] = {"Db", "Dc", "Dd", "ET"};
 const char* wetlnimet[] = {"wetland", "bog", "fen", "marsh", "tundra_wetland", "permafrost_bog"};
-const char* kaudet[]    = {"whole_year", "summer", "freezing", "winter"};
-enum                      {whole_year_e, summer_e, freezing_e, winter_e};
-enum                      {kopp_e, ikir_e, wetl_e} luokenum;
+const char* kaudet[]    = {"summer", "freezing", "winter"};
+enum                      {köpp_e, ikir_e, wetl_e} luokenum;
+const char* muuttujat[] = {"start", "end", "length"};
+enum                      {start_e, end_e, length_e} mitkä;
 const char*** luoknimet;
-const char* kansio = "kausijakaumadata";
-#define kausia 4
+const char* kansio = "kausidata2301";
+#define kausia 3
 #define wraja 0.05
 
+static char ei_katkaistuja, kertymä;
 static nct_vset *luok_vs;
 static char  *restrict luok_c;
 static double *restrict alat;
@@ -47,6 +41,7 @@ static int ikirvuosi0, ikirvuosia, vuosi0, vuosi1;
 
 struct laskenta {
     const char* lajinimi;
+    char* maski;
     float* kausiptr;
     int kausi, lajinum, vuosi;
     /* *.bin-tiedostot */
@@ -75,24 +70,33 @@ alku:
     goto alku;
 }
 
-int argumentit(int argc, char** argv) {
-    if(argc < 2) {
-	printf("Käyttö: %s luokitus:köpp/ikir/wetl\n", argv[0]);
-	return 1;
+#define jos(a) else if (!strcmp(argv[i], #a))
+void argumentit(int argc, char** argv) {
+    for(int i=1; i<argc; i++) {
+	if(0);
+	jos(köpp)
+	    luokenum = köpp_e;
+	jos(wetl)
+	    luokenum = wetl_e;
+	jos(ikir)
+	    luokenum = ikir_e;
+	jos(alku)
+	    mitkä = start_e;
+	jos(loppu)
+	    mitkä = end_e;
+	jos(pituus)
+	    mitkä = length_e;
+	jos(kertymä)
+	    kertymä = 1;
+	jos(eikatkaistuja)
+	    ei_katkaistuja = 1;
+	else
+	    printf("tuntematon argumentti %s\n", argv[i]);
     }
-    luokenum =
-	!strcmp(argv[1], "köpp")? kopp_e:
-	!strcmp(argv[1], "ikir")? ikir_e:
-	!strcmp(argv[1], "wetl")? wetl_e:
-	-1;
-    if(luokenum<0) {
-	printf("Ei luettu luokitusargumenttia\n");
-	return 1;
-    }
-    return 0;
 }
+#undef jos
 
-static void* lue_kopp() {
+static void* lue_köpp() {
     char* luok = malloc(resol);
     int pit;
     FILE* f = fopen("./köppenmaski.txt", "r");
@@ -101,6 +105,7 @@ static void* lue_kopp() {
 	printf("Luettiin %i eikä %i\n", pit, resol);
     for(int i=0; i<resol; i++)
 	luok[i] -= '1';
+    fclose(f);
     return (luok_c = luok);
 }
 static void* lue_ikir() {
@@ -119,7 +124,7 @@ static void* lue_wetl() {
     return (luok_vs = nct_read_ncfile("./BAWLD1x1.nc"));
 }
 void* lue_luokitus() {
-    static void* (*funktio[])(void) = { [kopp_e]=lue_kopp, [ikir_e]=lue_ikir, [wetl_e]=lue_wetl, };
+    static void* (*funktio[])(void) = { [köpp_e]=lue_köpp, [ikir_e]=lue_ikir, [wetl_e]=lue_wetl, };
     return funktio[luokenum]();
 }
 
@@ -127,25 +132,29 @@ void päivä_keskiarvoon(struct laskenta* args, double ala, int kausi, float pä
     args->päiv0sum[kausia*args->vuosi + kausi] += päivä * ala;
     args->n_päiv0 [kausia*args->vuosi + kausi] += ala;
 
-    int pisteitä = args->pisteitä++;
-    args->päivät[pisteitä] = päivä;
-    args->cdf[pisteitä] = ala;
+    if(kertymä) {
+	int pisteitä = args->pisteitä++;
+	args->päivät[pisteitä] = päivä;
+	args->cdf[pisteitä] = ala;
+    }
 }
 
 void päivä_keskiarvoon_w(struct laskenta* args, double ala, int kausi, float päivä, double paino) {
     args->päiv0sum[kausia*args->vuosi + kausi] += päivä * ala * paino;
     args->n_päiv0 [kausia*args->vuosi + kausi] += ala * paino;
 
-    int pisteitä = args->pisteitä++;
-    args->päivät[pisteitä] = päivä;
-    args->cdf[pisteitä] = ala*paino;
+    if(kertymä) {
+	int pisteitä = args->pisteitä++;
+	args->päivät[pisteitä] = päivä;
+	args->cdf[pisteitä] = ala*paino;
+    }
 }
 
 void täytä_kosteikkodata(struct laskenta* args) {
     double *restrict osuus0ptr = NCTVAR(*luok_vs, "wetland").data;
     double *restrict osuus1ptr = NCTVAR(*luok_vs, wetlnimet[args->lajinum]).data;
     for (int r=0; r<resol; r++) {
-	if (osuus0ptr[r] < wraja) continue;
+	if (!args->maski[r] || osuus0ptr[r] < wraja) continue;
 	float päivä = args->kausiptr[args->vuosi*resol+r];
 	if (päivä != päivä) continue;
 	päivä_keskiarvoon_w(args, alat[r/360], args->kausi, päivä, osuus1ptr[r]);
@@ -154,7 +163,7 @@ void täytä_kosteikkodata(struct laskenta* args) {
 
 void täytä_köppendata(struct laskenta* args) {
     for (int r=0; r<resol; r++) {
-	if (luok_c[r] != args->lajinum) continue;
+	if (!args->maski[r] || luok_c[r] != args->lajinum) continue;
 	float päivä = args->kausiptr[args->vuosi*resol+r];
 	if (päivä != päivä) continue;
 	päivä_keskiarvoon(args, alat[r/360], args->kausi, päivä);
@@ -166,7 +175,7 @@ void täytä_ikirdata(struct laskenta* args) {
     if (ikirv >= ikirvuosia)
 	ikirv = ikirvuosia-1;
     for(int r=0; r<resol; r++) {
-	if (luok_c[ikirv*resol+r] != args->lajinum) continue;
+	if (!args->maski[r] || luok_c[ikirv*resol+r] != args->lajinum) continue;
 	float päivä = args->kausiptr[args->vuosi*resol+r];
 	if (päivä != päivä) continue;
 	päivä_keskiarvoon(args, alat[r/360], args->kausi, päivä);
@@ -212,17 +221,20 @@ float* laita_data(struct laskenta* args, float *kohde, int kirjpit, int kausi, i
     return kohde;
 }
 
-void laita_alkupäivä(struct laskenta* args) {
-    FILE* f = fopen(aprintf("%s/alkupäivät_%s.csv", kansio, args->lajinimi), "w");
+void kirjoita_csv(struct laskenta* args) {
+    FILE* f = fopen(aprintf("%s/%s_%s.csv", kansio, muuttujat[mitkä], args->lajinimi), "w");
     fprintf(f, "#%s\n", args->lajinimi);
     for(int v=vuosi0; v<vuosi1; v++)
 	fprintf(f, ",%i", v);
     fputc('\n', f);
-    for(int kausi=1; kausi<kausia; kausi++) {
+    for(int kausi=0; kausi<kausia; kausi++) {
 	fprintf(f, "%s", kaudet[kausi]);
 	for(int v=0; v<vuosi1-vuosi0; v++) {
-	    int tavg = args->päiv0sum[v*kausia+kausi] / args->n_päiv0[v*kausia+kausi];
-	    fprintf(f, ",%i", tavg);
+	    float tavg = args->päiv0sum[v*kausia+kausi] / args->n_päiv0[v*kausia+kausi];
+	    if(tavg == tavg)
+		fprintf(f, ",%i", (int)tavg);
+	    else
+		fputc(',',f);
 	}
 	fputc('\n', f);
     }
@@ -230,33 +242,31 @@ void laita_alkupäivä(struct laskenta* args) {
 }
 
 int main(int argc, char** argv) {
-    if(argumentit(argc, argv))
-	return 1;
-    nct_vset apuvset = {0};
-    const char** _luoknimet[] = { [kopp_e]=koppnimet, [ikir_e]=ikirnimet, [wetl_e]=wetlnimet, };
+    argumentit(argc, argv);
+    nct_vset maskivset = {0};
+    const char** _luoknimet[] = { [köpp_e]=köppnimet, [ikir_e]=ikirnimet, [wetl_e]=wetlnimet, };
     luoknimet = _luoknimet;
-    int lajeja = ( luokenum==kopp_e? ARRPIT(koppnimet):
+    int lajeja = ( luokenum==köpp_e? ARRPIT(köppnimet):
 		   luokenum==ikir_e? ARRPIT(ikirnimet):
 		   luokenum==wetl_e? ARRPIT(wetlnimet):
 		   -1 );
     assert(lue_luokitus());
 
-    nct_read_ncfile_info_gd(&apuvset, "ikirdata.nc");
-    int lonpit = nct_get_varlen(&NCTVAR(apuvset, "lon"));
-    int latpit = nct_get_varlen(&NCTVAR(apuvset, "lat"));
-    double *lat = nct_load_data_with(&apuvset, "lat", nc_get_var_double, sizeof(double));
+    nct_read_ncfile_gd(&maskivset, "aluemaski.nc");
+    int lonpit = nct_get_varlen(&NCTVAR(maskivset, "lon"));
+    int latpit = nct_get_varlen(&NCTVAR(maskivset, "lat"));
+    double *lat = nct_get_var(&maskivset, "lat")->data;
     assert(lonpit*latpit == resol);
     double _alat[latpit];
     alat = _alat;
     for(int i=0; i<latpit; i++)
 	alat[i] = SUHT_ALA(lat[i], 1);
-    nct_free_vset(&apuvset);
-    free(lat);
+    char* maski = nct_next_truevar(maskivset.vars[0], 0)->data;
 
     nct_vset *kausivset = nct_read_ncfile("kausien_päivät.nc");
     nct_var* vuodet = nct_get_var(kausivset, "vuosi");
     vuosi0 = nct_get_integer(vuodet, 0);
-    vuosi1 = nct_get_integer(vuodet, vuodet->len-1);
+    vuosi1 = nct_get_integer(vuodet, -1) + 1;
     const int kirjpit = 240;
     float* apu = malloc(kirjpit*(vuosi1-vuosi0)*kausia*resol*sizeof(float));
 
@@ -266,65 +276,92 @@ int main(int argc, char** argv) {
     int tilaa = (vuosi1-vuosi0)*kausia;
     double päivsum_tila[tilaa*2];
     double* n_päiv_tila = päivsum_tila+tilaa;
+    float* pituustaul[kausia] = {0};
 
     for(int lajinum=0; lajinum<lajeja; lajinum++) {
 	memset(päivsum_tila, 0, tilaa*2*sizeof(double));
 	struct laskenta l_args;
 
-	for(int kausi_ind=1; kausi_ind<kausia; kausi_ind++) {
+	for(int kausi_ind=0; kausi_ind<kausia; kausi_ind++) {
 	    char varnimi[20];
 	    sprintf(varnimi, "%s_start", kaudet[kausi_ind]);
 	    nct_var* alkuvar = nct_get_var(kausivset, varnimi);
 	    assert(alkuvar->xtype == NC_FLOAT);
-
-	    /* Jos kausi kestää monta vuotta, se on katkaistu jostain päivästä,
-	       jotta emissio saadaan jaettua eri vuosille.
-	       Älköön siis huomioitako kohtia,
-	       joissa alkupäivä[vuosi] == loppupäivä[vuosi-1]-vuoden_päivät. */
 	    sprintf(varnimi, "%s_end", kaudet[kausi_ind]);
 	    nct_var* loppuvar = nct_get_var(kausivset, varnimi);
 	    float *ad=alkuvar->data, *ld=loppuvar->data;
-	    for(int v=1; v<vuosi1-vuosi0; v++) {
-		int vuosi = vuosi0+v;
-		int vuoden_päivät = 365 + (!(vuosi%4) && (vuosi%100 || !(vuosi%400)));
-		for(int i=0; i<resol; i++) {
-		    float *falku = ad + v*resol+i;
-		    float floppu = ld[(v-1)*resol+i];
-		    if(*falku != *falku || floppu != floppu) continue;
-		    if((int)*falku == (int)floppu-vuoden_päivät)
-			*falku = 0.0f/0.0f;
+
+	    /* Jos kausi kestää monta vuotta, se on katkaistu jostain päivästä,
+	       jotta emissio saadaan jaettua eri vuosille.
+	       Älköön siis välttämättä huomioitako kohtia,
+	       joissa alkupäivä[vuosi] == loppupäivä[vuosi-1]-vuoden_päivät. */
+	    if(ei_katkaistuja)
+		for(int v=1; v<vuosi1-vuosi0; v++) {
+		    int vuosi = vuosi0+v;
+		    int vuoden_päivät = 365 + (!(vuosi%4) && (vuosi%100 || !(vuosi%400)));
+		    for(int i=0; i<resol; i++) {
+			float *falku = ad + v*resol+i;
+			float floppu = ld[(v-1)*resol+i];
+			if(*falku != *falku || floppu != floppu) continue;
+			if((int)*falku == (int)floppu-vuoden_päivät)
+			    *falku = 0.0f/0.0f;
+		    }
 		}
-	    }
 
 	    l_args = (struct laskenta) {
-		.kausiptr = alkuvar->data,
 		.lajinimi = luoknimet[luokenum][lajinum],
 		.lajinum  = lajinum,
-		.päivät   = malloc(resol*sizeof(float)),
-		.cdf      = malloc(resol*sizeof(float)),
+		.maski    = maski,
 		.kausi    = kausi_ind,
 		.päiv0sum = päivsum_tila,
 		.n_päiv0  = n_päiv_tila,
 	    };
-	    assert(l_args.päivät && l_args.cdf);
 
+	    switch(mitkä) {
+		case start_e:
+		    l_args.kausiptr = ad;
+		    break;
+		case end_e:
+		    l_args.kausiptr = ld;
+		    break;
+		case length_e:
+		    if(!pituustaul[kausi_ind]) {
+			assert((pituustaul[kausi_ind] = malloc(resol*(vuosi1-vuosi0)*sizeof(float))));
+			for(int i=0; i<resol*(vuosi1-vuosi0); i++)
+			    pituustaul[kausi_ind][i] = ld[i] - ad[i];
+		    }
+		    l_args.kausiptr = pituustaul[kausi_ind];
+		    break;
+	    }
+
+	    if(kertymä) {
+		l_args.päivät = malloc(resol*sizeof(float));
+		l_args.cdf    = malloc(resol*sizeof(float));
+		assert(l_args.päivät && l_args.cdf);
+	    }
 	    for(int v=0; v<(vuosi1-vuosi0); v++) {
 		l_args.vuosi = v;
 		l_args.pisteitä = 0;
 		switch(luokenum) {
 		    case wetl_e: täytä_kosteikkodata(&l_args); break;
-		    case kopp_e: täytä_köppendata(&l_args);    break;
+		    case köpp_e: täytä_köppendata(&l_args);    break;
 		    case ikir_e: täytä_ikirdata(&l_args);      break;
 		}
-		laita_data(&l_args, apu+v*kirjpit, kirjpit, kausi_ind, vuosi0+v);
+		if(kertymä)
+		    laita_data(&l_args, apu+v*kirjpit, kirjpit, kausi_ind, vuosi0+v);
 	    }
-	    tallenna(&l_args, apu, kirjpit, kausi_ind);
-	    free(l_args.päivät);
-	    free(l_args.cdf);
+	    if(kertymä) {
+		tallenna(&l_args, apu, kirjpit, kausi_ind); // kertymäfunktio
+		free(l_args.päivät);
+		free(l_args.cdf);
+	    }
 	}
-	laita_alkupäivä(&l_args);
+	kirjoita_csv(&l_args);
     }
 
+    for(int i=0; i<kausia; i++)
+	free(pituustaul[i]);
+    nct_free_vset(&maskivset);
     nct_free_vset(kausivset);
     kausivset = NULL;
     free(luok_c);

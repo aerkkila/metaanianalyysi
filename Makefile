@@ -131,13 +131,13 @@ taulukot.target: vuotaul.target
 	./vuotaul.out
 
 # Näitä ei sisälly all-kohteeseen
-alkupäivät_vuosittain.out: alkupäivät_vuosittain.c
+päivät_vuosittain.out: päivät_vuosittain.c
 	gcc -Wall $< -o $@ `pkg-config --libs nctietue2 gsl` -lm -g -O3
-alkupäivät_vuosittain_ikir: alkupäivät_vuosittain.out
+päivät_vuosittain_ikir: päivät_vuosittain.out
 	./alkupäivät_vuosittain.out ikir
-alkupäivät_vuosittain_köpp: alkupäivät_vuosittain.out
+päivät_vuosittain_köpp: päivät_vuosittain.out
 	./alkupäivät_vuosittain.out köpp
-alkupäivät_vuosittain_wetl: alkupäivät_vuosittain.out
+päivät_vuosittain_wetl: päivät_vuosittain.out
 	./alkupäivät_vuosittain.out wetl
-alkupäivät_vuosittain.target: alkupäivät_vuosittain_ikir alkupäivät_vuosittain_köpp alkupäivät_vuosittain_wetl
-	cat kausijakaumadata/alkupäivät_*.csv > alkupäivät_vuosittain.csv
+päivät_vuosittain.target: päivät_vuosittain_ikir päivät_vuosittain_köpp päivät_vuosittain_wetl
+	@echo cat-comento puuttuu
