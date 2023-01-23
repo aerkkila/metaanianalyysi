@@ -134,10 +134,10 @@ taulukot.target: vuotaul.target
 päivät_vuosittain.out: päivät_vuosittain.c
 	gcc -Wall $< -o $@ `pkg-config --libs nctietue2 gsl` -lm -g -O3
 päivät_vuosittain_ikir: päivät_vuosittain.out
-	./alkupäivät_vuosittain.out ikir
+	./päivät_vuosittain.out kaikki_muuttujat ikir
 päivät_vuosittain_köpp: päivät_vuosittain.out
-	./alkupäivät_vuosittain.out köpp
+	./päivät_vuosittain.out kaikki_muuttujat köpp
 päivät_vuosittain_wetl: päivät_vuosittain.out
-	./alkupäivät_vuosittain.out wetl
+	./päivät_vuosittain.out kaikki_muuttujat wetl
 päivät_vuosittain.target: päivät_vuosittain_ikir päivät_vuosittain_köpp päivät_vuosittain_wetl
-	@echo cat-comento puuttuu
+	cat kausidata2301/*_*.csv > kausidata2301/data.csv

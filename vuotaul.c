@@ -16,6 +16,7 @@ const double r2 = 6362.1320*6362.1320; // km, jotta luvut ovat maltillisempia
 #define Pintaala(i) PINTAALA(Lat(i)*ASTE, ASTE)
 
 #define KANSIO "vuodata2301/"
+#define LOPUSTA_PUUTTUU 1 // metaanidatasta viimeisen vuoden lopussa puuttuvat päivät
 const char* ikirnimet[]      = {"nonpermafrost", "sporadic", "discontinuous", "continuous"};
 const char* köppnimet[]      = {"Db", "Dc", "Dd", "ET"};
 const char* wetlnimet[]      = {"wetland", "bog", "fen", "marsh", "permafrost_bog", "tundra_wetland"};
@@ -156,7 +157,8 @@ void laske(const struct tiedot* restrict tiedot, struct tulos* tulos) {
     tulos->pisteitä = n;
     if(tulos->sum1 == 0)
 	asm("int $3");
-    //printf("%.6lf\t %.6lf\n", tulos->sum1, tulos->jak1);
+    if(tulos->sum1 * 86400 * 16.0416 * 1e-6 > 1e5)
+	asm("int $3");
 }
 
 void vapauta_tulos(struct tulos* tulos) {
@@ -263,6 +265,7 @@ void aseta_alku_ja_loppu(struct tiedot* restrict td, nct_vset* kauvset, int kaus
 	    for(int r=0; r<td->res; r++) {
 		alk[r] = 0;
 		lop[r] = 365+karkaus;
+		lop[r] -= LOPUSTA_PUUTTUU*(i == vuosi1kaikki-td->vuodet[0]-1);
 	    }
 	}
 	return;
@@ -388,22 +391,6 @@ int nvars = sizeof(muoto)/sizeof(*muoto);
 void kirjoita_csvhen_vuosittain(char* buf[nvars], int sij[nvars], vakiotulos tulos) {
     for(int var=0; var<nvars; var++)
 	sij[var] += sprintf(buf[var]+sij[var], muoto[var], varfun[var](tulos));
-}
-
-void korjaa_vuosittaisesta_csvstä_osuus(char* buf[nvars], int sij[nvars], vakiotulos tulos) {
-    puts("Varoitus: funktio korjaa_vuosittaisesta-- ei toimi oikein");
-    assert(!strcmp(varnimet[2], "kausiosuus"));
-    char* ptr = buf[2]+sij[2];
-    int i=0;
-    while(ptr[--i] != ',');
-    double arvo;
-    if(sscanf(ptr, ",%lf", &arvo)!=1)
-	warn("sscanf korjaa osuus");
-    arvo = arvo*koko_vuoden_jakaja/jakajien_summa;
-    i += sprintf(ptr, muoto[2], arvo);
-    sij[2] += i;
-    if(i)
-	printf("i = %i\n", i);
 }
 
 void tee_lajin_kaudet(struct tiedot* tiedot, const char* luoknimi, nct_vset* kauvset, FILE** f) {

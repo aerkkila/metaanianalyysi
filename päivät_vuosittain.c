@@ -25,15 +25,16 @@ const char* ikirnimet[] = {"nonpermafrost", "sporadic", "discontinuous", "contin
 const char* köppnimet[] = {"Db", "Dc", "Dd", "ET"};
 const char* wetlnimet[] = {"wetland", "bog", "fen", "marsh", "tundra_wetland", "permafrost_bog"};
 const char* kaudet[]    = {"summer", "freezing", "winter"};
-enum                      {köpp_e, ikir_e, wetl_e} luokenum;
+const char* päänimet [] = {"köppen", "ikir", "wetland"};
+enum                      {köpp_e,   ikir_e, wetl_e} luokenum;
 const char* muuttujat[] = {"start", "end", "length"};
-enum                      {start_e, end_e, length_e} mitkä;
+enum                      {start_e, end_e, length_e, muuttujia} mitkä;
 const char*** luoknimet;
 const char* kansio = "kausidata2301";
 #define kausia 3
 #define wraja 0.05
 
-static char ei_katkaistuja, kertymä;
+static char ei_katkaistuja, kertymä, kaikki_muuttujat;
 static nct_vset *luok_vs;
 static char  *restrict luok_c;
 static double *restrict alat;
@@ -86,6 +87,8 @@ void argumentit(int argc, char** argv) {
 	    mitkä = end_e;
 	jos(pituus)
 	    mitkä = length_e;
+	jos(kaikki_muuttujat)
+	    kaikki_muuttujat = 1;
 	jos(kertymä)
 	    kertymä = 1;
 	jos(eikatkaistuja)
@@ -221,9 +224,8 @@ float* laita_data(struct laskenta* args, float *kohde, int kirjpit, int kausi, i
     return kohde;
 }
 
-void kirjoita_csv(struct laskenta* args) {
-    FILE* f = fopen(aprintf("%s/%s_%s.csv", kansio, muuttujat[mitkä], args->lajinimi), "w");
-    fprintf(f, "#%s\n", args->lajinimi);
+void kirjoita_csv(struct laskenta* args, FILE* f) {
+    fprintf(f, "#%s_%s\n", muuttujat[mitkä], args->lajinimi);
     for(int v=vuosi0; v<vuosi1; v++)
 	fprintf(f, ",%i", v);
     fputc('\n', f);
@@ -238,11 +240,11 @@ void kirjoita_csv(struct laskenta* args) {
 	}
 	fputc('\n', f);
     }
-    fclose(f);
 }
 
 int main(int argc, char** argv) {
     argumentit(argc, argv);
+alku:
     nct_vset maskivset = {0};
     const char** _luoknimet[] = { [köpp_e]=köppnimet, [ikir_e]=ikirnimet, [wetl_e]=wetlnimet, };
     luoknimet = _luoknimet;
@@ -277,6 +279,9 @@ int main(int argc, char** argv) {
     double päivsum_tila[tilaa*2];
     double* n_päiv_tila = päivsum_tila+tilaa;
     float* pituustaul[kausia] = {0};
+
+    /* Tallennustiedosto */
+    FILE* f = fopen(aprintf("%s/%s_%s.csv", kansio, muuttujat[mitkä], päänimet[luokenum]), "w");
 
     for(int lajinum=0; lajinum<lajeja; lajinum++) {
 	memset(päivsum_tila, 0, tilaa*2*sizeof(double));
@@ -332,6 +337,8 @@ int main(int argc, char** argv) {
 		    }
 		    l_args.kausiptr = pituustaul[kausi_ind];
 		    break;
+		case muuttujia:
+		    errx(1, "enum mitkä sai ylimenevän arvon");
 	    }
 
 	    if(kertymä) {
@@ -356,16 +363,16 @@ int main(int argc, char** argv) {
 		free(l_args.cdf);
 	    }
 	}
-	kirjoita_csv(&l_args);
+	kirjoita_csv(&l_args, f);
     }
 
+    fclose(f);
     for(int i=0; i<kausia; i++)
 	free(pituustaul[i]);
-    nct_free_vset(&maskivset);
-    nct_free_vset(kausivset);
-    kausivset = NULL;
-    free(luok_c);
-    free(apu);
-    nct_free_vset(luok_vs);
+    maskivset = (nct_free_vset(&maskivset), (nct_vset){0});
+    kausivset = luok_vs = luok_c = apu = (nct_free_vset(kausivset), nct_free_vset(luok_vs), free(luok_c), free(apu), NULL);
+    if(kaikki_muuttujat)
+	if(++mitkä < muuttujia)
+	    goto alku;
     return 0;
 }
