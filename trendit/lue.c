@@ -64,10 +64,7 @@ static enum palaute lue(str tied, int tiedpit, määrite* määr) {
 
     /* Haetaan oikea kohta. */
     char haku[64];
-    if(valinnat & 1<<kausi_e)
-	strcpy(haku, "#");
-    else
-	sprintf(haku, "#%s_", määr->muuttuja);
+    sprintf(haku, "#%s_", määr->muuttuja);
     ptr = strstr(tied, haku);
     if(!ptr) {
 	ret = ei_löytynyt_ensinkään; goto palaa; }
@@ -127,7 +124,7 @@ palaa:
 static char* tiedosto;
 static int tiedpit;
 static char* nimet_vuo[] = {"ikir.csv", "köppen.csv", "wetland.csv", "total.csv", NULL};
-static char* nimet_kausi[] = {"start", "end", "length", NULL};
+static char* nimet_kausi[] = {"data.csv", NULL};
 static char** ptr;
 
 int seuraava_tiedosto(int *määr_lajinum) {
@@ -144,7 +141,7 @@ int seuraava_tiedosto(int *määr_lajinum) {
     int fd;
 
     if(valinnat&1<<kausi_e)
-	sprintf(nimi, kausidirmakro"%s.csv", *ptr);
+	sprintf(nimi, kausidirmakro"%s", *ptr);
     else
 	sprintf(nimi, vuodirmakro"%s%s", valinnat&1<<antro_e? "antro/": "", *ptr);
     puts(nimi);

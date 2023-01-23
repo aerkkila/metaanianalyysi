@@ -32,7 +32,7 @@ cdef extern from "tulosta.c":
     void lopeta_lista()
     void tulosta_jasen(tul_jasen*, tul_maarite*)
 
-cdef int tee_kuvat = 0
+cdef int tee_kuvat = 1
 
 kuvakansio0 = 'kuvat'
 kuvakansio = kuvakansio0
@@ -45,6 +45,8 @@ cdef aja():
     xdata = np.empty(vuosia, np.int32)
     for i in range(vuosia):
         xdata[i] = vuodet[i]
+    print(xdata)
+    strxdata = [str(a) for a in xdata]
     ydata = np.empty([vuosia], np.float64)
     listalista = []
 
@@ -64,7 +66,7 @@ cdef aja():
                     fprintf(stderr, "\033[91mVirhe:\033[0m \"%s\" != \"%s\"\n", bytes(kohde_kausinimet[i]), bytes(kaudet[i]))
                 listalista[varnum].append(tulos)
 
-                if tee_kuvat:
+                if tee_kuvat and variables[varnum] != 'variance':
                     plot(ydata, '.')
                     plot(xfun, xfun*a.slope + a.intercept)
                     nimi = "%s,%s" %(
@@ -73,6 +75,7 @@ cdef aja():
                             )
                     title('%s, p=%.4f' %(nimi.replace(',',', '),a.p))
                     ylabel(variables[varnum])
+                    xticks(range(0,11,2), labels=strxdata[::2])
                     tight_layout()
                     savefig('%s/%s/%s.png' %(kuvakansio,variables[varnum],nimi.replace(' ','_')))
                     clf()
@@ -136,3 +139,19 @@ tulosta_listalista(listalista)
 lopeta_lista()
 luenta_ei(b"antro");
 kuvakansio = kuvakansio0
+
+luenta_olkoon(b'kausi')
+kaudet = kaudet[1:]
+kaudet_ulos = kaudet_ulos[1:]
+kausia = kausia_kau
+muuttujat = [b"start", b"end", b"length"]
+variables = ["start", "end", "length"]
+bvariables = muuttujat
+
+tee_tulmaar()
+assert(not aloita_luenta())
+listalista = aja()
+alusta_lista(&maar, b"trendit0_kausi")
+tulosta_listalista(listalista)
+lopeta_lista()
+luenta_ei(b"kausi")
