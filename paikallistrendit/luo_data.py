@@ -1,9 +1,9 @@
 #!/bin/env python
 from netCDF4 import Dataset
 import numpy as np
-import pymannkendall as fit1
+#import pymannkendall as pmk
+import pmk
 import sys
-# Piti muistaa vielä sklearn theil-sen
 
 dir = '../'
 kaudet = ['summer', 'freezing', 'winter']
@@ -18,7 +18,9 @@ def sovita(data):
         if np.sum(~np.isnan(data[r,:])) < 3:
             trendit[r], merkits[r] = (np.nan, 101)
             continue
-        a = fit1.original_test(data[r,:])
+        x = data[r,:]
+        x = x[~np.isnan(x)]
+        a = pmk.original_test(x)
         trendit[r] = a.slope
         merkits[r] = a.p*100
     print("\033[K", end='')
