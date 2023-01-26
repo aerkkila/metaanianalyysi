@@ -124,6 +124,7 @@ palaa:
 static char* tiedosto;
 static int tiedpit;
 static char* nimet_vuo[] = {"ikir.csv", "köppen.csv", "wetland.csv", "total.csv", NULL};
+enum                       {ikircsv_e,  köppencsv_e,   wetlandcsv_e,  totalcsv_e, vuotiedostoja};
 static char* nimet_kausi[] = {"data.csv", NULL};
 static char** ptr;
 
@@ -140,7 +141,7 @@ int seuraava_tiedosto(int *määr_lajinum) {
     char nimi[128];
     int fd;
 
-    if(valinnat&1<<kausi_e)
+    if(valinnat & 1<<kausi_e)
 	sprintf(nimi, kausidirmakro"%s", *ptr);
     else
 	sprintf(nimi, vuodirmakro"%s%s", valinnat&1<<antro_e? "antro/": "", *ptr);
@@ -224,7 +225,12 @@ static void palauta_kausi(int kausi) {
 }
 
 static int aloita_luenta() {
-    ptr = valinnat&1<<kausi_e? nimet_kausi: nimet_vuo;
+    if(valinnat & 1<<kausi_e)
+	ptr = nimet_kausi;
+    else if(valinnat & 1<<antro_e)
+	ptr = nimet_vuo+totalcsv_e; // antrolle ainoastaan total
+    else
+	ptr = nimet_vuo;
     määr = (määrite){0};
     if(seuraava_tiedosto(&määr.lajinum))
 	return 1;

@@ -1,8 +1,7 @@
 import numpy as np
 from libc.stdio cimport *
 from libc.string cimport strcpy
-import pymannkendall as fit1
-#from sklearn.linear_model import TheilSenRegressor as fit2
+import pmk as fit1
 from matplotlib.pyplot import *
 import os
 
@@ -37,6 +36,8 @@ cdef int tee_kuvat = 1
 kuvakansio0 = 'kuvat'
 kuvakansio = kuvakansio0
 
+kokonais = np.zeros([5,20])
+
 cdef aja():
     cdef tul_jasen tulos
     cdef int varnum, i, j
@@ -45,8 +46,7 @@ cdef aja():
     xdata = np.empty(vuosia, np.int32)
     for i in range(vuosia):
         xdata[i] = vuodet[i]
-    print(xdata)
-    strxdata = [str(a) for a in xdata]
+    #strxdata = [str(a) for a in xdata]
     ydata = np.empty([vuosia], np.float64)
     listalista = []
 
@@ -55,11 +55,17 @@ cdef aja():
         if tee_kuvat:
             os.system("mkdir -p %s/%s" %(kuvakansio,variables[varnum]))
         while not lue_seuraava(muuttujat[varnum]):
+            totalko = b"total" in kohde_lajinimi and muuttujat[varnum] == b"emissio"
             for i in range(kausia):
                 apudata = anna_data(i)
                 for j in range(vuosia):
-                    ydata[j] = foo(apudata[j])
-                a = fit1.original_test(ydata)
+                    ydata[j] = apudata[j]
+                if totalko:
+                    kokonais[i,:len(ydata)] += ydata
+                maski = ~np.isnan(ydata)
+                ynyt = ydata[maski]
+                xnyt = xdata[maski]
+                a = fit1.original_test(ynyt, xnyt)
                 tulos = tul_jasen(kulmak=a.slope, parvot=a.p)
                 strcpy(tulos.lajinimi, kohde_lajinimi)
                 if(kohde_kausinimet[i] != kaudet[i]):
@@ -67,15 +73,15 @@ cdef aja():
                 listalista[varnum].append(tulos)
 
                 if tee_kuvat and variables[varnum] != 'variance':
-                    plot(ydata, '.')
-                    plot(xfun, xfun*a.slope + a.intercept)
+                    plot(xnyt, ynyt, '.')
+                    plot(xnyt, xnyt*a.slope + a.intercept)
                     nimi = "%s,%s" %(
                             kohde_kausinimet[i].decode('utf-8'),
                             kohde_lajinimi.replace(muuttujat[varnum],b'').decode('utf-8').replace('_',' ')
                             )
                     title('%s, p=%.4f' %(nimi.replace(',',', '),a.p))
                     ylabel(variables[varnum])
-                    xticks(range(0,11,2), labels=strxdata[::2])
+                    #xticks(range(0,11,2), labels=strxdata[::2])
                     tight_layout()
                     savefig('%s/%s/%s.png' %(kuvakansio,variables[varnum],nimi.replace(' ','_')))
                     clf()
@@ -119,8 +125,6 @@ variables   = ["emission", "flux", "variance"]
 bvariables  = [b"emission", b"flux", b"variance"]
 latexmuutt  = [1,1,0]
 
-foo = lambda x: x
-
 cdef int kausia = kausia_vuo
 tee_tulmaar()
 assert(not aloita_luenta())
@@ -128,6 +132,8 @@ listalista = aja()
 alusta_lista(&maar, b"trendit0")
 tulosta_listalista(listalista)
 lopeta_lista()
+
+print(kokonais)
 
 tee_tulmaar()
 luenta_olkoon(b"antro")
@@ -139,6 +145,8 @@ tulosta_listalista(listalista)
 lopeta_lista()
 luenta_ei(b"antro");
 kuvakansio = kuvakansio0
+
+print(kokonais)
 
 luenta_olkoon(b'kausi')
 kaudet = kaudet[1:]
