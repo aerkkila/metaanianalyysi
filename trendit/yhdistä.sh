@@ -11,7 +11,7 @@ luku=
 luokat() {
     kmnt='gm convert'
     for laji in $@; do
-	kmnt="$kmnt +append $kansio/$muuttuja/$kausi,_{$laji}.png"
+	kmnt="$kmnt +append $kansio/$muuttuja/$kausi,{$laji}.png"
     done
     kmnt="$kmnt -append kuvat/${muuttuja}_${kausi}_${luku}.png"
     eval $kmnt
