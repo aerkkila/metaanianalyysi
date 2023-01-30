@@ -31,15 +31,41 @@ cdef extern from "tulosta.c":
     void lopeta_lista()
     void tulosta_jasen(tul_jasen*, tul_maarite*)
 
-cdef int tee_kuvat = 1
+cdef int tee_kuvat = os.system('[ -f tee ]') == 0
 
 kuvakansio0 = 'kuvat'
 kuvakansio = kuvakansio0
 
 kokonais = np.zeros([5,20])
 
-cdef aja():
+def tekeminen(ydata, xdata, i, varnum):
     cdef tul_jasen tulos
+    maski = ~np.isnan(ydata)
+    ynyt = ydata[maski]
+    xnyt = xdata[maski]
+    a = fit1.original_test(ynyt, xnyt)
+    tulos = tul_jasen(kulmak=a.slope, parvot=a.p)
+    strcpy(tulos.lajinimi, kohde_lajinimi)
+    if(kohde_kausinimet[i] != kaudet[i]):
+        fprintf(stderr, "\033[91mVirhe:\033[0m \"%s\" != \"%s\"\n", bytes(kohde_kausinimet[i]), bytes(kaudet[i]))
+
+    if tee_kuvat and variables[varnum] != 'variance':
+        plot(xnyt, ynyt, '.')
+        plot(xnyt, xnyt*a.slope + a.intercept)
+        nimi = "%s,%s" %(
+                kohde_kausinimet[i].decode('utf-8'),
+                kohde_lajinimi[kohde_lajinimi.index(b'_')+1:].decode('utf-8')
+                )
+        print(nimi)
+        title('%s, p=%.4f' %(nimi.replace(',',', '),a.p))
+        ylabel(variables[varnum])
+        #xticks(range(0,11,2), labels=strxdata[::2])
+        tight_layout()
+        savefig('%s/%s/%s.png' %(kuvakansio,variables[varnum],nimi.replace(' ','_')))
+        clf()
+    return tulos
+
+cdef aja():
     cdef int varnum, i, j
     cdef double* apudata
     xfun = np.array([0,vuosia], np.float64)
@@ -62,29 +88,8 @@ cdef aja():
                     ydata[j] = apudata[j]
                 if totalko:
                     kokonais[i,:len(ydata)] += ydata
-                maski = ~np.isnan(ydata)
-                ynyt = ydata[maski]
-                xnyt = xdata[maski]
-                a = fit1.original_test(ynyt, xnyt)
-                tulos = tul_jasen(kulmak=a.slope, parvot=a.p)
-                strcpy(tulos.lajinimi, kohde_lajinimi)
-                if(kohde_kausinimet[i] != kaudet[i]):
-                    fprintf(stderr, "\033[91mVirhe:\033[0m \"%s\" != \"%s\"\n", bytes(kohde_kausinimet[i]), bytes(kaudet[i]))
+                tulos = tekeminen(ydata, xdata, i, varnum)
                 listalista[varnum].append(tulos)
-
-                if tee_kuvat and variables[varnum] != 'variance':
-                    plot(xnyt, ynyt, '.')
-                    plot(xnyt, xnyt*a.slope + a.intercept)
-                    nimi = "%s,%s" %(
-                            kohde_kausinimet[i].decode('utf-8'),
-                            kohde_lajinimi.replace(muuttujat[varnum],b'').decode('utf-8').replace('_',' ')
-                            )
-                    title('%s, p=%.4f' %(nimi.replace(',',', '),a.p))
-                    ylabel(variables[varnum])
-                    #xticks(range(0,11,2), labels=strxdata[::2])
-                    tight_layout()
-                    savefig('%s/%s/%s.png' %(kuvakansio,variables[varnum],nimi.replace(' ','_')))
-                    clf()
     return listalista
 
 cdef tul_maarite maar
@@ -133,20 +138,27 @@ alusta_lista(&maar, b"trendit0")
 tulosta_listalista(listalista)
 lopeta_lista()
 
-print(kokonais)
-
+# antrosta ei tehdä taulukkoa, joten tämä ei tuota mitään ellei kuvia tallenneta
 tee_tulmaar()
 luenta_olkoon(b"antro")
 kuvakansio = '%s/antro' %(kuvakansio0)
 assert(not aloita_luenta())
 listalista = aja()
 alusta_lista(&maar, b"trendit0_antro")
-tulosta_listalista(listalista)
+#tulosta_listalista(listalista)
 lopeta_lista()
 luenta_ei(b"antro");
 kuvakansio = kuvakansio0
 
-print(kokonais)
+# bio- ja antroemissiot yhteensä
+xdata = np.empty(vuosia, np.int32)
+kuvakansio = '%s/yhteensä' %(kuvakansio0)
+os.system('mkdir -p %s/%s' %(kuvakansio, variables[0]))
+for i in range(vuosia):
+    xdata[i] = vuodet[i]
+for i in range(len(kaudet)):
+    tekeminen(kokonais[i,:vuosia], xdata, i, 0)
+kuvakansio = kuvakansio0
 
 luenta_olkoon(b'kausi')
 kaudet = kaudet[1:]
