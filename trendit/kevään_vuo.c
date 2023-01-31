@@ -4,6 +4,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <stdint.h>
+
+typedef double mk_ytyyppi;
+typedef double mk_xtyyppi;
+#include "mkts.c"
 
 const double r2 = 6362.1320*6362.1320; // km, jotta luvut ovat maltillisempia
 #define PINTAALA(lat, hila) ((hila) * r2 * (sin((lat)+0.5*(hila)) - sin((lat)-0.5*(hila))))
@@ -30,19 +35,19 @@ typedef struct {
 spit lue_päivät() {
     static FILE* f;
     short data[20*ikirluokkia];
-    int oli_f = !!f;
+    intptr_t oli_f = (intptr_t)f;
     if(!oli_f)
 	f = fopen("kevät.csv", "r");
-    while(fgetc(f) <= ' ');
+    while(getc(f) <= ' ');
     while(getc(f) != '\n'); // vuosirivi ohi
-    int pit = 0, N=0, sanaind=0;
+    int N=0, sanaind=0;
     char c;
     char sana[8];
     for(int i=0; i<ikirluokkia; i++) {
-	while((c=fgetc(f)) != ',');
+	while((c=getc(f)) != ',');
 	sanaind = 0;
 	do {
-	    c=fgetc(f);
+	    c=getc(f);
 	    if(c == ',' || c == '\n') {
 		sana[sanaind] = '\0';
 		data[N++] = atoi(sana);
@@ -67,8 +72,8 @@ int main() {
     int vuosia = 2021-vuosi0;
     spit alut_  = lue_päivät();
     spit loput_ = lue_päivät();
-    assert(alut_.pit = ikirluokkia*vuosia);
-    assert(loput_.pit = ikirluokkia*vuosia);
+    assert(alut_.pit == ikirluokkia*vuosia);
+    assert(loput_.pit == ikirluokkia*vuosia);
     short* alut = alut_.s;
     short* loput = loput_.s;
     nct_vset* ikirdata = nct_read_ncfile("../ikirdata.nc");
@@ -79,10 +84,12 @@ int main() {
     char* maski = nct_read_from_ncfile("../aluemaski.nc", "maski", NULL, -1);
 
     int ikir_v_ind[vuosia];
+    double vuodet[vuosia];
     for(int i=0; i<vuosia; i++) {
 	ikir_v_ind[i] = vuosi0 - ikirvuosi0 + i;
 	if(ikir_v_ind[i] >= ikirvuosia)
 	    ikir_v_ind[i] = ikirvuosia-1;
+	vuodet[i] = vuosi0+i;
     }
 
     nct_vset* vuovset = nct_read_ncfile("../flux1x1.nc");
@@ -105,16 +112,41 @@ int main() {
 	    double summa = 0;
 	    for(int i=alku; i<loppu; i++)
 		summa += vuo[(päivä+i)*19800+r];
-	    summat[ikir[19800*ikir_v_ind[v]+r]][v] += summa * ala * 86400 * (1.0079*4 + 12.01);
+	    summat[(int)ikir[19800*ikir_v_ind[v]+r]][v] += summa * ala * 86400 * (1.0079*4 + 12.01);
 	    //jakajat[v] += ala * (loppu-alku);
 	}
     }
 
     for(int ik=0; ik<ikirluokkia; ik++) {
 	printf("\033[92mikirouta %i\033[0m\n", ik);
+	for(int i=0; i<vuosia; i++) {
+	    summat[ik][i] *= 1e-6;
+	    //printf("%.4lf\n", summat[ik][i]);
+	}
+	float p = mannkendall(summat[ik], vuosia);
+	float kerr  = ts_kulmakerroin_yx(summat[ik], vuodet, vuosia);
+	float y[vuosia];
 	for(int i=0; i<vuosia; i++)
-	    printf("%.4lf\n", summat[ik][i]*1e-6);
+	    y[i] = summat[ik][i];
+	float vakio = ts_vakiotermi_yx(y, vuodet, vuosia, kerr);
+	printf("p = %.4lf\n", p);
+	printf("%.4lf x + %.4lf\n", kerr, vakio);
     }
+
+    float fssumma[vuosia];
+    double ssumma[vuosia];
+    for(int i=0; i<vuosia; i++) {
+	ssumma[i] = 0;
+	for(int j=0; j<ikirluokkia; j++)
+	    ssumma[i] += summat[j][i];
+	fssumma[i] = ssumma[i];
+    }
+    puts("\033[92myhteensä\033[0m");
+    float p = mannkendall(ssumma, vuosia);
+    float kerr  = ts_kulmakerroin_yx(ssumma, vuodet, vuosia);
+    float vakio = ts_vakiotermi_yx(fssumma, vuodet, vuosia, kerr);
+    printf("p = %.4lf\n", p);
+    printf("%.4lf x + %.4lf\n", kerr, vakio);
 
     nct_free_vset(vuovset);
     nct_free_vset(ikirdata);
