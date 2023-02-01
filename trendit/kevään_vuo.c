@@ -5,6 +5,9 @@
 #include <string.h>
 #include <assert.h>
 #include <stdint.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <err.h>
 
 typedef double mk_ytyyppi;
 typedef double mk_xtyyppi;
@@ -67,6 +70,33 @@ spit lue_päivät() {
     return palaute;
 }
 
+static void mkts(float* kohde, const double* summat, const double* jakajat, const double* vuodet, int vuosia) {
+    float y[vuosia];
+    /* emissiot */
+    for(int i=0; i<vuosia; i++)
+	y[i] = summat[i]; // vakiotermi määritetään muutettavasta float-taulukosta
+    kohde[0] = mannkendall(summat, vuosia);
+    kohde[1] = ts_kulmakerroin_yx(summat, vuodet, vuosia);
+    kohde[2] = ts_vakiotermi_yx(y, vuodet, vuosia, kohde[1]);
+
+    printf("\033[93m");
+    for(int i=0; i<3; i++)
+	printf(", %.4lf", kohde[i]);
+    printf("\033[0m\n");
+
+    /* vuot */
+    for(int i=0; i<vuosia; i++)
+	y[i] = jakajat[i]; // vakiotermi määritetään muutettavasta float-taulukosta
+    kohde += 3*(ikirluokkia+1);
+    kohde[0] = mannkendall(jakajat, vuosia);
+    kohde[1] = ts_kulmakerroin_yx(jakajat, vuodet, vuosia);
+    kohde[2] = ts_vakiotermi_yx(y, vuodet, vuosia, kohde[1]);
+
+    for(int i=0; i<3; i++)
+	printf(", %.4lf", kohde[i]);
+    putchar('\n');
+}
+
 int main() {
     int vuosi0 = 2011;
     int vuosia = 2021-vuosi0;
@@ -99,8 +129,8 @@ int main() {
 
     double summat[ikirluokkia][vuosia];
     memset(summat, 0, vuosia*ikirluokkia*sizeof(double));
-    //double jakajat[vuosia];
-    //memset(jakajat, 0, vuosia*sizeof(double));
+    double jakajat[ikirluokkia][vuosia];
+    memset(jakajat, 0, vuosia*ikirluokkia*sizeof(double));
     for(int r=0; r<19800; r++) {
 	if(!maski[r])
 	    continue;
@@ -112,41 +142,42 @@ int main() {
 	    double summa = 0;
 	    for(int i=alku; i<loppu; i++)
 		summa += vuo[(päivä+i)*19800+r];
-	    summat[(int)ikir[19800*ikir_v_ind[v]+r]][v] += summa * ala * 86400 * (1.0079*4 + 12.01);
-	    //jakajat[v] += ala * (loppu-alku);
+	    int ind = ikir[19800*ikir_v_ind[v]+r];
+	    summat[ind][v] += summa * ala;// * 86400 * (1.0079*4 + 12.01);
+	    jakajat[ind][v] += ala * (loppu-alku);
 	}
+    }
+
+    double s_emiss[vuosia];
+    double s_vuo[vuosia];
+    for(int i=0; i<vuosia; i++) {
+	s_emiss[i] = 0;
+	s_vuo[i] = 0;
+	for(int j=0; j<ikirluokkia; j++) {
+	    s_emiss[i] += summat[j][i];
+	    s_vuo[i] += jakajat[j][i];
+	}
+	s_vuo[i] = s_emiss[i] / s_vuo[i] * 1e9;
+	s_emiss[i] *= 1e-6 * 86400 * (1.0079*4 + 12.01);
     }
 
     for(int ik=0; ik<ikirluokkia; ik++) {
-	printf("\033[92mikirouta %i\033[0m\n", ik);
 	for(int i=0; i<vuosia; i++) {
-	    summat[ik][i] *= 1e-6;
-	    //printf("%.4lf\n", summat[ik][i]);
+	    jakajat[ik][i] = summat[ik][i] / jakajat[ik][i] * 1e9; // jakaja on vastedes vuo
+	    summat[ik][i] *= 1e-6 * 86400 * (1.0079*4 + 12.01);    // summa on vastedes emissio
 	}
-	float p = mannkendall(summat[ik], vuosia);
-	float kerr  = ts_kulmakerroin_yx(summat[ik], vuodet, vuosia);
-	float y[vuosia];
-	for(int i=0; i<vuosia; i++)
-	    y[i] = summat[ik][i];
-	float vakio = ts_vakiotermi_yx(y, vuodet, vuosia, kerr);
-	printf("p = %.4lf\n", p);
-	printf("%.4lf x + %.4lf\n", kerr, vakio);
     }
 
-    float fssumma[vuosia];
-    double ssumma[vuosia];
-    for(int i=0; i<vuosia; i++) {
-	ssumma[i] = 0;
-	for(int j=0; j<ikirluokkia; j++)
-	    ssumma[i] += summat[j][i];
-	fssumma[i] = ssumma[i];
-    }
-    puts("\033[92myhteensä\033[0m");
-    float p = mannkendall(ssumma, vuosia);
-    float kerr  = ts_kulmakerroin_yx(ssumma, vuodet, vuosia);
-    float vakio = ts_vakiotermi_yx(fssumma, vuodet, vuosia, kerr);
-    printf("p = %.4lf\n", p);
-    printf("%.4lf x + %.4lf\n", kerr, vakio);
+    float tulokset[3*(ikirluokkia+1)*2];
+
+    for(int i=0; i<ikirluokkia; i++)
+	mkts(tulokset+3*i, summat[i], jakajat[i], vuodet, vuosia);
+    mkts(tulokset+3*ikirluokkia, s_emiss, s_vuo, vuodet, vuosia);
+
+    int fd = open("kevät.bin", O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if(write(fd, tulokset, 3*(ikirluokkia+1)*sizeof(float)*2) < 0)
+	warn("write");
+    close(fd);
 
     nct_free_vset(vuovset);
     nct_free_vset(ikirdata);

@@ -66,7 +66,7 @@ char _csvbuf[12];
 char* csvväri(float arvo) {
     return strcpy(_csvbuf,
 	    arvo < 0.01? "\033[1;91m":
-	    arvo < 0.02? "\033[94m":
+	    arvo < 0.03? "\033[94m":
 	    arvo < 0.05? "\033[92m":
 	    ""), _csvbuf;
 }
@@ -74,14 +74,16 @@ char* csvväri(float arvo) {
 char _texbuf[32];
 char* latexluku(float arvo, float luku) {
     static const char* muodot[] = {
-	"\\textbf{%.@f}", "\\textbf{(%.@f)}", "%.@f", "(%.@f)"
+	"\\textbf{%.@f}", "%.@f", "(%.@f)",
     };
     const char tarkk = '3';
-    const float rajat[] = {0.01, 0.02, 0.05};
+    const float rajat[] = {0.01, 0.03, 0.05};
     int i;
     for(i=0; i<3; i++)
-	if(arvo<rajat[i])
-	    break;
+	if(arvo < rajat[i])
+	    goto laita;
+    return "";
+laita:
     char muoto[32];
     strcpy(muoto, muodot[i]);
     *strchr(muoto, '@') = tarkk;

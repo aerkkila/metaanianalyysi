@@ -27,6 +27,7 @@ cdef extern from "tulosta.c":
     struct tul_jasen:
         float kulmak, parvot,
         char lajinimi[26]
+    FILE* tex
     void alusta_lista(tul_maarite*, char*)
     void lopeta_lista()
     void tulosta_jasen(tul_jasen*, tul_maarite*)
@@ -105,6 +106,8 @@ cpdef tulosta_listalista(listalista):
                 jasen.parvot = a['parvot']
                 strcpy(jasen.lajinimi, a['lajinimi'])
                 tulosta_jasen(&jasen, &maar)
+        if i == 3*len(kaudet) or i == 7*len(kaudet) or i == 13*len(kaudet):
+            fprintf(tex, "\\midrule\n");
     return
 
 rcParams.update({'font.size':14})
@@ -116,7 +119,7 @@ cdef tee_tulmaar():
         maar.kaudet_ulos[i] = kaudet_ulos[i]
     for i in range(len(muuttujat)):
         maar.muuttujat[i] = muuttujat[i]
-        maar.variables[i] = bvariables[i]
+        maar.variables[i] = texvariables[i]
         maar.latexmuutt[i] = 1
     for i in range(len(latexmuutt)):
         maar.latexmuutt[i] = latexmuutt[i]
@@ -127,7 +130,7 @@ kaudet      = [b"whole_year", b"summer", b"freezing", b"winter"]
 kaudet_ulos = [b'wh',b'su',b'fr',b'wi']
 muuttujat   = [b"emissio", b"vuo", b"varianssi"]
 variables   = ["emission", "flux", "variance"]
-bvariables  = [b"emission", b"flux", b"variance"]
+texvariables = [b"emission ($\Delta$(Tg) / 10 yr)", b"flux ($\Delta$(nmol m$^{-2}$ s$^{-1}$) / 10 yr)", b""]
 latexmuutt  = [1,1,0]
 
 cdef int kausia = kausia_vuo
@@ -161,12 +164,14 @@ for i in range(len(kaudet)):
 kuvakansio = kuvakansio0
 
 luenta_olkoon(b'kausi')
+luenta_olkoon(b'vain_ikir')
 kaudet = kaudet[1:]
 kaudet_ulos = kaudet_ulos[1:]
 kausia = kausia_kau
 muuttujat = [b"start", b"end", b"length"]
 variables = ["start", "end", "length"]
-bvariables = muuttujat
+latexmuutt = [1,1,1]
+texvariables = muuttujat
 
 tee_tulmaar()
 assert(not aloita_luenta())

@@ -34,8 +34,8 @@ double kohde_data[KAUSIA_VUO][15];
 
 /* Bittimaski, jonka jäseniä voidaan asettaa pythonilla funktioilla luenta_olkoon() ja luenta_ei() */
 static unsigned valinnat;
-enum {antro_e, kausi_e, valintoja};
-str valintanimet[] = {"antro", "kausi"};
+enum {antro_e, kausi_e, vain_ikir_e, valintoja};
+str valintanimet[] = {"antro", "kausi", "vain_ikir"};
 
 static char ckaudet[] = {1,1,1,1,1,1,1};
 
@@ -44,7 +44,7 @@ typedef struct {
     int lajinum;
 } määrite;
 
-enum palaute {kelpaa, ei_löytynyt_ensinkään, ei_löytynyt_enää, aikainen_eof};
+enum palaute {kelpaa, ei_löytynyt_ensinkään, eitoivottu_laji, ei_löytynyt_enää, aikainen_eof};
 
 int lue_vuodet(str tied) {
     vuosia = 0;
@@ -85,6 +85,15 @@ static enum palaute lue(str tied, int tiedpit, määrite* määr) {
     *ptr++; // ohitetaan alusta '#'-merkki
     while((kohde_lajinimi[apu++]=*ptr++) != '\n');
     kohde_lajinimi[apu-1] = '\0';
+    
+    if (valinnat & 1<<vain_ikir_e) {
+	char* nimet[] = {"nonpermafrost", "sporadic", "discontinuos", "continuous"};
+	for (int i=0; i<4; i++)
+	    if(strstr(kohde_lajinimi, nimet[i]))
+		goto valikointi_onnistui;
+	return eitoivottu_laji;
+    }
+valikointi_onnistui:
 
     while(*ptr++ != '\n'); // ohitetaan vuosirivi
 
@@ -181,12 +190,17 @@ static int lue_seuraava(str muuttuja) {
 		if(seuraava_tiedosto(&määr.lajinum))
 		    return 1;
 		break;
+	    case eitoivottu_laji:
+		määr.lajinum++;
+		return lue_seuraava(muuttuja);
 	    case ei_löytynyt_ensinkään:
 		printf("Muuttujaa %s ei löytynyt\n", muuttuja);
 		return 1;
 	    case aikainen_eof:
 		printf("Tiedosto loppui kesken muuttujalla %s\n", muuttuja);
 		return 1;
+	    default:
+		__builtin_unreachable();
 	}
     }
 onnistui:
