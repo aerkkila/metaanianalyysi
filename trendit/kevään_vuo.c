@@ -9,8 +9,13 @@
 #include <unistd.h>
 #include <err.h>
 
+#ifdef KAUDET
+typedef short mk_ytyyppi;
+typedef double mk_xtyyppi;
+#else
 typedef double mk_ytyyppi;
 typedef double mk_xtyyppi;
+#endif
 #include "mkts.c"
 
 const double r2 = 6362.1320*6362.1320; // km, jotta luvut ovat maltillisempia
@@ -70,6 +75,33 @@ spit lue_päivät() {
     return palaute;
 }
 
+#ifdef KAUDET
+#define kopioi_y(y) float y[pit]; for(int i=0; i<pit; i++) y[i] = (*ptr)[i]
+static void mkts_kaudet(float* kohde, const short* alku, short* loppu, const double* vuodet, int pit) {
+    {
+	const short** ptr = &alku;
+	kopioi_y(y);
+	kohde[0] = mannkendall(*ptr, pit);
+	kohde[1] = ts_kulmakerroin_yx(*ptr, vuodet, pit);
+	kohde[2] = ts_vakiotermi_yx(y, vuodet, pit, kohde[1]);
+	kohde += 3;
+    } {
+	short** ptr = &loppu;
+	kopioi_y(y);
+	kohde[0] = mannkendall(*ptr, pit);
+	kohde[1] = ts_kulmakerroin_yx(*ptr, vuodet, pit);
+	kohde[2] = ts_vakiotermi_yx(y, vuodet, pit, kohde[1]);
+	kohde += 3;
+    } {
+	short** ptr = &loppu;
+	kopioi_y(y);
+	for(int i=0; i<pit; i++) loppu[i]-=alku[i];
+	kohde[0] = mannkendall(*ptr, pit);
+	kohde[1] = ts_kulmakerroin_yx(*ptr, vuodet, pit);
+	kohde[2] = ts_vakiotermi_yx(y, vuodet, pit, kohde[1]);
+    }
+}
+#else
 static void mkts(float* kohde, const double* summat, const double* jakajat, const double* vuodet, int vuosia) {
     float y[vuosia];
     /* emissiot */
@@ -96,6 +128,7 @@ static void mkts(float* kohde, const double* summat, const double* jakajat, cons
 	printf(", %.4lf", kohde[i]);
     putchar('\n');
 }
+#endif
 
 int main() {
     int vuosi0 = 2011;
@@ -106,15 +139,34 @@ int main() {
     assert(loput_.pit == ikirluokkia*vuosia);
     short* alut = alut_.s;
     short* loput = loput_.s;
+
+    double vuodet[vuosia];
+    for(int i=0; i<vuosia; i++)
+	vuodet[i] = vuosi0+i;
+
+#ifdef KAUDET
+    float tulokset[3*ikirluokkia];
+    for(int i=0; i<ikirluokkia; i++)
+	mkts_kaudet(tulokset+3*3*i, alut, loput, vuodet, alut_.pit/ikirluokkia);
+
+    int fd = open("kevään_päivät.bin", O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if(write(fd, tulokset, 3*3*ikirluokkia*sizeof(float)) != 3*3*ikirluokkia*sizeof(float))
+	warn("write");
+    close(fd);
+
+#else
+    char* maski = nct_read_from_ncfile("../aluemaski.nc", "maski", NULL, -1);
+    nct_vset* vuovset = nct_read_ncfile("../flux1x1.nc");
+    float* vuo = nct_get_var(vuovset, "flux_bio_posterior")->data;
+    time_t aika0 = nct_mktime0(nct_get_var(vuovset, "time"), NULL).a.t;
     nct_vset* ikirdata = nct_read_ncfile("../ikirdata.nc");
     char* ikir = nct_get_var(ikirdata, "luokka")->data;
     nct_var* ikirvuodet = nct_get_var(ikirdata, "vuosi");
     int ikirvuosi0 = nct_get_integer(ikirvuodet, 0);
     int ikirvuosia = nct_get_varlen(ikirvuodet);
-    char* maski = nct_read_from_ncfile("../aluemaski.nc", "maski", NULL, -1);
+    double lat0 = nct_get_floating(nct_get_var(ikirdata, "lat"), 0);
 
     int ikir_v_ind[vuosia];
-    double vuodet[vuosia];
     for(int i=0; i<vuosia; i++) {
 	ikir_v_ind[i] = vuosi0 - ikirvuosi0 + i;
 	if(ikir_v_ind[i] >= ikirvuosia)
@@ -122,10 +174,6 @@ int main() {
 	vuodet[i] = vuosi0+i;
     }
 
-    nct_vset* vuovset = nct_read_ncfile("../flux1x1.nc");
-    float* vuo = nct_get_var(vuovset, "flux_bio_posterior")->data;
-    time_t aika0 = nct_mktime0(nct_get_var(vuovset, "time"), NULL).a.t;
-    double lat0 = nct_get_floating(nct_get_var(vuovset, "lat"), 0);
 
     double summat[ikirluokkia][vuosia];
     memset(summat, 0, vuosia*ikirluokkia*sizeof(double));
@@ -147,6 +195,8 @@ int main() {
 	    jakajat[ind][v] += ala * (loppu-alku);
 	}
     }
+    free(maski);
+    nct_free_vset(ikirdata);
 
     double s_emiss[vuosia];
     double s_vuo[vuosia];
@@ -174,13 +224,14 @@ int main() {
 	mkts(tulokset+3*i, summat[i], jakajat[i], vuodet, vuosia);
     mkts(tulokset+3*ikirluokkia, s_emiss, s_vuo, vuodet, vuosia);
 
+    nct_free_vset(vuovset);
+
     int fd = open("kevät.bin", O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if(write(fd, tulokset, 3*(ikirluokkia+1)*sizeof(float)*2) < 0)
 	warn("write");
     close(fd);
 
-    nct_free_vset(vuovset);
-    nct_free_vset(ikirdata);
+#endif
     free(alut);
     free(loput);
 }

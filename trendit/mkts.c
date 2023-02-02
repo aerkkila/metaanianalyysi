@@ -71,7 +71,7 @@ static float ts_kulmakerroin_yx(const mk_ytyyppi* y, const mk_xtyyppi* x, Int pi
     for (Int i=0; i<pit-1; i++)
 	for (Int j=i+1; j<pit; j++)
 	    ker[ind++] = (double)(y[j] - y[i]) / (x[j] - x[i]);
-    float ret = gsl_stats_float_median(ker, 1, pit);
+    float ret = gsl_stats_float_median(ker, 1, ind);
     free(ker);
     return ret;
 }
