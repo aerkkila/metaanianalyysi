@@ -13,15 +13,14 @@ raja = 5
 def kartta(ds, kausi, tap):
     kt = (kausi, tap)
 
-    def kuvaksi(dt, i):
-        ax = subplot(1,2,i, projection=proj)
+    def kuvaksi(dt, i, ax):
+        sca(ax)
+        #ax = subplot(1,2,i, projection=proj)
         ax.coastlines()
         ax.set_extent(katt, pc)
         normi = mcolors.TwoSlopeNorm(0, np.nanpercentile(dt, 2), np.nanpercentile(dt, 98))
         pcolormesh(mx, my, dt, transform=pc, norm=normi, cmap=get_cmap('coolwarm'))
-        c = colorbar()
-        if i == 2:
-            title('p < %.2f' %(raja/100))
+        c = colorbar(shrink=0.85, extend='both')
         c.set_label('$\Delta$(%s %s) / 10 years' %kt)
 
     pc   = ccrs.PlateCarree()
@@ -34,14 +33,13 @@ def kartta(ds, kausi, tap):
     dt = np.ma.getdata(ds['trendit/%s_%s' %kt])
     dt1 = np.ma.getdata(ds['p/%s_%s' %kt])
 
-    #ax = axes(projection=proj).coastlines()
-    kuvaksi(dt,1)
+    fig, axs = subplots(1, 2, layout='constrained', subplot_kw={'projection':proj})
+    kuvaksi(dt, 1, axs[0])
 
     #ax = axes(projection=proj).coastlines()
     dt[dt1>=raja] = np.nan
-    kuvaksi(dt,2)
+    kuvaksi(dt, 2, axs[1])
 
-    tight_layout()
     if '-s' in sys.argv:
         savefig('kuvat/%s_%s.png' %kt)
         clf()
@@ -50,7 +48,7 @@ def kartta(ds, kausi, tap):
 
 def main():
     rcParams.update({'font.size': 15,
-                     'figure.figsize': (16,8)})
+                     'figure.figsize': (15,7)})
     if '-s' in sys.argv:
         os.system('mkdir -p kuvat')
 

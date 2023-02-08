@@ -41,7 +41,7 @@ def piirrä(dt, mx, my, tall):
         cb = colorbar(extend=ext, shrink=0.8, ticks = tikit)
 
     if '-s' in sys.argv:
-        savefig(tall)
+        savefig('kuvat/' + tall)
         clf()
     else:
         show()
@@ -55,7 +55,7 @@ def main():
     lon,lat = np.meshgrid(lon, lat, sparse=True)
     for i in range(3):
         piirrä(lue(i), lon, lat, tall='keskivuo_%s.png' %(kaudet[i]))
-    piirrä(lue('kesän_maxvuo.bin'), lon, lat, tall='kesän_maxvuo.png')
+    piirrä(lue('kesän_maksvuo.bin'), lon, lat, tall='kesän_maxvuo.png')
 
 if __name__=='__main__':
     try:
