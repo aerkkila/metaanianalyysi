@@ -15,8 +15,8 @@ const double r2 = 6362.1320*6362.1320; // km, jotta luvut ovat maltillisempia
 #define Lat(i) (lat0+(i)/360)
 #define Pintaala(i) PINTAALA(Lat(i)*ASTE, ASTE)
 
-#define KANSIO "vuodata2301/"
-#define LOPUSTA_PUUTTUU 1 // metaanidatasta viimeisen vuoden lopussa puuttuvat päivät
+#define KANSIO "vuodata2302/"
+#define LOPUSTA_PUUTTUU 1 // Metaanidatasta viimeisen vuoden lopussa puuttuvien päivien määrä. Esim. 1 -> 30.12. viimeinen
 const char* ikirnimet[]      = {"nonpermafrost", "sporadic", "discontinuous", "continuous"};
 const char* köppnimet[]      = {"Db", "Dc", "Dd", "ET"};
 const char* wetlnimet[]      = {"wetland", "bog", "fen", "marsh", "permafrost_bog", "tundra_wetland"};
@@ -41,7 +41,7 @@ double lat0, koko_vuoden_jakaja, jakajien_summa;
 
 struct tiedot {
     double *vuo, *WET;
-    float *alut, *loput;
+    short *alut, *loput;
     int *vuodet, res, v0, v1;
     time_t aika0;
     char* alue;
@@ -94,13 +94,14 @@ int argumentit(int argc, char** argv) {
 }
 
 #define VIRHE -1234567
-int montako_päivää(time_t aika0, int vuosi, float fpäivä) {
-    if(fpäivä != fpäivä)
+#define PÄIVÄTÄYTTÖ 999
+int montako_päivää(time_t aika0, int vuosi, short päivä) {
+    if(päivä == PÄIVÄTÄYTTÖ)
 	return VIRHE;
     struct tm aikatm = {
 	.tm_year = vuosi-1900,
 	.tm_mon  = 0,
-	.tm_mday = 1+(int)fpäivä,
+	.tm_mday = 1+päivä,
     };
     time_t kohdeaika = mktime(&aikatm);
     return (kohdeaika - aika0) / 86400;
@@ -116,14 +117,12 @@ double laske_piste(const struct tiedot* restrict tiedot, int i) {
     double ala = Pintaala(i);
     int vuosia = 0;
     for(int v=tiedot->v0; v<tiedot->v1; v++) {
+	if(luokenum==ikir_e && tiedot->ikir[v*tiedot->res+i] != tiedot->luokka)
+	    continue;
 	int alku  = montako_päivää(tiedot->aika0, tiedot->vuodet[v], tiedot->alut [v*tiedot->res + i]),
 	    loppu = montako_päivää(tiedot->aika0, tiedot->vuodet[v], tiedot->loput[v*tiedot->res + i]);
 	if(alku == VIRHE || loppu == VIRHE)
 	    continue;
-	/* Tässä voisi tarkistaa vuopäivien kelvollisuuden. */
-	if(luokenum==ikir_e && tiedot->ikir[v*tiedot->res+i]!=tiedot->luokka)
-	    continue;
-
 	vuosia++;
 	for(int t=alku; t<loppu; t++)
 	    summa += tiedot->vuo[t*tiedot->res+i] * ala;
@@ -131,8 +130,8 @@ double laske_piste(const struct tiedot* restrict tiedot, int i) {
     }
     if(!vuosia)
 	return epäluku;
-    jakaja *= tiedot->jakajan_kerroin(tiedot, i) / vuosia;
-    return summa * tiedot->summan_kerroin(tiedot, i) / vuosia;
+    jakaja *=      tiedot->jakajan_kerroin(tiedot, i) / vuosia;
+    return summa * tiedot-> summan_kerroin(tiedot, i) / vuosia;
 }
 
 void laske(const struct tiedot* restrict tiedot, struct tulos* tulos) {
@@ -151,7 +150,7 @@ void laske(const struct tiedot* restrict tiedot, struct tulos* tulos) {
 	tulos->sum1 += tulos->summat[n];
 	tulos->jak1 += (tulos->jakajat[n] = laske_piste(tiedot, pisteen_jakaja(i)));
 	tulos->lat  += Lat(i) * tulos->jakajat[n];
-	tulos->alat[n] = Pintaala(i);
+	tulos->alat[n] = Pintaala(i) * tiedot->jakajan_kerroin(tiedot, i);
 	n++;
     }
     tulos->pisteitä = n;
@@ -256,12 +255,12 @@ void rajaa_aluetta_kosteikon_perusteella(char* alue, const struct tiedot* restri
 void aseta_alku_ja_loppu(struct tiedot* restrict td, nct_vset* kauvset, int kausi) {
     if(kausi == whole_year_e) {
 	int vuosia = td->v1 - td->v0;
-	td->alut =  malloc(    td->res*vuosia*2*sizeof(float));
+	td->alut =  malloc(    td->res*vuosia*2*sizeof(short));
 	td->loput = td->alut + td->res*vuosia;
 	for(int i=td->v0; i<td->v1; i++) {
 	    int karkaus = !(td->vuodet[i]%4) && (td->vuodet[i]%100 || !(td->vuodet[i]%400));
-	    float* alk = td->alut  + i*td->res;
-	    float* lop = td->loput + i*td->res;
+	    short* alk = td->alut  + i*td->res;
+	    short* lop = td->loput + i*td->res;
 	    for(int r=0; r<td->res; r++) {
 		alk[r] = 0;
 		lop[r] = 365+karkaus;
@@ -276,13 +275,13 @@ void aseta_alku_ja_loppu(struct tiedot* restrict td, nct_vset* kauvset, int kaus
     sprintf(nimi, "%s_start", kaudet[kausi]);
     apu = nct_get_var(kauvset, nimi);
     if(!apu->data)
-	nct_load_var_with(apu, -1, nc_get_var_float, sizeof(float));
+	nct_load_var(apu, -1);
     td->alut = apu->data;
 
     sprintf(nimi, "%s_end", kaudet[kausi]);
     apu = nct_get_var(kauvset, nimi);
     if(!apu->data)
-	nct_load_var_with(apu, -1, nc_get_var_float, sizeof(float));
+	nct_load_var(apu, -1);
     td->loput = apu->data;
 }
 
@@ -352,17 +351,18 @@ int alusta_csv_vuosittain(const char* luoknimi, int var, int v0, int v1, char* b
     return ret;
 }
 
-typedef const struct tulos* restrict vakiotulos;
+#define vakiotulos const struct tulos* restrict
 
+/* Painotettuna luokan pinta-alalla. */
 double varianssi(vakiotulos tulos) {
-    double avg = tulos->sum1 / tulos->jak1 * 1e9; // erotus² voi olla pieni ellei kerrota 1e9:llä
+    double avg = tulos->sum1 / tulos->jak1 * 1e9; // erotus² voi olla pieni ellei kerrota suurella
     double summa = 0;
     double jakaja = 0;
     for(int i=0; i<tulos->pisteitä; i++) {
-	double tämä = tulos->summat[i] / tulos->jakajat[i] * 1e9;
-	if(!(tämä==tämä))
+	if(tulos->jakajat[i] == 0)
 	    continue;
-	summa += (avg - tämä) * (avg - tämä) * tulos->alat[i];
+	double tämävuo = tulos->summat[i] / tulos->jakajat[i] * 1e9;
+	summa += (avg - tämävuo) * (avg - tämävuo) * tulos->alat[i];
 	jakaja += tulos->alat[i];
     }
     return summa / jakaja;
@@ -473,7 +473,7 @@ int main(int argc, char** argv) {
 
     aluevset = nct_read_ncfile("aluemaski.nc");
     vuovset  = nct_read_ncfile_info(vlnum>1? "../vuo_2212/flux1x1_.nc": "flux1x1.nc");
-    kauvset  = nct_read_ncfile_info("kausien_päivät.nc");
+    kauvset  = nct_read_ncfile_info("kausien_päivät_int16.nc");
     maski    = nct_next_truevar(aluevset->vars[0], 0);
     vuoaika  = nct_get_var(vuovset, "time");
     nct_load_var(vuoaika, -1);

@@ -3,7 +3,7 @@ all: vuotaul_00.target vuotaul_10.target vuotaul_01.target vuotaul_02.target vuo
 argv =
 
 vuodata.out: vuotaul.c
-	gcc -Wall -o $@ $< -lm `pkg-config --libs nctietue2` -O3
+	gcc -Wall -o $@ $< -lm `pkg-config --libs nctietue2` -Ofast
 vvt.target: vvk vvw vvi vvt vvkk vvik
 vvk: vuodata.out
 	./$< vuosittain köpp $(argv)
@@ -17,6 +17,20 @@ vvkk: vuodata.out
 	./$< vuosittain köpp kosteikko $(argv)
 vvik: vuodata.out
 	./$< vuosittain ikir kosteikko $(argv)
+
+vt.target: vk vw vi vt vkk vik
+vk: vuodata.out
+	./$< köpp $(argv)
+vi: vuodata.out
+	./$< ikir $(argv)
+vw: vuodata.out
+	./$< wetl $(argv)
+vt: vuodata.out
+	./$< totl $(argv)
+vkk: vuodata.out
+	./$< köpp kosteikko $(argv)
+vik: vuodata.out
+	./$< ikir kosteikko $(argv)
 
 vuotaul_00.target: vuotaul_köppen_pri.csv vuotaul_köppen_post.csv vuotaul_ikir_pri.csv vuotaul_ikir_post.csv vuotaul_wetland_pri.csv vuotaul_wetland_post.csv
 	cat vuotaulukot/*_pri_*.csv > vuotaul_pri.csv
