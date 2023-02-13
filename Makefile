@@ -1,8 +1,9 @@
 # pintaalat.py ja kaudet.c pitää olla ajettuina ennen tätä
-all: vuotaul_00.target vuotaul_10.target vuotaul_01.target vuotaul_02.target vuojakaumadata.target vuojakaumadata_vuosittain.target vuosijainnit.nc kuvat taulukot.target
+#all: vuotaul_00.target vuotaul_10.target vuotaul_01.target vuotaul_02.target vuojakaumadata.target vuojakaumadata_vuosittain.target vuosijainnit.nc kuvat taulukot.target
+all: vt.target vtpri.target vuojakaumadata.target vuojakaumadata_vuosittain.target vuosijainnit.nc kuvat.target taulukot.target
 argv =
 
-vuodata.out: vuotaul.c
+vuodata.out: vuodata.c
 	gcc -Wall -o $@ $< -lm `pkg-config --libs nctietue2` -Ofast
 vvt.target: vvk vvw vvi vvt vvkk vvik
 vvk: vuodata.out
@@ -18,7 +19,7 @@ vvkk: vuodata.out
 vvik: vuodata.out
 	./$< vuosittain ikir kosteikko $(argv)
 
-vt.target: vk vw vi vt vkk vik
+vt.target: vk vw vi vt vkk vik vwm vwp
 vk: vuodata.out
 	./$< köpp $(argv)
 vi: vuodata.out
@@ -31,57 +32,28 @@ vkk: vuodata.out
 	./$< köpp kosteikko $(argv)
 vik: vuodata.out
 	./$< ikir kosteikko $(argv)
+vwm: vuodata.out
+	./$< wetl temperate $(argv)
+vwp: vuodata.out
+	./$< wetl nontemperate $(argv)
 
-vuotaul_00.target: vuotaul_köppen_pri.csv vuotaul_köppen_post.csv vuotaul_ikir_pri.csv vuotaul_ikir_post.csv vuotaul_wetland_pri.csv vuotaul_wetland_post.csv
-	cat vuotaulukot/*_pri_*.csv > vuotaul_pri.csv
-	cat vuotaulukot/*_post_*.csv > vuotaul_post.csv
-vuotaul_00.out: vuotaul_yleinen.c
-	gcc -Wall -g -O2 vuotaul_yleinen.c -o $@ `pkg-config --libs nctietue2` -lm -DKOSTEIKKO=0 -Dkosteikko_kahtia=0
-vuotaul_wetland_post.csv: vuotaul_00.out
-	./vuotaul_00.out wetl post
-	./vuotaul_00.out wetl post
-vuotaul_wetland_pri.csv: vuotaul_00.out
-	./vuotaul_00.out wetl pri
-	./vuotaul_00.out wetl pri
-vuotaul_köppen_post.csv: vuotaul_00.out
-	./vuotaul_00.out köpp post
-	./vuotaul_00.out köpp post
-vuotaul_köppen_pri.csv: vuotaul_00.out
-	./vuotaul_00.out köpp pri
-	./vuotaul_00.out köpp pri
-vuotaul_ikir_post.csv: vuotaul_00.out
-	./vuotaul_00.out ikir post
-	./vuotaul_00.out ikir post
-vuotaul_ikir_pri.csv: vuotaul_00.out
-	./vuotaul_00.out ikir pri
-	./vuotaul_00.out ikir pri
-
-# calculates climate and permafrost class data with only their wetland areas into vuotaulukot/*k1.csv
-vuotaul_10.target: vuotaul_köppen_post10.csv vuotaul_ikir_post10.csv
-vuotaul_10.out: vuotaul_yleinen.c
-	gcc -Wall -g -O2 vuotaul_yleinen.c -o $@ `pkg-config --libs nctietue2` -lm -DKOSTEIKKO=1 -Dkosteikko_kahtia=0
-vuotaul_köppen_post10.csv: vuotaul_10.out
-	./vuotaul_10.out köpp post
-	./vuotaul_10.out köpp post
-vuotaul_ikir_post10.csv: vuotaul_10.out
-	./vuotaul_10.out ikir post
-	./vuotaul_10.out ikir post
-
-# calculates wetland data without the mixed area into vuotaulukot/kahtia/*
-vuotaul_01.target: vuotaul_wetland_post01.csv
-vuotaul_01.out: vuotaul_yleinen.c
-	gcc -Wall -g -O2 vuotaul_yleinen.c -o $@ `pkg-config --libs nctietue2` -lm -DKOSTEIKKO=0 -Dkosteikko_kahtia=1
-vuotaul_wetland_post01.csv: vuotaul_01.out
-	./vuotaul_01.out wetl post
-	./vuotaul_01.out wetl post
-
-# calculates wetland data with only the mixed area into vuotaulukot/kahtia_keskiosa/*
-vuotaul_02.target: vuotaul_wetland_post02.csv
-vuotaul_02.out: vuotaul_yleinen.c
-	gcc -Wall -g -O2 vuotaul_yleinen.c -o $@ `pkg-config --libs nctietue2` -lm -DKOSTEIKKO=0 -Dkosteikko_kahtia=2
-vuotaul_wetland_post02.csv: vuotaul_02.out
-	./vuotaul_02.out wetl post
-	./vuotaul_02.out wetl post
+vtpri.target: vkpri vwpri vipri vtpri vkkpri vikpri vwmpri vwppri
+vkpri: vuodata.out
+	./$< köpp pri $(argv)
+vipri: vuodata.out
+	./$< ikir pri $(argv)
+vwpri: vuodata.out
+	./$< wetl pri $(argv)
+vtpri: vuodata.out
+	./$< totl pri $(argv)
+vkkpri: vuodata.out
+	./$< köpp kosteikko pri $(argv)
+vikpri: vuodata.out
+	./$< ikir kosteikko pri $(argv)
+vwmpri: vuodata.out
+	./$< wetl temperate pri $(argv)
+vwppri: vuodata.out
+	./$< wetl nontemperate pri $(argv)
 
 # vuojakaumadata
 # Jos tässä on optimointina -Ofast, saadaan muistialueen ylitys,
@@ -119,14 +91,13 @@ vuosijainnit.nc: vuosijainnit.out
 vuosijainnit.out: vuosijainnit.c
 	gcc -Wall -o $@ $< `pkg-config --libs nctietue2` -lm -O3 -g
 
-kuvat: vuosijainnit.nc
+kuvat.target: vuosijainnit.nc
 	./köppikir_kartta.py -s
 	./köppikir_kartta.py ikir -s
 	./kaudet_laatikko.py -s
 	./permafrost_wetland_kartta.py -s
-	./xvuo_laatikko.py -s
 	./vuojakaumalaatikko.py -s
-	./vuojakaumalaatikko_vuosittain.py -s
+	./vuojakaumalaatikko_vuosittain.py -s -nf
 	./vuosijainnit.py -s
 
 vuotaul.target:
@@ -145,6 +116,7 @@ taulukot.target: vuotaul.target
 	./vuotaul.out
 
 # Näitä ei sisälly all-kohteeseen
+# Lienevät vanhentuneita
 päivät_vuosittain.out: päivät_vuosittain.c
 	gcc -Wall $< -o $@ `pkg-config --libs nctietue2 gsl` -lm -g -O3
 päivät_vuosittain_ikir: päivät_vuosittain.out

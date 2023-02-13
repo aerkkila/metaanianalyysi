@@ -8,7 +8,7 @@
 #define arrpit(a) ((sizeof(a)) / sizeof(*(a)))
 const char* wetlnimet[] = {"bog", "fen", "marsh", "permafrost_bog", "tundra_wetland", "wetland", "nonwetland"};
 const char* ikirnimet[] = {"nonpermafrost", "sporadic", "discontinuous", "continuous"};
-const char* köppnimet[] = {"D.b", "D.c", "D.d", "ET"};
+const char* köppnimet[] = {"Db", "Dc", "Dd", "ET"};
 int pit_wetl = arrpit(wetlnimet),
     pit_ikir = arrpit(ikirnimet),
     pit_köpp = arrpit(köppnimet);
@@ -93,18 +93,18 @@ kelpaa:
     goto kelpaa;
 }
 
-#define kansio0 "./"
+#define kansio0 "./vuodata2302/"
 
 int main() {
-    lue_tiedosto(kansio0"vuotaulukot/wetlandvuo_post_whole_year_k0.csv", wtaul, 0, wetlnimet, pit_wetl);
-    lue_tiedosto(kansio0"vuotaulukot/kahtia/wetlandvuo_post_whole_year_k0.csv", wtaul, 1, wetlnimet, pit_wetl);
+    lue_tiedosto(kansio0"wetlandvuo_biopost_whole_year_k0.csv", wtaul, 0, wetlnimet, pit_wetl);
+    lue_tiedosto(kansio0"nontemperate/wetlandvuo_biopost_whole_year_k0.csv", wtaul, 1, wetlnimet, pit_wetl);
     //lue_tiedosto(kansio0"vuotaulukot/kahtia_keskiosa/wetlandvuo_post_whole_year_k0.csv", wtaul, 2, wetlnimet, pit_wetl);
     
-    lue_tiedosto(kansio0"vuotaulukot/ikirvuo_post_whole_year_k0.csv", itaul, 0, ikirnimet, pit_ikir);
-    lue_tiedosto(kansio0"vuotaulukot/ikirvuo_post_whole_year_k1.csv", itaul, 1, ikirnimet, pit_ikir);
+    lue_tiedosto(kansio0"ikirvuo_biopost_whole_year_k0.csv", itaul, 0, ikirnimet, pit_ikir);
+    lue_tiedosto(kansio0"ikirvuo_biopost_whole_year_k1.csv", itaul, 1, ikirnimet, pit_ikir);
     
-    lue_tiedosto(kansio0"vuotaulukot/köppenvuo_post_whole_year_k0.csv", ktaul, 0, köppnimet, pit_köpp);
-    lue_tiedosto(kansio0"vuotaulukot/köppenvuo_post_whole_year_k1.csv", ktaul, 1, köppnimet, pit_köpp);
+    lue_tiedosto(kansio0"köppenvuo_biopost_whole_year_k0.csv", ktaul, 0, köppnimet, pit_köpp);
+    lue_tiedosto(kansio0"köppenvuo_biopost_whole_year_k1.csv", ktaul, 1, köppnimet, pit_köpp);
 
     FILE* f = fopen(kansio0"lattaul.tex", "w");
     kirjoita_data(f);

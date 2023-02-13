@@ -11,9 +11,9 @@ equal_t = lambda x1,x2,s1,s2,n1,n2: (x1 - x2) / (sp(s1,s2,n1,n2) * (1/n1 + 1/n2)
 welch_t = lambda x1,x2,s1,s2,n1,n2: (x1 - x2) / (s1/n1 + s2/n2)**0.5
 dof = lambda s1,n1,s2,n2: (s1/n1 + s2/n2)**2 / (s1**2/(n1**3-n1**2) + s2**2/(n2**3-n2**2))
 
-tiedosto = "vuotaulukot/%swetlandvuo_post_%%s_k0.csv" %('kahtia/'               if 'pure' in sys.argv
-                                                        else 'kahtia_keskiosa/' if 'mixed' in sys.argv
-                                                        else '')
+tiedosto = "vuodata2302/%swetlandvuo_biopost_%%s_k0.csv" %('nontemperate/'   if 'nontemperate' in sys.argv
+                                                           else 'temperate/' if 'temperate'    in sys.argv
+                                                           else '')
 
 f = open(tiedosto %'summer', 'r')
 f.readline()
@@ -86,7 +86,7 @@ def tulosta_kivasti(taul):
             a = taul[j,i]
             if a > 0.5:
                 a = 1-a
-            punainen() if a < 0.01 else vihreä() if a < 0.03 else keltainen() if a < 0.05 else perus()
+            vihreä() if a < 0.01 else keltainen() if a < 0.03 else punainen() if a < 0.05 else perus()
             pri('%-*.4f' %(int(lev[i]),a))
         pri('\n')
     perus()

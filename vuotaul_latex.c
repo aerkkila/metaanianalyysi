@@ -13,11 +13,11 @@
 #endif
 
 #if KOST_KAHTIA == 0
-#define kansio "vuotaulukot"
+#define kansio "vuodata2302/"
 #elif KOST_KAHTIA == 1
-#define kansio "vuotaulukot/kahtia"
+#define kansio "vuodata2302/nontemperate/"
 #elif KOST_KAHTIA == 2
-#define kansio "vuotaulukot/kahtia_keskiosa"
+#define kansio "vuodata2302/temperate/"
 #endif
 
 const char* pripost[] = {"post", "pri"};
@@ -25,7 +25,7 @@ const char* kaudet[] = {"summer", "freezing", "winter"};
 const char* ylänimet[] = {"wetland", "köppen", "ikir"};
 const char* wetlnimet[] = {"bog", "fen", "marsh", "permafrost_bog", "tundra_wetland", "wetland", "nonwetland"};
 const char* ikirnimet[] = {"nonpermafrost", "sporadic", "discontinuous", "continuous"};
-const char* köppnimet[] = {"D.b", "D.c", "D.d", "ET"};
+const char* köppnimet[] = {"Db", "Dc", "Dd", "ET"};
 int 
     pit_kaudet=ARRPIT(kaudet),
     pit_wetl=ARRPIT(wetlnimet),
@@ -83,9 +83,9 @@ kelpaa:
 int lue_data(int ppnum, const char* ylänimi, const char** nimet, int pit, float* taul) {
     static int vuo_ind=-1, tg_ind=-1;
     for(int k=0; k<pit_kaudet; k++) {
-	FILE* f = fopen(aprintf(kansio "/%svuo_%s_%s_k%i.csv",
+	FILE* f = fopen(aprintf(kansio"%svuo_bio%s_%s_k%i.csv",
 				ylänimi, pripost[ppnum], kaudet[k], KOSTEIKKO*(!!strcmp(ylänimi,"wetland"))), "r");
-	if(!f) return 1;
+	if(!f) {puts(aprintapu); return 1;}
 	while(fgetc(f) != '\n'); // 1. rivi on kommentti
 
 	if(vuo_ind < 0)

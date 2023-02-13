@@ -7,14 +7,12 @@ They should be compiled with argument \`pkg-config --libs nctietue2\`
 	   BAWLD classification
    - **ikirdata<area>.py** &rarr; ikirdata<area>.nc, ikirdata<area>.npy \
 	   permafrost classification
-   - **kaudet<area>.c* &rarr; kaudet<area>.nc, kausien_päivät.nc \
+   - **smoskoodit/kaudet<area>.c* &rarr; kaudet<area>.nc, kausien_päivät.nc, kausien_päivät_int16.nc \
 	   ongoing season (kaudet<area>.nc) and season start and end dates (kausien_päivät.nc)
    - **pintaalat<area>.py** &rarr; pintaalat<area>.npy \
 	   a simple code: calculate area of each grid cell
    - **köppen.c** &rarr; köppen1x1maski<area>.nc \
 	   Reads shapefile of köppen classification and outputs netcdf file.
-   - **yleiskosteikko<area>.c** &rarr; yleiskosteikko<area>.nc \
-	   Reads three wetland classes used in the model and creates a combination of them that that best explains the modelled flux.
    - **köppenmaski<area>.py** &rarr; köppenmaski<area>.npy, köppenmaski<area>.txt \
 	   Climate class for each grid cell.
 
@@ -26,9 +24,9 @@ They should be compiled with argument \`pkg-config --libs nctietue2\`
    - **päivät_vuosittain.c** &rarr; kausidata2301/* \
 	   Like vuojakaumadata<area>.c but for season start days
 	   which are read straight from kausien_päivät.nc and therefore is much simpler.
-   - **vuotaul_yleinen.c** &rarr; vuotaulukot/\*.csv \
-	   Calculate average methane fluxes in different areas and seasons. \
-	   **This has to be run twice to get standard deviations right.**
+   - **vuodata.c** &rarr; vuodata$(yymm)/\*.csv \
+	   Calculate average methane fluxes and many other things in different areas and seasons. \
+	   This replaces the ugly code in vuotaul_yleinen.c.
    - **wregressio/** \
 	   Contains its own readme.
 

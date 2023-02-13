@@ -32,7 +32,7 @@ const char* vuolaji_ulos[]   = {"biopri", "biopost", "antropri", "antropost"};
 #define vuosi1_ 2021 // jos vuosittain, saatetaan käyttää muuta arvoa
 #define vuosi0_ 2011
 
-enum alue_e     {kokoalue_e, pure_e, mixed_e} alueenum;
+enum alue_e     {kokoalue_e, nontemperate_e, temperate_e} alueenum;
 enum luokitus_e luokenum;
 int vlnum=1, kosteikko, vuosittain;                // argumentteja
 int ikirvuosi0, ikirvuosia, vuosi1kaikki, luokkia; // määritettäviä
@@ -68,9 +68,9 @@ int argumentit(int argc, char** argv) {
 	    luokenum = totl_e;
 	else if(!strcmp(argv[i], "köpp"))
 	    luokenum = köpp_e;
-	else if (!strcmp(argv[i], "ikir"))
+	else if(!strcmp(argv[i], "ikir"))
 	    luokenum = ikir_e;
-	else if (!strcmp(argv[i], "wetl"))
+	else if(!strcmp(argv[i], "wetl"))
 	    luokenum = wetl_e;
 	else if(!strcmp(argv[i], "pri"))
 	    vlnum = 0;
@@ -82,10 +82,10 @@ int argumentit(int argc, char** argv) {
 	    kosteikko = 1;
 	else if(!strcmp(argv[i], "vuosittain"))
 	    vuosittain = 1;
-	else if(!strcmp(argv[i], "mixed"))
-	    alueenum = mixed_e;
-	else if(!strcmp(argv[i], "pure"))
-	    alueenum = pure_e;
+	else if(!strcmp(argv[i], "temperate"))
+	    alueenum = temperate_e;
+	else if(!strcmp(argv[i], "nontemperate"))
+	    alueenum = nontemperate_e;
 	else {
 	    fprintf(stderr, "\033[91mVirheellinen argumentti\033[0m %s\n", argv[i]);
 	    return 1;
@@ -229,13 +229,13 @@ void* lue_luokitus() {
 void rajaa_aluetta_kosteikon_perusteella(char* alue, const struct tiedot* restrict td, int flags) {
     double* mix;
     switch(alueenum) {
-	case mixed_e:
+	case temperate_e:
 	    mix = nct_read_from_ncfile("BAWLD1x1.nc", "wetland_prf", nc_get_var_double, sizeof(double));
 	    for(int i=0; i<td->res; i++)
 		alue[i] &= (0.03 < mix[i]/td->WET[i] && mix[i]/td->WET[i] < 0.97);
 	    free(mix);
 	    break;
-	case pure_e:
+	case nontemperate_e:
 	    mix = nct_read_from_ncfile("BAWLD1x1.nc", "wetland_prf", nc_get_var_double, sizeof(double));
 	    for(int i=0; i<td->res; i++)
 		alue[i] &= !(0.03 < mix[i]/td->WET[i] && mix[i]/td->WET[i] < 0.97);
@@ -307,8 +307,8 @@ void mkdir_p(const char *restrict nimi, int mode) {
 
 FILE* alusta_csv(int kausi) {
     char nimi[160];
-    char* kansio = (alueenum==pure_e?  KANSIO"kahtia" :
-	            alueenum==mixed_e? KANSIO"kahtia_keskiosa" :
+    char* kansio = (alueenum==nontemperate_e? KANSIO"nontemperate" :
+	            alueenum==temperate_e?    KANSIO"temperate" :
 	            KANSIO);
     mkdir_p(kansio, 0755);
     sprintf(nimi, "%s/%svuo_%s_%s_k%i.csv", kansio,
@@ -335,9 +335,9 @@ int alusta_csv_vuosittain(const char* luoknimi, int var, int v0, int v1, char* b
     if(!vlnum)
 	fprintf(f, "_priori");
     switch(alueenum) {
-	case pure_e:
+	case nontemperate_e:
 	    fprintf(f, "_puhdas"); break;
-	case mixed_e:
+	case temperate_e:
 	    fprintf(f, "_sekoitus"); break;
 	default:
 	    break;
@@ -440,7 +440,7 @@ void tee_lajin_kaudet_vuosittain(struct tiedot* tiedot, nct_vset* kauvset, char*
 
 void vie_tiedostoksi(char* buf[][nvars], int sij[][nvars]) {
     char nimi[128];
-    char* aluenimi = alueenum==mixed_e?"_sekoitus": alueenum==pure_e?"_puhdas": "";
+    char* aluenimi = alueenum==temperate_e?"_lauhkea": alueenum==nontemperate_e?"_eilauhkea": "";
     const char* kansio = vlnum>1? KANSIO"vuosittain/antro": KANSIO"vuosittain";
     mkdir_p(kansio, 0755);
     sprintf(nimi, "%s/%s%s%s%s.csv", kansio,

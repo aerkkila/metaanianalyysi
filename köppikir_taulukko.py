@@ -11,7 +11,7 @@ def lue_data():
     ds = Dataset('köppen1x1maski.nc')
     köpp = np.zeros([len(luokat.köpp), 19800], bool)
     for u in ds.variables:
-        for i,k in enumerate(luokat.köpp):
+        for i,k in enumerate(luokat.köppre):
             if re.match(k,u):
                 köpp[i,:] = köpp[i,:] | np.ma.getdata(ds[u]).flatten()
     ds.close()

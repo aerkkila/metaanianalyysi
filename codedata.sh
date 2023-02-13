@@ -43,8 +43,8 @@ cp -lr \
     pintaalat.npy \
     vuotaulukot \
     vuojakaumadata \
-    kaudet.nc \
     kausien_päivät.nc \
+    kausien_päivät_int16.nc \
     BAWLD1x1.nc \
     flux1x1.nc \
     vuosijainnit.nc \
@@ -153,62 +153,63 @@ kansio=$k0/create_pintaalat
 mkdir -p $kansio
 cp pintaalat.py $kansio
 
-kansio=$k0/create_vuotaulukot
+kansio=$k0/create_vuodata
 mkdir -p $kansio
-cp vuotaul_yleinen.c $kansio
+cp vuodata.c $kansio
 cat >$kansio/Makefile <<EOF
-all: vuotaul_00.target vuotaul_10.target vuotaul_01.target vuotaul_02.target
+all: vt.target vtpri.target vvt.target
 
-vuotaul_00.target: vuotaul_köppen_pri.csv vuotaul_köppen_post.csv vuotaul_ikir_pri.csv vuotaul_ikir_post.csv vuotaul_wetland_pri.csv vuotaul_wetland_post.csv
-	cat vuotaulukot/*_pri_*.csv > vuotaul_pri.csv
-	cat vuotaulukot/*_post_*.csv > vuotaul_post.csv
-vuotaul_00.out:
-	gcc -Wall -g -O2 vuotaul_yleinen.c -o \$@ \`pkg-config --libs nctietue2\` -lm -DKOSTEIKKO=0 -Dkosteikko_kahtia=0
-vuotaul_wetland_post.csv: vuotaul_00.out
-	./vuotaul_00.out wetl post
-	./vuotaul_00.out wetl post
-vuotaul_wetland_pri.csv: vuotaul_00.out
-	./vuotaul_00.out wetl pri
-	./vuotaul_00.out wetl pri
-vuotaul_köppen_post.csv: vuotaul_00.out
-	./vuotaul_00.out köpp post
-	./vuotaul_00.out köpp post
-vuotaul_köppen_pri.csv: vuotaul_00.out
-	./vuotaul_00.out köpp pri
-	./vuotaul_00.out köpp pri
-vuotaul_ikir_post.csv: vuotaul_00.out
-	./vuotaul_00.out ikir post
-	./vuotaul_00.out ikir post
-vuotaul_ikir_pri.csv: vuotaul_00.out
-	./vuotaul_00.out ikir pri
-	./vuotaul_00.out ikir pri
+vuodata.out: vuodata.c
+	gcc -Wall -o \$@ \$< -lm \`pkg-config --libs nctietue2\` -Ofast
+vvt.target: vvk vvw vvi vvt vvkk vvik
+vvk: vuodata.out
+	./\$< vuosittain köpp \$(argv)
+vvi: vuodata.out
+	./\$< vuosittain ikir \$(argv)
+vvw: vuodata.out
+	./\$< vuosittain wetl \$(argv)
+vvt: vuodata.out
+	./\$< vuosittain totl \$(argv)
+vvkk: vuodata.out
+	./\$< vuosittain köpp kosteikko \$(argv)
+vvik: vuodata.out
+	./\$< vuosittain ikir kosteikko \$(argv)
 
-# calculates climate and permafrost class data with only their wetland areas into vuotaulukot/*k1.csv
-vuotaul_10.target: vuotaul_köppen_post10.csv vuotaul_ikir_post10.csv
-vuotaul_10.out:
-	gcc -Wall -g -O2 vuotaul_yleinen.c -o \$@ \`pkg-config --libs nctietue2\` -lm -DKOSTEIKKO=1 -Dkosteikko_kahtia=0
-vuotaul_köppen_post10.csv: vuotaul_10.out
-	./vuotaul_10.out köpp post
-	./vuotaul_10.out köpp post
-vuotaul_ikir_post10.csv: vuotaul_10.out
-	./vuotaul_10.out ikir post
-	./vuotaul_10.out ikir post
+vt.target: vk vw vi vt vkk vik vwm vwp
+vk: vuodata.out
+	./\$< köpp \$(argv)
+vi: vuodata.out
+	./\$< ikir \$(argv)
+vw: vuodata.out
+	./\$< wetl \$(argv)
+vt: vuodata.out
+	./\$< totl \$(argv)
+vkk: vuodata.out
+	./\$< köpp kosteikko \$(argv)
+vik: vuodata.out
+	./\$< ikir kosteikko \$(argv)
+vwm: vuodata.out
+	./\$< wetl temperate \$(argv)
+vwp: vuodata.out
+	./\$< wetl nontemperate \$(argv)
 
-# calculates wetland data without the mixed area into vuotaulukot/kahtia/*
-vuotaul_01.target: vuotaul_wetland_post01.csv
-vuotaul_01.out:
-	gcc -Wall -g -O2 vuotaul_yleinen.c -o \$@ \`pkg-config --libs nctietue2\` -lm -DKOSTEIKKO=0 -Dkosteikko_kahtia=1
-vuotaul_wetland_post01.csv: vuotaul_01.out
-	./vuotaul_01.out wetl post
-	./vuotaul_01.out wetl post
-
-# calculates wetland data with only the mixed area into vuotaulukot/kahtia_keskiosa/*
-vuotaul_02.target: vuotaul_wetland_post02.csv
-vuotaul_02.out:
-	gcc -Wall -g -O2 vuotaul_yleinen.c -o \$@ \`pkg-config --libs nctietue2\` -lm -DKOSTEIKKO=0 -Dkosteikko_kahtia=2
-vuotaul_wetland_post02.csv: vuotaul_02.out
-	./vuotaul_02.out wetl post
-	./vuotaul_02.out wetl post
+vtpri.target: vkpri vwpri vipri vtpri vkkpri vikpri vwmpri vwppri
+vkpri: vuodata.out
+	./\$< köpp pri \$(argv)
+vipri: vuodata.out
+	./\$< ikir pri \$(argv)
+vwpri: vuodata.out
+	./\$< wetl pri \$(argv)
+vtpri: vuodata.out
+	./\$< totl pri \$(argv)
+vkkpri: vuodata.out
+	./\$< köpp kosteikko pri \$(argv)
+vikpri: vuodata.out
+	./\$< ikir kosteikko pri \$(argv)
+vwmpri: vuodata.out
+	./\$< wetl temperate pri \$(argv)
+vwppri: vuodata.out
+	./\$< wetl nontemperate pri \$(argv)
 EOF
 
 kansio=$k0/create_vuosijainnit
@@ -302,7 +303,7 @@ cat > $k0/create_links.sh <<EOF
 #!/bin/sh
 ( cd create_köppen;         ln -s ../köppen1x1maski.nc . )
 ( cd create_köppen/create_köppen1x1maski; ln -s ../../aluemaski.nc . )
-( cd create_vuotaulukot;    ln -s ../köppenmaski.txt ../ikirdata.nc ../BAWLD1x1.nc ../flux1x1.nc ../kaudet.nc . )
+( cd create_vuodata;        ln -s ../köppenmaski.txt ../ikirdata.nc ../BAWLD1x1.nc ../flux1x1.nc ../kausien_päivät_int16.nc . )
 ( cd create_vuojakaumadata; ln -s ../köppenmaski.txt ../ikirdata.nc ../BAWLD1x1.nc ../flux1x1.nc ../kausien_päivät.nc . )
 ( cd create_kaudet;         ln -s ../aluemaski.nc . )
 ( cd create_kaudet/create_ft_percent/create_data; ln -s ../../../aluemaski.nc . )
@@ -322,8 +323,8 @@ To remove the library, run:
     make uninstall # as root
 Alternatively, this can be done without root privilidges:
     make
-    export PKG_CONFIG_PATH=\$PWD
-    export LD_LOAD_PATH=\$PWD
+    export PKG_CONFIG_PATH=\$PWD:\$PKG_CONFIG_PATH
+    export LD_LIBRARY_PATH=\$PWD:\$LD_LIBRARY_PATH
     export cflags="-I\$PWD -L\$PWD"
     sed -Ei "s|gcc (.*pkg-config.*nctietue2)|gcc \$cflags \1|" \`find .. -name Makefile\`
 Then to compile without a Makefile, use 'gcc \$cflags ...', if nctietue2 is used in the code.
@@ -337,7 +338,7 @@ If nctietue2-library is used in C code, it should be compiled with argument \`pk
 Most C codes use non-ascii utf8 characters in variable names
 which gcc cannot compile if version < 10.1.
 
-fig_11.py and table_9.py are the same file but given twice for naming reasons.
+Some python files may be given twice with different names for naming reasons (i.e. figX.py == tableY.py).
 
 File names:
 aluemaski			region mask
@@ -356,4 +357,4 @@ EOF
 # Lopuksi koodit ilman suuria tiedostoja
 k1=$HOME/codedata1
 cp -rl $k0 $k1
-rm -r $k1/flux1x1.nc $k1/kaudet.nc $k1/create_kaudet/ft_percent $k1/create_kaudet/create_ft_percent/EASE*.nc
+rm -r $k1/flux1x1.nc $k1/create_kaudet/ft_percent $k1/create_kaudet/create_ft_percent/EASE*.nc

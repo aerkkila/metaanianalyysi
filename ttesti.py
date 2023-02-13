@@ -7,7 +7,8 @@ from scipy.stats import t
 welch_t = lambda x1,x2,s1,s2,n1,n2: (x1 - x2) / (s1/n1 + s2/n2)**0.5
 dof = lambda s1,n1,s2,n2: (s1/n1 + s2/n2)**2 / (s1**2/(n1**3-n1**2) + s2**2/(n2**3-n2**2))
 
-tiedosto = "vuotaulukot/kahtia/wetlandvuo_post_%s_k0.csv"
+# tiedosto = "vuotaulukot/kahtia/wetlandvuo_post_%s_k0.csv"
+tiedosto = "vuodata2302/nontemperate/wetlandvuo_biopost_%s_k0.csv"
 
 f = open(tiedosto %'summer', 'r')
 f.readline()
@@ -22,8 +23,7 @@ f.close();
 def laske(d1,d2,suure):
     tsuure = welch_t(d1[0],d2[0],d1[1],d2[1],d1[2],d2[2])
     df = dof(d1[1], d1[2], d2[1], d2[2])
-    print("%.5f, %.2f (%.0f), %s" %(tsuure, df, d1[2]+d2[2], suure))
-    print("\033[1m%.5f\033[0m" %(t.cdf(tsuure, df)))
+    print("%15s: \033[1m%.5f\033[0m %.5f, %.2f (%.0f)" %(suure, t.cdf(tsuure, df),tsuure, df, d1[2]+d2[2]))
 
 def työstä_kausi(tiedosto):
     lkt = luokat.wetl[1:]
@@ -37,7 +37,7 @@ def työstä_kausi(tiedosto):
                 break
         f.close()
 
-        f = open(tiedosto.replace('kahtia','kahtia_keskiosa'), 'r')
+        f = open(tiedosto.replace('nontemperate','temperate'), 'r')
         for rivi in f:
             a = rivi[:-1].split(',')
             if a[0] == suure:
@@ -47,7 +47,7 @@ def työstä_kausi(tiedosto):
         laske(d1,d2,suure)
 
     # koko wetland erikseen molemmilta alueilta verrattuna keskiosaan
-    f = open(tiedosto.replace('kahtia','kahtia_keskiosa'), 'r')
+    f = open(tiedosto.replace('nontemperate','temperate'), 'r')
     for rivi in f:
         a = rivi[:-1].split(',')
         if a[0] == 'wetland':

@@ -4,7 +4,7 @@ from matplotlib.pyplot import *
 from netCDF4 import Dataset
 import matplotlib, re, sys, luokat
 
-luokat_köpp = ['C.b', 'D.a', 'D.b', 'D.c', 'D.d', 'ET']
+luokat_köpp_re = ['C.b', 'D.a', 'D.b', 'D.c', 'D.d', 'ET']
 luokat_ikir = luokat.ikir
 cmapnimi = "jet"
 
@@ -35,12 +35,12 @@ def main():
     else:
         luokitus_ = Dataset('köppen1x1maski.nc', 'r')
         luokitus = np.zeros(len(lat)*len(lon), np.int8)
-        for ilk,lk in enumerate(luokat_köpp):
+        for ilk,lk in enumerate(luokat_köpp_re):
             for k in luokitus_.variables:
                 if re.match(lk, k):
                     luokitus |= np.ma.getdata(luokitus_[k]).flatten() * maski * (ilk+1)
         luokitus_.close()
-        luokat_ = luokat_köpp
+        luokat_ = luokat_köpp_re
         ncol=2
         nimi = 'köppen_kartta'
 
@@ -55,7 +55,7 @@ def main():
     pcolormesh(mx, my, lk, cmap=cmapnimi, transform=platecarree)
 
     for i,l in enumerate(luokat_):
-        plot(-1,-1,'.',markersize=25,color=cmap(i),label=l,transform=platecarree)
+        plot(-1, -1, '.', markersize=25, color=cmap(i), label=l.replace('.',''), transform=platecarree)
     legend(loc='lower left', fancybox=False, framealpha=1, ncol=ncol)
     tight_layout()
     if '-s' in sys.argv:
