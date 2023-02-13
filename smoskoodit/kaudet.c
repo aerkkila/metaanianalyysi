@@ -12,6 +12,18 @@
 #define syksy jäätym
 #define kesä 1
 
+#ifdef Short
+typedef short päi_tyy;
+const char* nimi_ulos = "kausien_päivät_int16.nc";
+const int nctyyppi = NC_SHORT;
+#define täyttö 999
+#else
+typedef float päi_tyy;
+const char* nimi_ulos = "kausien_päivät.nc";
+const int nctyyppi = NC_FLOAT;
+#define täyttö (0.0f/0.0f)
+#endif
+
 #define jäätyykö(froz, part) ((froz)*9+(part) >= 0.9)
 //#define jäätyykö(froz, part) (froz >= 0.1)
 
@@ -123,7 +135,7 @@ int kesän_pituus(float* fr, float* pr, int aika0, int pit_xy, int t_pit, int vu
 }
 
 int pit_xy_g;
-void vaihdepäivä(int v, int t, int p, float* loppuva[2], float* alkava[2]) {
+void vaihdepäivä(int v, int t, int p, päi_tyy* loppuva[2], päi_tyy* alkava[2]) {
     int yday = aikamuunnos(t, v);
     if(yday > 600) {
 	asm("int $3");
@@ -133,26 +145,26 @@ void vaihdepäivä(int v, int t, int p, float* loppuva[2], float* alkava[2]) {
     alkava[0][v*pit_xy_g+p] = yday;
 }
 
-void vaihdepäivä1(int v, int t, int p, float* loppuva[2], float* alkava[2]) {
+void vaihdepäivä1(int v, int t, int p, päi_tyy* loppuva[2], päi_tyy* alkava[2]) {
     if(v > 0)
 	loppuva[1][(v-1)*pit_xy_g+p] = aikamuunnos(t, v-1);
     alkava[0][v*pit_xy_g+p] = aikamuunnos(t, v);
 }
 
 struct päiväluvut {
-    float *k[2], *j[2], *t[2];
+    päi_tyy *k[2], *j[2], *t[2];
 };
 
 void alusta_päiväluvut(struct päiväluvut* pl, int pit_xy, int tpit) {
     int vuosia = tpit/366+1;
     for(int i=0; i<2; i++) {
-	pl->k[i] = malloc(pit_xy*vuosia*sizeof(float));
-	pl->j[i] = malloc(pit_xy*vuosia*sizeof(float));
-	pl->t[i] = malloc(pit_xy*vuosia*sizeof(float));
+	pl->k[i] = malloc(pit_xy*vuosia*sizeof(päi_tyy));
+	pl->j[i] = malloc(pit_xy*vuosia*sizeof(päi_tyy));
+	pl->t[i] = malloc(pit_xy*vuosia*sizeof(päi_tyy));
 	assert(pl->k[i] && pl->j[i] && pl->t[i]);
-	for(int j=0; j<vuosia*pit_xy; pl->k[i][j++]=0.0f/0.0f);
-	for(int j=0; j<vuosia*pit_xy; pl->j[i][j++]=0.0f/0.0f);
-	for(int j=0; j<vuosia*pit_xy; pl->t[i][j++]=0.0f/0.0f);
+	for(int j=0; j<vuosia*pit_xy; pl->k[i][j++]=täyttö);
+	for(int j=0; j<vuosia*pit_xy; pl->j[i][j++]=täyttö);
+	for(int j=0; j<vuosia*pit_xy; pl->t[i][j++]=täyttö);
     }
 }
 
@@ -308,13 +320,13 @@ aika_päättyi:;
     nct_add_dim(&k, nct_range_NC_INT(vuosi0, vuosi0+vuosia, 1), vuosia, NC_INT, "vuosi");
     nct_copy_var(&k, latvar, 1);
     nct_copy_var(&k, lonvar, 1);
-    nct_add_var(&k, pl.k[0], NC_FLOAT, "summer_start",   3, dimids);
-    nct_add_var(&k, pl.k[1], NC_FLOAT, "summer_end",     3, dimids);
-    nct_add_var(&k, pl.j[0], NC_FLOAT, "freezing_start", 3, dimids);
-    nct_add_var(&k, pl.j[1], NC_FLOAT, "freezing_end",   3, dimids);
-    nct_add_var(&k, pl.t[0], NC_FLOAT, "winter_start",   3, dimids);
-    nct_add_var(&k, pl.t[1], NC_FLOAT, "winter_end",     3, dimids);
-    nct_write_ncfile(&k, "kausien_päivät.nc");
+    nct_add_var(&k, pl.k[0], nctyyppi, "summer_start",   3, dimids);
+    nct_add_var(&k, pl.k[1], nctyyppi, "summer_end",     3, dimids);
+    nct_add_var(&k, pl.j[0], nctyyppi, "freezing_start", 3, dimids);
+    nct_add_var(&k, pl.j[1], nctyyppi, "freezing_end",   3, dimids);
+    nct_add_var(&k, pl.t[0], nctyyppi, "winter_start",   3, dimids);
+    nct_add_var(&k, pl.t[1], nctyyppi, "winter_end",     3, dimids);
+    nct_write_ncfile(&k, nimi_ulos);
     nct_free_vset(&k);
 
     free(maski);
