@@ -112,8 +112,8 @@ vuotaul.target:
 
 taulukot.target: vuotaul.target
 	./köppikir_taulukko.py
-	gcc lattaul.c -O1 -o vuotaul.out
-	./vuotaul.out
+	gcc lattaul.c -O1 -o lattaul.out
+	./lattaul.out
 
 # Näitä ei sisälly all-kohteeseen
 # Lienevät vanhentuneita

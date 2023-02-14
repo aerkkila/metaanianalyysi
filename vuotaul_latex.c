@@ -158,7 +158,7 @@ void kirjoita_data(int ppnum, float* taul) {
     K("\\begin{tabular}{l");
     for(int i=0; i<pit_kaudet; i++) K("|rrr");
     K("}\n");
-    for(int i=0; i<pit_kaudet; i++) K(" & \\multicolumn{3}{r}{%s}", kaudet[i]);
+    for(int i=0; i<pit_kaudet; i++) K(" & \\multicolumn{3}{c}{%s}", kaudet[i]);
     K(" \\\\\n");
     for(int i=0; i<pit_kaudet; i++) K(" & {Tg} & {‰} & {nmol/m$^2$/s}");
     K(" \\\\\n\\midrule\n");

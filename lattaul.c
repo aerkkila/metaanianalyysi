@@ -106,7 +106,7 @@ int main() {
     lue_tiedosto(kansio0"köppenvuo_biopost_whole_year_k0.csv", ktaul, 0, köppnimet, pit_köpp);
     lue_tiedosto(kansio0"köppenvuo_biopost_whole_year_k1.csv", ktaul, 1, köppnimet, pit_köpp);
 
-    FILE* f = fopen(kansio0"lattaul.tex", "w");
+    FILE* f = fopen("lattaul.tex", "w");
     kirjoita_data(f);
     fclose(f);
 }

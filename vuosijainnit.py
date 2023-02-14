@@ -8,11 +8,11 @@ import sys
 
 def main():
     rcParams.update({'font.size': 15,
-                     'figure.figsize': (12,9)})
+                     'figure.figsize': (11,12)})
     platecarree = ccrs.PlateCarree()
     projektio   = ccrs.LambertAzimuthalEqualArea(central_latitude=90)
     kattavuus   = [-180,180,45,90]
-    lajit       = ['fen','marsh','permafrost_bog','tundra_wetland']
+    lajit       = ['bog','fen','marsh','permafrost_bog','tundra_wetland']
 
     ds = Dataset("vuosijainnit%s.nc" %('_sekoitus' if '--sekoitus' in sys.argv[1:] else ''), "r")
     lat = np.ma.getdata(ds['lat'])
@@ -20,7 +20,7 @@ def main():
     mx,my = np.meshgrid(lon,lat, sparse=True)
 
     for il,laji in enumerate(lajit):
-        ax = subplot(2,2,il+1, projection=projektio)
+        ax = subplot(3,2,il+1, projection=projektio)
         ax.coastlines()
         ax.set_extent(kattavuus, platecarree)
         dt = np.ma.getdata(ds[laji])

@@ -4,7 +4,7 @@
 #include <stdarg.h>
 #include <assert.h>
 
-/* Luettavassa tiedostossa pitää olla peräkkäin samalta kaudelta ensin ei-ikirouta ja sitten ikirouta-alueen tulokset,
+/* Luettavassa tiedostossa pitää olla peräkkäin samalta kaudelta ensin lämpimän ja sitten kylmän alueen tulokset,
    mutta muuten tässä ei tehdä oletuksia tiedoston järjestyksestä. */
 
 #define arrpit(a) (sizeof(a)/sizeof(*(a)))
@@ -65,9 +65,9 @@ int main() {
     FILE *f = fopen("sovitteet.txt", "r");
     char sana[128];
     for(int k=0; k<kausia; k++) {
-	löydä_kohta(kaudet[k], f, SEEK_SET); // ei ikirouta
+	löydä_kohta(kaudet[k], f, SEEK_SET); // lämmin
 	lue_kausi(k, f, 0);
-	löydä_kohta(kaudet[k], f, SEEK_CUR); // ikirouta
+	löydä_kohta(kaudet[k], f, SEEK_CUR); // kylmä
 	lue_kausi(k, f, 1);
     }
 
@@ -80,7 +80,7 @@ int main() {
 	fprintf(f, " & \\multicolumn{2}{c}{%s}", kaudet[k]);
     fprintf(f, " \\\\\n");
     for(int k=0; k<kausia; k++)
-	fprintf(f, " & {nonpermafrost} & {permafrost}");
+	fprintf(f, " & {warm} & {cold}");
     fprintf(f, " \\\\\n\\midrule\n");
 
     kirjoita(f, "upper flux limit", ylä, 0);
