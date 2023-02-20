@@ -37,7 +37,7 @@ def viimeistele(tulos, nimi, xnimet, ynimi):
         yticks(ytik,päivät)
     tight_layout()
     if '-s' in sys.argv:
-        nimi="kuvia/kausilaatikko_%s_%s.png" %(ynimi.replace(' ','-'), nimi)
+        nimi="kuvia/kaudet_%s.png" %(ynimi.replace(' ','-'))
         savefig(nimi)
         clf()
     else:
@@ -67,7 +67,6 @@ def main():
     päivädata  = Dataset("kausien_päivät.nc", "r")
     köppdata   = np.tile(np.load("köppenmaski.npy"), vuosi1-vuosi0)
     ikirdata_  = Dataset("ikirdata.nc", "r")
-    ikirvuodet = ikirdata_['vuosi'][:]
     ikirdata   = toimikoon_ikirouta(ikirdata_).flatten()
     ikirdata_.close()
 

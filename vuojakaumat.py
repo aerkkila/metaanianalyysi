@@ -53,7 +53,7 @@ def aja(dt, nimet, tunniste):
     yticks(rotation=90)
     tight_layout()
     if '-s' in sys.argv:
-        nimi = 'kuvia/vuojakaumalaatikko_%s_%s.png' %(pripost[ppnum], tunniste)
+        nimi = 'kuvia/vuojakaumat_%s_%s.png' %(pripost[ppnum], tunniste)
         savefig(nimi)
         clf()
         os.system('gm convert -rotate 90 %s %s' %(nimi,nimi))

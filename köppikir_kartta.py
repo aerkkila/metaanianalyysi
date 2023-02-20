@@ -24,7 +24,8 @@ def main():
         luokitus_ = Dataset('ikirdata.nc', 'r')
         luokitus = np.zeros(len(lat)*len(lon), np.int8)
         taul = np.ma.getdata(luokitus_['luokka'])
-        taul = np.round(np.mean(taul, axis=0)).astype(int)
+        vuodet = np.ma.getdata(luokitus_['vuosi'])
+        taul = np.round(np.mean(taul[vuodet>=2011], axis=0)).astype(int)
         for i,v in enumerate(luokat_ikir):
             k = luokat.ikir.index(v)
             luokitus += (taul==k).flatten() * maski * (i+1)

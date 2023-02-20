@@ -148,9 +148,9 @@ void kirjoita_rivi(FILE* f, float* taul) {
 
 void kirjoita_data(int ppnum, float* taul) {
 #if KOST_KAHTIA==1
-    FILE *f = fopen("vuosummat_kahtia.tex", "w");
+    FILE *f = fopen("vuosummat_epälauhkea.tex", "w");
 #elif KOST_KAHTIA==2
-    FILE *f = fopen("vuosummat_sekoitus.tex", "w");
+    FILE *f = fopen("vuosummat_lauhkea.tex", "w");
 #else
     FILE *f = fopen(aprintf("vuosummat_%s%s.tex",
 			    pripost[ppnum], KOSTEIKKO? STR2(_k,KOSTEIKKO): ""), "w");

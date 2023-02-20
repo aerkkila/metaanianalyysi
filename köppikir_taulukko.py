@@ -5,7 +5,8 @@ import luokat, re
 
 def lue_data():
     ds = Dataset('ikirdata.nc')
-    ikir = np.round(np.mean(np.ma.getdata(ds['luokka']), axis=0)).astype(np.int8).flatten()
+    vuodet = np.ma.getdata(ds['vuosi']) >= 2011
+    ikir = np.round(np.mean(np.ma.getdata(ds['luokka'])[vuodet, ...], axis=0)).astype(np.int8).flatten()
     ds.close()
 
     ds = Dataset('köppen1x1maski.nc')

@@ -20,7 +20,7 @@ def main():
     mx,my = np.meshgrid(lon,lat, sparse=True)
 
     for il,laji in enumerate(lajit):
-        ax = subplot(3,2,il+1, projection=projektio)
+        ax = subplot(3,2,il+1+(il>0), projection=projektio)
         ax.coastlines()
         ax.set_extent(kattavuus, platecarree)
         dt = np.ma.getdata(ds[laji])

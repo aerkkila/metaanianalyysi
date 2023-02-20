@@ -13,20 +13,21 @@ double pintaala(int i) {
 }
 
 #define VIRHE -1234567
-int montako_päivää(time_t aika0, int vuosi, float fpäivä) {
-    if(fpäivä != fpäivä)
+int montako_päivää(time_t aika0, int vuosi, short päivä) {
+    if(päivä == 999)
 	return VIRHE;
     struct tm aikatm = {
 	.tm_year = vuosi-1900,
 	.tm_mon  = 0,
-	.tm_mday = 1+(int)fpäivä,
+	.tm_mday = 1+päivä,
     };
     time_t kohdeaika = mktime(&aikatm);
     return (kohdeaika - aika0) / 86400;
 }
 
 struct tiedot {
-    double *vuo, *alut, *loput, *WET, *wet;
+    double *vuo, *WET, *wet;
+    short *alut, *loput;
     int *vuodet, vuosia, res;
     time_t aika0;
     char* alue;
@@ -119,11 +120,11 @@ void* tee_luokka(void* varg) {
 }
 
 int main(int argc, char** argv) {
-    int kokoalue = argc < 2 || strcmp(argv[1], "--sekoitus");
+    int kokoalue = argc < 2 || strcmp(argv[1], "--lauhkea");
     nct_vset *aluevset = nct_read_ncfile("aluemaski.nc"),
 	     *bawvset  = nct_read_ncfile_info("BAWLD1x1.nc"),
 	     *vuovset  = nct_read_ncfile_info("flux1x1.nc"),
-	     *kauvset  = nct_read_ncfile_info("kausien_päivät.nc");
+	     *kauvset  = nct_read_ncfile_info("kausien_päivät_int16.nc");
 
     nct_var* maski = nct_next_truevar(aluevset->vars[0], 0);
     double* prfwet = nct_load_data_with(bawvset, "wetland_prf", nc_get_var_double, sizeof(double));
@@ -131,8 +132,8 @@ int main(int argc, char** argv) {
     
     struct tiedot tiedot = {
 	.vuo    = nct_load_data_with(vuovset, "flux_bio_posterior", nc_get_var_double, sizeof(double)),
-	.alut   = nct_load_data_with(kauvset, "summer_start",       nc_get_var_double, sizeof(double)),
-	.loput  = nct_load_data_with(kauvset, "summer_end",         nc_get_var_double, sizeof(double)),
+	.alut   = nct_load_data_with(kauvset, "summer_start",       nc_get_var_short,  sizeof(short)),
+	.loput  = nct_load_data_with(kauvset, "summer_end",         nc_get_var_short,  sizeof(short)),
 	.WET    = nct_load_data_with(bawvset, "wetland",            nc_get_var_double, sizeof(double)),
 	.vuodet = nct_load_data_with(kauvset, "vuosi",              nc_get_var_int,    sizeof(int)),
 	.res    = xyres,
@@ -161,7 +162,7 @@ int main(int argc, char** argv) {
 	nct_add_var(&tallenn, data, NC_FLOAT, (char*)luokat[j], 2, varid);
     }
 
-    nct_write_ncfile(&tallenn, kokoalue? "vuosijainnit.nc": "vuosijainnit_sekoitus.nc");
+    nct_write_ncfile(&tallenn, kokoalue? "vuosijainnit.nc": "vuosijainnit_lauhkea.nc");
 
     nct_free_vset(&tallenn);
     nct_free_vset(aluevset);
