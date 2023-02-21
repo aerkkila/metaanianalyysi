@@ -61,38 +61,36 @@ kopioi() {
 }
 
 nimet0='
-köppikir_kartta.py
+aluejaot.py
 kaudet_laatikko.py
-permafrost_wetland_kartta.py
+kosteikkoalueet.py
 vuojakaumalaatikko.py
 vuosijainnit.py
-vuojakaumalaatikko_vuosittain.py
 ttesti_luokat.py
 ttesti.py
 '
 nimet1='
-fig_1.py
-fig_2,3.py
-fig_4.py
-fig_5,6.py
-fig_7.py
-fig_11.py
+fig01.py
+fig02,3.py
+fig04.py
+fig05,6.py
+fig07.py
 ttest_wetlcateg.py
 ttest_mixed-pure.py
 '
 kopioi
 
 nimet0='
-köppikir_taulukko.py
+yhdistelmäalueet.py
 lattaul.c
 vuotaul_latex.c
 vuojakaumalaatikko_vuosittain.py
 '
 nimet1='
-table_1.py
-table_2.c
-table_3-7.c
-table_9.py
+table01.py
+table02.c
+table03-07.c
+table09.py
 '
 kopioi
 
@@ -113,7 +111,7 @@ Command line arguments to wregressio.out include:
     -k [0123] // which season is calculated
     -s        // save: replaces stdout with a file and changes output a little
     -p -s     // passes argument -s to python program piirrä.py to save the drawn figures
-    -i        // to calculate permafrost wetland instead of nonpermafrost wetland
+    -i        // to results for cold wetland areas instead of warm
 
 After wregressio.out one should run 'cat tallenteet/* > sovitteet.txt' to combine the files that wregressio.out created.
 
@@ -268,7 +266,7 @@ cat >$kansio/README <<EOF
 Compiler needs argument \`pkg-config --libs nctietue2\`.
 The code reads annual data files named as FT_720_yyyy.nc.
 To run the codes, go to ./create data first.
-and run ./create_data/yhdistä_vuosittain.c to turn them into requested format.
+and compile and run yhdistä_vuosittain.c to turn the files into requested format.
 EOF
 
 kansio=$kansio/create_data
@@ -279,13 +277,13 @@ This is the code that was used to combine each year into one file
 and fill missing dates with values read from previous existing date.
 Compiler needs argument \`pkg-config --libs nctietue2\`.
 
-Data can be downloaded from
+Data can be downloaded from 
 https://nsdc.fmi.fi/services/SMOSService/
-(Rautiainen, K., Parkkinen, T., Lemmetyinen, J., Schwank, M., Wiesmann, A., Ikonen, J., Derksen, C., Davydov, S., Davydova, A., Boike, J., Langer, M., Drusch, M., and Pulliainen, J. 2016. SMOS prototype algorithm for detecting autumn soil freezing, Remote Sensing of Environment, 180, 346-360. DOI: 10.1016/j.rse.2016.01.012)
+(Rautiainen, K., Parkkinen, T., Lemmetyinen, J., Schwank, M., Wiesmann, A., Ikonen, J., Derksen, C., Davydov, S., Davydova, A., Boike, J., Langer, M., Drusch, M., and Pulliainen, J. 2016. SMOS prototype algorithm for detecting autumn soil freezing, Remote Sensing of Environment, 180, 346-360. DOI: 10.1016/j.rse.2016.01.012).
+Probably that data is not exactly the same which was used in the article so results may differ slightly if someone recreates the result from there.
 
 Downloaded data files should be in netcdf form and renamed as FT_yyyymmdd.nc.
-We do not have a script to do that because we got our data straight from the authors in that form
-but something like 'mmv "W_XX-ESA,SMOS,NH_25KM_EASE2_*_[or]_*.nc" FT_#1.nc' should work.
+Something like 'mmv "W_XX-ESA,SMOS,NH_25KM_EASE2_*_[or]_*.nc" FT_#1.nc' should rename the files correctly.
 EOF
 
 kansio=$k0/create_BAWLD1x1
@@ -313,15 +311,18 @@ EOF
 chmod 755 $k0/create_links.sh
 
 cat > $k0/README <<EOF
+Many of the C-codes will probably only work on Unix-like operating systems.
 It is necessary to run create_links.sh before attempting to run most codes elsewhere than in the root directory.
+It is also necessary to install nctietue2-library before running some of the C-codes. 
 
-It is also necessary to install nctietue2-library before running some of the C-codes.
 Go to nctietue2 directory which is included here and then it can be installed normally with:
     make
     make install # as root
 To remove the library, run:
     make uninstall # as root
-Alternatively, this can be done without root privilidges:
+To install without root privilidges, change variable prefix in config.mk to \$HOME/.local
+
+Alternatively, this can also be done without root privilidges:
     make
     export PKG_CONFIG_PATH=\$PWD:\$PKG_CONFIG_PATH
     export LD_LIBRARY_PATH=\$PWD:\$LD_LIBRARY_PATH
@@ -334,9 +335,12 @@ Last sed command edits Makefiles and should be run only once, otherwise the chan
 The root directory contains all codes that make the final results used in the article.
 Codes needed to create \$data are one level deeper in directory called create_\$data.
 
+Compilation:
+Sometimes a Makefile is given.
+Sometimes compilation command is in comment at the beginning of a C-code.
 If nctietue2-library is used in C code, it should be compiled with argument \`pkg-config --libs nctietue2\`.
 Most C codes use non-ascii utf8 characters in variable names
-which gcc cannot compile if version < 10.1.
+which old compiler versions cannot compile (for gcc, version ≥ 10.1).
 
 Some python files may be given twice with different names for naming reasons (i.e. figX.py == tableY.py).
 

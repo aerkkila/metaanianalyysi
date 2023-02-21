@@ -92,10 +92,9 @@ vuosijainnit.out: vuosijainnit.c
 	gcc -Wall -o $@ $< `pkg-config --libs nctietue2` -lm -Ofast -g
 
 kuvat.target: vuosijainnit.nc
-	./köppikir_kartta.py -s
-	./köppikir_kartta.py ikir -s
+	./aluejaot.py -s
 	./kaudet_laatikko.py -s
-	./permafrost_wetland_kartta.py -s
+	./kosteikkoalueet.py -s
 	./vuojakaumalaatikko.py -s
 	./vuojakaumalaatikko_vuosittain.py -s -nf
 	./vuosijainnit.py -s
@@ -111,7 +110,7 @@ vuotaul.target:
 	./vuotaul.out
 
 taulukot.target: vuotaul.target
-	./köppikir_taulukko.py
+	./yhdistelmäalueet.py
 	gcc lattaul.c -O1 -o lattaul.out
 	./lattaul.out
 

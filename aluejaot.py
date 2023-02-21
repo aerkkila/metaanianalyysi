@@ -1,26 +1,25 @@
-#!/usr/bin/python3
+#!/bin/env python
 import cartopy.crs as ccrs
 from matplotlib.pyplot import *
 from netCDF4 import Dataset
-import matplotlib, re, sys, luokat
+import matplotlib, re, sys, luokat, os
 
 luokat_köpp_re = ['C.b', 'D.a', 'D.b', 'D.c', 'D.d', 'ET']
 luokat_ikir = luokat.ikir
 cmapnimi = "jet"
 
-def main():
+def aja(ikirkö):
     global lon, lat, platecarree
     platecarree = ccrs.PlateCarree()
     projektio   = ccrs.LambertAzimuthalEqualArea(central_latitude=90)
     kattavuus   = [-180,180,40,90]
-    rcParams.update({'font.size':18,'figure.figsize':(10,10)})
     ds = Dataset('aluemaski.nc')
     lon = np.ma.getdata(ds['lon']).flatten()
     lat = np.ma.getdata(ds['lat']).flatten()
     maski = np.ma.getdata(ds['maski']).flatten()
     ds.close()
 
-    if 'ikir' in sys.argv:
+    if ikirkö:
         luokitus_ = Dataset('ikirdata.nc', 'r')
         luokitus = np.zeros(len(lat)*len(lon), np.int8)
         taul = np.ma.getdata(luokitus_['luokka'])
@@ -32,7 +31,6 @@ def main():
         luokitus_.close()
         luokat_ = luokat_ikir
         ncol=1
-        nimi = 'ikir_kartta'
     else:
         luokitus_ = Dataset('köppen1x1maski.nc', 'r')
         luokitus = np.zeros(len(lat)*len(lon), np.int8)
@@ -43,11 +41,9 @@ def main():
         luokitus_.close()
         luokat_ = luokat_köpp_re
         ncol=2
-        nimi = 'köppen_kartta'
 
     cmap = matplotlib.cm.get_cmap(cmapnimi, len(luokat_))
-    fig = figure()
-    ax = axes(projection=projektio)
+    ax = subplot(1,2,1+ikirkö, projection=projektio)
     ax.coastlines()
     ax.set_extent(kattavuus, platecarree)
     luokitus = luokitus.reshape([len(lat),len(lon)])
@@ -58,9 +54,14 @@ def main():
     for i,l in enumerate(luokat_):
         plot(-1, -1, '.', markersize=25, color=cmap(i), label=l.replace('.',''), transform=platecarree)
     legend(loc='lower left', fancybox=False, framealpha=1, ncol=ncol)
+
+def main():
+    rcParams.update({'font.size':18,'figure.figsize':(16,8)})
+    aja(0)
+    aja(1)
     tight_layout()
     if '-s' in sys.argv:
-        savefig('kuvia/%s.png' %(nimi))
+        savefig('kuvia/aluejaot.png')
         clf()
     else:
         show()

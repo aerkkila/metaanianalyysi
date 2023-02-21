@@ -42,6 +42,6 @@ if __name__=='__main__':
     tee_kuva(rajat)
     tight_layout()
     if('-s') in sys.argv:
-        savefig('kuvia/permafrost_wetland_kartta.png')
+        savefig('kuvia/kosteikkoalueet.png')
     else:
         show()

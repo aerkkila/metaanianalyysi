@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/bin/env python
 import sys, struct
 from matplotlib.pyplot import *
 import numpy as np
@@ -32,7 +32,7 @@ def luo_värit(dt):
     return r
 
 def nimeä(kausi):
-    ax.set_xlabel(nimi.replace('_',' '))
+    ax.set_xlabel(nimi.replace('_',' ').replace(' cold','').replace(' warm',''))
     ax.set_ylabel('nmol s$^{-1}$ m$^{-2}$')
     title(kausi.replace('_',' '))
 
@@ -79,7 +79,7 @@ def main():
     molemmista = True
     tallenna = '-s' in sys.argv
     sov = 'sovitteet' in sys.argv
-    rcParams.update({'figure.figsize':(12,11), 'font.size':15})
+    rcParams.update({'figure.figsize':(8,7), 'font.size':15})
     raaka = sys.stdin.buffer.read(4)
     pit = struct.unpack("i", raaka)[0]
 

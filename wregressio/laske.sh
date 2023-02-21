@@ -25,3 +25,6 @@ cat tallenteet/* >> sovitteet.txt
 ./virhepalkit.py -s
 gcc taulukko_rajat.c -O2 -g -o taulukko_rajat.out
 ./taulukko_rajat.out
+./yhdistä.sh B1
+./yhdistä.sh B2
+./yhdistä.sh B3

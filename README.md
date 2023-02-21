@@ -37,10 +37,10 @@ They should be compiled with argument \`pkg-config --libs nctietue2\`
 	   Season average methane flux on map. Different map for each permafrost region, season and prior/posterior data.
    - **kaudet_laatikko.py** &rarr; kausilaatikko_{season}\_['length','start']\_ikirköpp.png \
 	   Boxplot of season start day or length in different climate and permafrost classifications.
-   - **köppikir_kartta.py** &rarr; ['köppen','ikir']\_kartta.png \
+   - **aluejaot.py** &rarr; aluejaot.png \
 	   Map of used climate or permafrost classification
-   - **köppikir_taulukko.py** &rarr; köppikir<area>.tex \
-	   Latex table about how much climate and permafrost classifications overlap
+   - **yhdistelmäalueet.py** &rarr; yhdistelmäalueet.tex \
+	   Latex table about how much climate and permafrost classifications and wetland overlap.
    - **prf_kasvil_taulukko.py** &rarr; prf_kasvil_taulukko_['1000km2','prosentti'].csv \
 	   csv-table about how much permafrost region and BAWLD classes overlap (*has to be updated*)
    - **vuotaul_latex.c** &rarr; vuosummat['',_tiivistelmä]_['pri','post']['',_k1].tex \

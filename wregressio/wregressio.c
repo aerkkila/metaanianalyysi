@@ -16,9 +16,9 @@
 #include <err.h>
 
 const char* wetlnimet_0[]    = {"wetland", "bog", "fen", "marsh"};
-const char* wetlandnimi_0    = "wetland";
+const char* wetlandnimi_0    = "wetland_warm";
 const char* wetlnimet_1[]    = {"wetland", "permafrost_bog", "tundra_wetland"};
-const char* wetlandnimi_1    = "wetland_permafrost";
+const char* wetlandnimi_1    = "wetland_cold";
 const char *wetlandnimi, **wetlnimet;
 int wpit;
 const char* kaudet[]         = {"whole_year", "summer", "freezing", "winter"};

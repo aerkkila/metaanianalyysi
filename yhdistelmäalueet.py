@@ -45,7 +45,7 @@ def main():
         taul[ii,ki+1] = np.sum(alat[tmpmaski] * wetl[tmpmaski]) * 1e-3
         taul[ii,ki+2] = taul[ii,ki+1] / np.sum(alat[ikir==ii]) * 1e6
 
-    f = open('köppikir.tex', 'w')
+    f = open('yhdistelmäalueet.tex', 'w')
     f.write('\\begin{tabular}{l|%s' %('r'*(len(luokat.köpp)+1)))
     f.write('|r}\nArea (1000 km²)')
     for k in luokat.köpp:
