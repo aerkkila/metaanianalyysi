@@ -89,12 +89,33 @@ vuojakaumalaatikko_vuosittain.py
 nimet1='
 table01.py
 table02.c
-table03-07.c
-table09.py
+latextable.c
+table08.py
 '
 kopioi
 
-kansio=$k0/table_8+figures_8-10
+cat >$k0/table03.sh <<-EOF
+	\#!/bin/sh
+	gcc latextable.c -O2
+	./a.out
+EOF
+cat >$k0/table04.sh <<-EOF
+	\#!/bin/sh
+	gcc latextable.c -DKOSTEIKKO -O2
+	./a.out
+EOF
+cat >$k0/table05.sh <<-EOF
+	\#!/bin/sh
+	gcc latextable.c -DLAUHKEUS=1 -O2
+	./a.out
+EOF
+cat >$k0/table06.sh <<-EOF
+	\#!/bin/sh
+	gcc latextable.c -DLAUHKEUS=2 -O2
+	./a.out
+EOF
+
+kansio=$k0/table07+figure08+appendixB
 mkdir -p $kansio
 cd wregressio
 cp laske.sh Makefile virhepalkit.pyx setup.py virhepalkit.py piirrä.py taulukko_rajat.c wregressio.c $kansio
@@ -106,18 +127,18 @@ Everything in this directory can be run automatically using laske.sh
 in which case, the rest of this file is not needed to read.
 
 make compiles wregressio.c into wregressio.out and virhepalkit.pyx into shared object
-wregressio.out conducts the linear regression and calls piirrä.py to draw figures 9 and 10.
+wregressio.out conducts the linear regression and calls piirrä.py to draw the figures in Appendix B.
 Command line arguments to wregressio.out include:
     -k [0123] // which season is calculated
     -s        // save: replaces stdout with a file and changes output a little
     -p -s     // passes argument -s to python program piirrä.py to save the drawn figures
-    -i        // to results for cold wetland areas instead of warm
+    -i        // get results for cold wetland areas instead of warm
 
 After wregressio.out one should run 'cat tallenteet/* > sovitteet.txt' to combine the files that wregressio.out created.
 
 Thereafter one can run the rest of codes:
 virhepalkit.py to create figure 8. That uses virhepalkit.pyx to read sovitteet.txt.
-taulukko_rajat.c to create table 8. This can be compiled normally without additional arguments.
+taulukko_rajat.c to create table 7. This can be compiled normally without additional arguments.
 EOF
 
 kansio=$k0/create_ikirdata
@@ -308,12 +329,12 @@ cat > $k0/create_links.sh <<EOF
 ( cd create_BAWLD1x1;       ln -s ../aluemaski.nc . )
 ( cd create_vuosijainnit;   ln -s ../aluemaski.nc ../flux1x1.nc ../BAWLD1x1.nc ../kausien_päivät.nc . )
 EOF
-chmod 755 $k0/create_links.sh
+for f in `find $k0 -type f`; do head -1 $f | grep -q "^#!" && chmod 755 $f; done # suoritettaviin tiedostoihin suoritusoikeus
 
 cat > $k0/README <<EOF
 Many of the C-codes will probably only work on Unix-like operating systems.
 It is necessary to run create_links.sh before attempting to run most codes elsewhere than in the root directory.
-It is also necessary to install nctietue2-library before running some of the C-codes. 
+It is also necessary to install nctietue2-library (see next paragraph) before running some of the C-codes.
 
 Go to nctietue2 directory which is included here and then it can be installed normally with:
     make

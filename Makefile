@@ -102,9 +102,9 @@ kuvat.target: vuosijainnit.nc
 vuotaul.target:
 	gcc vuotaul_latex.c -O2 -o vuotaul.out
 	./vuotaul.out
-	gcc vuotaul_latex.c -DKOST_KAHTIA=1 -O2 -o vuotaul.out
+	gcc vuotaul_latex.c -DLAUHKEUS=1 -O2 -o vuotaul.out
 	./vuotaul.out
-	gcc vuotaul_latex.c -DKOST_KAHTIA=2 -O2 -o vuotaul.out
+	gcc vuotaul_latex.c -DLAUHKEUS=2 -O2 -o vuotaul.out
 	./vuotaul.out
 	gcc vuotaul_latex.c -DKOSTEIKKO=1 -O3 -o vuotaul.out
 	./vuotaul.out

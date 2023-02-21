@@ -5,7 +5,7 @@ from matplotlib.pyplot import *
 hakemisto = '../'
 
 lajit = [l.decode('UTF-8') for l in lajit]
-rcParams.update({'figure.figsize':(12,10), 'font.size':14})
+rcParams.update({'figure.figsize':(10,8), 'font.size':15})
 assert(len(x)%3 == 0)
 pit = len(x) // 3
 

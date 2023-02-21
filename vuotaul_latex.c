@@ -4,23 +4,23 @@
 #include <string.h>
 #include <assert.h>
 
-#define ARRPIT(a) sizeof(a)/sizeof(*(a))
+#define ARRPIT(a) (sizeof(a)/sizeof(*(a)))
 #ifndef KOSTEIKKO
 #define KOSTEIKKO 0
 #endif
-#ifndef KOST_KAHTIA
-#define KOST_KAHTIA 0
+#ifndef LAUHKEUS
+#define LAUHKEUS 0
 #endif
 
-#if KOST_KAHTIA == 0
+#if LAUHKEUS == 0
 #define kansio "vuodata2302/"
-#elif KOST_KAHTIA == 1
+#elif LAUHKEUS == 1
 #define kansio "vuodata2302/nontemperate/"
-#elif KOST_KAHTIA == 2
+#elif LAUHKEUS == 2
 #define kansio "vuodata2302/temperate/"
 #endif
 
-const char* pripost[] = {"post", "pri"};
+const char* pripost[] = {"pri", "post"};
 const char* kaudet[] = {"summer", "freezing", "winter"};
 const char* ylänimet[] = {"wetland", "köppen", "ikir"};
 const char* wetlnimet[] = {"bog", "fen", "marsh", "permafrost_bog", "tundra_wetland", "wetland", "nonwetland"};
@@ -147,10 +147,10 @@ void kirjoita_rivi(FILE* f, float* taul) {
 #undef B
 
 void kirjoita_data(int ppnum, float* taul) {
-#if KOST_KAHTIA==1
-    FILE *f = fopen("vuosummat_epälauhkea.tex", "w");
-#elif KOST_KAHTIA==2
-    FILE *f = fopen("vuosummat_lauhkea.tex", "w");
+#if LAUHKEUS==1
+    FILE *f = fopen(aprintf("vuosummat_epälauhkea%s.tex", ppnum?"":"_pri"), "w");
+#elif LAUHKEUS==2
+    FILE *f = fopen(aprintf("vuosummat_lauhkea%s.tex", ppnum?"":"_pri"), "w");
 #else
     FILE *f = fopen(aprintf("vuosummat_%s%s.tex",
 			    pripost[ppnum], KOSTEIKKO? STR2(_k,KOSTEIKKO): ""), "w");
@@ -163,7 +163,7 @@ void kirjoita_data(int ppnum, float* taul) {
     for(int i=0; i<pit_kaudet; i++) K(" & {Tg} & {‰} & {nmol/m$^2$/s}");
     K(" \\\\\n\\midrule\n");
 
-#if !KOST_KAHTIA
+#if !LAUHKEUS
     for(int i=0; i<pit_ikir; i++) {
 	K("%s", ikirnimet[i]);
 	kirjoita_rivi(f, taul);
@@ -176,7 +176,7 @@ void kirjoita_data(int ppnum, float* taul) {
     }
 #endif
 #if !KOSTEIKKO
-#if !KOST_KAHTIA
+#if !LAUHKEUS
     K("\\\\\n");
 #endif
     for(int i=0; i<pit_wetl; i++) {
@@ -189,23 +189,24 @@ void kirjoita_data(int ppnum, float* taul) {
 }
 #undef K
 
-#if KOST_KAHTIA
+#if LAUHKEUS
 int main() {
     pituudet();
     pit_wetl -= 2;
     float* taul = malloc(pit_wetl * pit_kaudet * 2 * sizeof(float));
-    if(lue_data(0, "wetland", wetlnimet, pit_wetl, taul))
-	puts("virhe lue_data");
-    else
-	kirjoita_data(0, taul);
+    for(int ppnum=0; ppnum<2; ppnum++) {
+	if(lue_data(ppnum, "wetland", wetlnimet, pit_wetl, taul)) {
+	    puts("virhe lue_data");
+	    continue; }
+	kirjoita_data(ppnum, taul);
+    }
     free(taul);
 }
 #else
 int main() {
     pituudet();
     float* taul = malloc((pit_wetl+pit_köpp+pit_ikir)*pit_kaudet*2*sizeof(float));
-    int toistot = 1 + (KOSTEIKKO==0 && KOST_KAHTIA==0);
-    for(int ppnum=0; ppnum<toistot; ppnum++) {
+    for(int ppnum=0; ppnum<2; ppnum++) {
 	float* taul1 = taul;
 	if(lue_data(ppnum, "ikir", ikirnimet, pit_ikir, taul1))
 	    puts("virhe lue_data");

@@ -21,7 +21,7 @@ def muunna_aika(lista):
         r[i] = time.strftime("%m-%d", tämä)
     return r
 
-def viimeistele(tulos, nimi, xnimet, ynimi):
+def viimeistele(tulos, xnimet, ynimi):
     ax = gca()
     xs = tulos['xsij']
     grid('on', axis='y')
@@ -119,7 +119,7 @@ def main():
             tulos = laatikkokuvaaja(np.concatenate([pdatastot_ikir.flatten(), pdatastot_köpp.flatten()]),
                                     fliers='', avgmarker='o',
                                     painostot = np.concatenate([painostot_ikir.flatten(), painostot_köpp.flatten()]))
-            viimeistele(tulos, "ikirköpp", np.concatenate([xnimet_ikir, xnimet_köpp]), '%s %s' %(kausi, nimi))
+            viimeistele(tulos, np.concatenate([xnimet_ikir, xnimet_köpp]), '%s %s' %(kausi, nimi))
 
     päivädata.close()
 
