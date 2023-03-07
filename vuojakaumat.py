@@ -77,7 +77,7 @@ def main():
     aja(dt, nimet, '1')
 
     luokitus = np.array(luokat.wetl)
-    rcParams.update({'figure.figsize':(len(luokitus)*1.3,11), 'font.size':16})
+    params()
     dt, nimet = lue(luokitus, np.zeros(len(luokitus), bool))
     aja(dt, nimet, '2')
 
