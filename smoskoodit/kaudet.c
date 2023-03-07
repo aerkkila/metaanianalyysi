@@ -1,4 +1,4 @@
-#include <nctietue2.h>
+#include <nctietue3.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -186,27 +186,30 @@ void alusta_taitesekunnit() {
 }
 
 int main(int argc, char** argv) {
-    nct_vset* partly = nct_read_ncmultifile_regex(kansio "^partly_frozen_percent_pixel_[0-9]*.nc$", 0, NULL);
-    nct_vset* frozen = nct_read_ncmultifile_regex(kansio "^frozen_percent_pixel_[0-9]*.nc$", 0, NULL);
-    char* maski = nct_read_from_ncfile("aluemaski.nc", NULL, NULL, 0);
+    nct_readflags = nct_ratt;
+    nct_set* partly = nct_read_mfnc_regex(kansio "^partly_frozen_percent_pixel_[0-9]*.nc$", 0, NULL);
+    nct_set* frozen = nct_read_mfnc_regex(kansio "^frozen_percent_pixel_[0-9]*.nc$", 0, NULL);
+    char* maski = nct_read_from_nc("aluemaski.nc", NULL);
 
     mktime(&aika0tm);
     mktime(&aikatm_kesä);
-    nct_convert_timeunits(nct_get_var(partly, "time"), aika0str); // käytännössä tämä vain lisää vakion aika-arvoihin
+    /* convert_timeunits ainoastaan lisää tähän vakion eli siirtää alkuhetkeä,
+       koska, ajan välimatka on jo päivä. */
+    nct_var* aika = nct_convert_timeunits(nct_get_var(partly, "time"), aika0str);
+    assert(aika);
     nct_convert_timeunits(nct_get_var(frozen, "time"), aika0str);
-    nct_var* aika = nct_get_var(partly, "time");
     const int t_alku = -((int*)aika->data)[0];
     t_alku_g = t_alku;
     int t_pit = (aika->len-t_alku)/365*365;
 
-    const int pit_xy = nct_get_varlen_from(nct_next_truevar(partly->vars[0], 0), 1);
+    const int pit_xy = nct_get_len_from(nct_firstvar(partly), 1);
     pit_xy_g = pit_xy;
     struct tm aika1tm = aika0tm;
     aika1tm.tm_mday += t_pit;
     char* kausi = malloc(t_pit*pit_xy);
 
-    float* froz = nct_next_truevar(frozen->vars[0], 0)->data;
-    float* part = nct_next_truevar(partly->vars[0], 0)->data;
+    float* froz = nct_firstvar(frozen)->data;
+    float* part = nct_firstvar(partly)->data;
 
     struct päiväluvut pl;
     alusta_päiväluvut(&pl, pit_xy, t_pit);
@@ -214,7 +217,7 @@ int main(int argc, char** argv) {
     alusta_taitesekunnit();
 
     for(int i=0; i<pit_xy; i++) {
-	printf("\r%i/%i ", i+1, pit_xy);
+	printf("%i/%i \r", i+1, pit_xy);
 	fflush(stdout);
 	if(!maski[i]) {
 	    for(int t=0; t<t_pit; t++)
@@ -299,25 +302,27 @@ kesä_loppuun_keväällä:
 
 aika_päättyi:;
     }
-    putchar('\n');
+    printf("\033[K");
 
     nct_var* latvar = nct_get_var(partly, "lat");
     nct_var* lonvar = nct_get_var(partly, "lon");
     int dimids[] = {0,1,2};
 
-    nct_vset k = {0};
-    nct_var* var = nct_add_dim(&k, nct_range_NC_INT(0,t_pit,1), t_pit, NC_INT, "time");
+    nct_set k = {0};
+    nct_var* var = nct_dim2coord(nct_add_dim(&k, t_pit, "time"), NULL, NC_INT);
+    nct_put_interval(var, 0, 1);
     nct_add_varatt_text(var, "units", (char*)aika0str, 0);
     nct_copy_var(&k, latvar, 1);
     nct_copy_var(&k, lonvar, 1);
     nct_add_var(&k, kausi, NC_BYTE, "kausi", 3, dimids);
-    nct_write_ncfile(&k, "kaudet.nc");
-    nct_free_vset(&k);
+    nct_write_nc(&k, "kaudet1.nc");
+    nct_free1(&k);
 
-    k = (nct_vset){0};
+    k = (nct_set){0};
     int vuosia = t_pit/366+1;
     int vuosi0 = aika0tm.tm_year+1+1900;
-    nct_add_dim(&k, nct_range_NC_INT(vuosi0, vuosi0+vuosia, 1), vuosia, NC_INT, "vuosi");
+    var = nct_dim2coord(nct_add_dim(&k, vuosia, "vuosi"), NULL, NC_INT);
+    nct_put_interval(var, vuosi0, 1);
     nct_copy_var(&k, latvar, 1);
     nct_copy_var(&k, lonvar, 1);
     nct_add_var(&k, pl.k[0], nctyyppi, "summer_start",   3, dimids);
@@ -326,10 +331,8 @@ aika_päättyi:;
     nct_add_var(&k, pl.j[1], nctyyppi, "freezing_end",   3, dimids);
     nct_add_var(&k, pl.t[0], nctyyppi, "winter_start",   3, dimids);
     nct_add_var(&k, pl.t[1], nctyyppi, "winter_end",     3, dimids);
-    nct_write_ncfile(&k, nimi_ulos);
-    nct_free_vset(&k);
+    nct_write_nc(&k, nimi_ulos);
 
     free(maski);
-    nct_free_vset(partly);
-    nct_free_vset(frozen);
+    nct_free(&k, partly, frozen);
 }

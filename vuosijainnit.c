@@ -1,4 +1,4 @@
-#include <nctietue2.h>
+#include <nctietue3.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -92,7 +92,7 @@ const int luokkia = sizeof(luokat)/sizeof(char*);
 
 struct Arg {
     struct tiedot tiedot;
-    nct_vset *tallenn, *bawvset;
+    nct_set *tallenn, *bawvset;
     int j;
 };
 int arg_luettu;
@@ -100,7 +100,7 @@ int arg_luettu;
 void* tee_luokka(void* varg) {
     struct Arg arg = *(struct Arg*)varg;
     arg_luettu = 1;
-    arg.tiedot.wet = nct_load_data_with(arg.bawvset, luokat[arg.j], nc_get_var_double, sizeof(double));
+    arg.tiedot.wet = nct_loadg_as(arg.bawvset, luokat[arg.j], NC_DOUBLE)->data;
     const struct tiedot* restrict tiedot = &arg.tiedot;
     double summa  = summa_ja_jakaja(tiedot, 0);
     double jakaja = summa_ja_jakaja(tiedot, 1);
@@ -121,34 +121,35 @@ void* tee_luokka(void* varg) {
 
 int main(int argc, char** argv) {
     int kokoalue = argc < 2 || strcmp(argv[1], "--lauhkea");
-    nct_vset *aluevset = nct_read_ncfile("aluemaski.nc"),
-	     *bawvset  = nct_read_ncfile_info("BAWLD1x1.nc"),
-	     *vuovset  = nct_read_ncfile_info("flux1x1.nc"),
-	     *kauvset  = nct_read_ncfile_info("kausien_päivät_int16.nc");
+    nct_readflags = nct_rlazy;
+    nct_set *aluevset = nct_read_ncf("aluemaski.nc", 0),
+	    *bawvset  = nct_read_nc("BAWLD1x1.nc"),
+	    *vuovset  = nct_read_ncf("flux1x1.nc", nct_rlazy|nct_ratt),
+	    *kauvset  = nct_read_nc("kausien_päivät_int16.nc");
 
-    nct_var* maski = nct_next_truevar(aluevset->vars[0], 0);
-    double* prfwet = nct_load_data_with(bawvset, "wetland_prf", nc_get_var_double, sizeof(double));
-    int xyres = nct_get_varlen(maski);
+    nct_var* maski = nct_firstvar(aluevset);
+    double* prfwet = nct_loadg_as(bawvset, "wetland_prf", NC_DOUBLE)->data;
+    int xyres = maski->len;
     
     struct tiedot tiedot = {
-	.vuo    = nct_load_data_with(vuovset, "flux_bio_posterior", nc_get_var_double, sizeof(double)),
-	.alut   = nct_load_data_with(kauvset, "summer_start",       nc_get_var_short,  sizeof(short)),
-	.loput  = nct_load_data_with(kauvset, "summer_end",         nc_get_var_short,  sizeof(short)),
-	.WET    = nct_load_data_with(bawvset, "wetland",            nc_get_var_double, sizeof(double)),
-	.vuodet = nct_load_data_with(kauvset, "vuosi",              nc_get_var_int,    sizeof(int)),
+	.vuo    = nct_loadg_as(vuovset, "flux_bio_posterior", NC_DOUBLE)->data,
+	.alut   = nct_loadg_as(kauvset, "summer_start",       NC_SHORT )->data,
+	.loput  = nct_loadg_as(kauvset, "summer_end",         NC_SHORT )->data,
+	.WET    = nct_loadg_as(bawvset, "wetland",            NC_DOUBLE)->data,
+	.vuodet = nct_loadg_as(kauvset, "vuosi",              NC_INT   )->data,
 	.res    = xyres,
-	.aika0  = nct_mktime0(nct_get_var(vuovset, "time"), NULL).a.t,
+	.aika0  = nct_mktime0g(vuovset, "time", NULL).a.t,
     };
     tiedot.vuosia = 2021 - tiedot.vuodet[0];
     tiedot.alue = kokoalue?
 	luo_koko_alue(   tiedot.WET, maski->data, xyres):
 	luo_alue(prfwet, tiedot.WET, maski->data, xyres);
 
-    nct_vset tallenn = {0};
+    nct_set tallenn = {0};
     nct_copy_var(&tallenn, nct_get_var(aluevset, "lat"), 1);
     nct_copy_var(&tallenn, nct_get_var(aluevset, "lon"), 1);
     lat = tallenn.vars[0]->data;
-    lonpit = nct_get_varlen(tallenn.vars[1]);
+    lonpit = tallenn.vars[1]->len;
     
     for(int j=0; j<luokkia; j++) {
 	struct Arg arg = {
@@ -162,11 +163,7 @@ int main(int argc, char** argv) {
 	nct_add_var(&tallenn, data, NC_FLOAT, (char*)luokat[j], 2, varid);
     }
 
-    nct_write_ncfile(&tallenn, kokoalue? "vuosijainnit.nc": "vuosijainnit_lauhkea.nc");
+    nct_write_nc(&tallenn, "vuosijainnit3.nc");
 
-    nct_free_vset(&tallenn);
-    nct_free_vset(aluevset);
-    nct_free_vset(bawvset);
-    nct_free_vset(vuovset);
-    nct_free_vset(kauvset);
+    nct_free(&tallenn, aluevset, bawvset, vuovset, kauvset);
 }

@@ -1,4 +1,4 @@
-#include <nctietue2.h>
+#include <nctietue3.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,10 +12,6 @@
 #include <assert.h>
 #include <time.h>
 #include <err.h>
-
-// kääntäjä tarvitsee argumentit `pkg-config --libs nctietue2 gsl`
-// lisäksi tarvittaessa -DVUODET_ERIKSEEN=1
-// nctietue2-kirjasto on osoitteessa https://github.com/aerkkila/nctietue2.git
 
 #define ARRPIT(a) (sizeof(a)/sizeof(*(a)))
 #define MIN(a,b) (a)<(b)? (a): (b)
@@ -35,14 +31,14 @@ const char* koppnimet[]      = {"Db", "Dc", "Dd", "ET"};
 const char* wetlnimet[]      = {"wetland", "bog", "fen", "marsh", "tundra_wetland", "permafrost_bog"};
 const char* kaudet[]         = {"whole_year", "summer", "freezing", "winter"};
 enum                           {whole_year_e, summer_e, freezing_e, winter_e};
-const char* pripost_sisaan[] = {"flux_bio_prior", "flux_bio_posterior"};
+const char* pripost_sisään[] = {"flux_bio_prior", "flux_bio_posterior"};
 const char* pripost_ulos[]   = {"pri", "post"};
 enum                           {kopp_e, ikir_e, wetl_e} luokenum;
 const char*** luoknimet;
 #define kausia 4
 #define wraja 0.05
 
-static nct_vset *luok_vs;
+static nct_set *luok_vs;
 static int       ppnum;
 static char  *restrict luok_c;
 static double *restrict alat;
@@ -151,11 +147,11 @@ int argumentit(int argc, char** argv) {
     if (argc <= 3)
 	return 0;
     if (!strcmp(argv[3], "kost"))
-	kost = nct_read_from_ncfile("BAWLD1x1.nc", "wetland", nc_get_var_double, sizeof(double));
+	kost = nct_read_from_nc_as("BAWLD1x1.nc", "wetland", NC_DOUBLE);
     return 0;
 }
 
-static void* lue_kopp() {
+static void* lue_köpp() {
     char* luok = malloc(resol);
     int pit;
     FILE* f = fopen("./köppenmaski.txt", "r");
@@ -167,22 +163,21 @@ static void* lue_kopp() {
     return (luok_c = luok);
 }
 static void* lue_ikir() {
-    nct_vset *vset = nct_read_ncfile("./ikirdata.nc");
-    int varid = nct_get_varid(vset, "luokka");
-    char* ret = vset->vars[varid]->data;
-    vset->vars[varid]->nonfreeable_data = 1;
-    nct_var* var = &NCTVAR(*vset, "vuosi");
-    assert(var->xtype == NC_INT);
+    nct_set *set = nct_read_ncf("./ikirdata.nc", nct_rlazy);
+    nct_var* var = nct_loadg_as(set, "luokka", NC_BYTE);
+    char* ret = var->data;
+    var->not_freeable = 1;
+    var = nct_loadg_as(set, "vuosi", NC_INT);
     ikirvuosi0 = ((int*)var->data)[0];
-    ikirvuosia = nct_get_varlen(var);
-    nct_free_vset(vset);
+    ikirvuosia = var->len;
+    nct_free1(set);
     return (luok_c = ret);
 }
 static void* lue_wetl() {
-    return (luok_vs = nct_read_ncfile("./BAWLD1x1.nc"));
+    return (luok_vs = nct_read_nc("./BAWLD1x1.nc"));
 }
 void* lue_luokitus() {
-    static void* (*funktio[])(void) = { [kopp_e]=lue_kopp, [ikir_e]=lue_ikir, [wetl_e]=lue_wetl, };
+    static void* (*funktio[])(void) = { [kopp_e]=lue_köpp, [ikir_e]=lue_ikir, [wetl_e]=lue_wetl, };
     return funktio[luokenum]();
 }
 
@@ -246,8 +241,8 @@ void aikasilmukka(struct laskenta* args, int r) {
 }
 
 void täytä_kosteikkodata(struct laskenta* args) {
-    double *restrict osuus0ptr = NCTVAR(*luok_vs, "wetland").data;
-    double *restrict osuus1ptr = NCTVAR(*luok_vs, wetlnimet[args->lajinum]).data;
+    double *restrict osuus0ptr = nct_get_var(luok_vs, "wetland")->data;
+    double *restrict osuus1ptr = nct_get_var(luok_vs, wetlnimet[args->lajinum])->data;
     for(int r=0; r<resol; r++)
 	aikasilmukka_kosteikko(args, r, osuus0ptr, osuus1ptr);
 }
@@ -362,9 +357,8 @@ int main(int argc, char** argv) {
     if(argumentit(argc, argv))
 	return 1;
     char kansio_[60];
-    sprintf(kansio_, "vuojakaumadata%s%s", kost? "/kost": "", VUODET_ERIKSEEN? "/vuosittain": "");
+    sprintf(kansio_, "vuojakaumadata2302%s%s", kost? "/kost": "", VUODET_ERIKSEEN? "/vuosittain": "");
     kansio = kansio_;
-    nct_vset vuo;
     nct_var* apuvar;
     const char** _luoknimet[] = { [kopp_e]=koppnimet, [ikir_e]=ikirnimet, [wetl_e]=wetlnimet, };
     luoknimet = _luoknimet;
@@ -373,33 +367,32 @@ int main(int argc, char** argv) {
 		   luokenum==wetl_e? ARRPIT(wetlnimet):
 		   -1 );
 
-    nct_read_ncfile_gd0(&vuo, "./flux1x1.nc");
-    apuvar = &NCTVAR(vuo, pripost_sisaan[ppnum]);
-    assert(apuvar->xtype == NC_FLOAT);
+    nct_readm_ncf(vuo, "./flux1x1.nc", nct_rlazy|nct_ratt);
+    apuvar = nct_loadg_as(&vuo, pripost_sisään[ppnum], NC_FLOAT);
     float* vuoptr = (float*)apuvar->data;
 
     assert(lue_luokitus());
-    aluemaski = nct_read_from_ncfile("aluemaski.nc", NULL, nc_get_var_ubyte, 1);
+    aluemaski = nct_read_from_nc_as("aluemaski.nc", NULL, NC_UBYTE);
 
-    int lonpit = NCTVARDIM(*apuvar,2).len;
-    int latpit = NCTVARDIM(*apuvar,1).len;
+    int lonpit = nct_get_dim(&vuo, "lon")->len;
+    apuvar = nct_loadg_as(&vuo, "lat", NC_FLOAT);
+    int latpit = apuvar->len;
     assert(lonpit*latpit == resol);
-    assert((apuvar=&NCTVAR(vuo, "lat"))->xtype == NC_FLOAT);
     float* lat = apuvar->data;
     double _alat[latpit];
     alat = _alat;
     for(int i=0; i<latpit; i++)
 	alat[i] = SUHT_ALA(lat[i], 1);
 
-    nct_vset *kausivset = nct_read_ncfile("kausien_päivät.nc");
+    nct_set *kausivset = nct_read_nc("kausien_päivät.nc");
     nct_var* vuosivar = nct_get_var(kausivset, "vuosi");
 
     vuosi0 = nct_get_integer(vuosivar, 0);
-    apuvar = &NCTVAR(vuo, "time");
+    apuvar = nct_loadg(&vuo, "time");
     t1max  = apuvar->len;
     vuosi1 = VUODET_ERIKSEEN? 2021: 2020;
 
-    nct_anyd res = nct_mktime(apuvar, NULL, 0);
+    nct_anyd res = nct_mktime(apuvar, NULL, NULL, 0);
     if(res.d < 0)
 	warn("nct_mktime rivillä %i", __LINE__);
     int vuo_t0 = res.a.t;
@@ -461,15 +454,12 @@ int main(int argc, char** argv) {
 	    laita_emissio(&l_args);
     }
 
-    nct_free_vset(kausivset);
-    kausivset = NULL;
     free(luok_c);
     free(apu);
     free(vuotila);
     free(cdftila);
     free(kost);
     free(aluemaski);
-    nct_free_vset(luok_vs);
-    nct_free_vset(&vuo);
+    nct_free(luok_vs, &vuo, kausivset);
     return 0;
 }

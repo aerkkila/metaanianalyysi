@@ -1,15 +1,10 @@
-#include <nctietue2.h>
+#include <nctietue3.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 #include <sys/stat.h> // mkdir
 #include <err.h>
-
-/*
- * kääntäjälle `pkg-config --libs nctietue2` [-O3]
- * github.com/aerkkila/nctietue2 pitää olla asennettuna
- */
 
 void transpose(double* taul) {
     double* uusi = malloc(720*720*sizeof(double));
@@ -25,9 +20,9 @@ const int resol = 55*360;
 #define vnta_maxpit 50
 int* tee_valintaindeksit(double* lat, double* lon) {
     double *e2lon, *e2lat;
-    e2lon = nct_read_from_ncfile("EASE_2_lon.nc", NULL, nc_get_var_double, sizeof(double));
-    e2lat = nct_read_from_ncfile("EASE_2_lat.nc", NULL, nc_get_var_double, sizeof(double));
-    unsigned char* data = nct_read_from_ncfile("FT_720_2016.nc", "data", nc_get_var_ubyte, 1);
+    e2lon = nct_read_from_nc_as("EASE_2_lon.nc", NULL, NC_DOUBLE);
+    e2lat = nct_read_from_nc_as("EASE_2_lat.nc", NULL, NC_DOUBLE);
+    unsigned char* data = nct_read_from_nc_as("FT_720_2016.nc", "data", NC_UBYTE);
 
     /* Pituuspiirit pitää jostain syystä muuntaa näin. */
     transpose(e2lon);
@@ -62,10 +57,8 @@ int* tee_valintaindeksit(double* lat, double* lon) {
 
 int main() {
     int nfrozen, npartly, nthaw;
-    nct_vset ftset;
     char apustr[256];
     unsigned char *aluemaski;
-    unsigned char *ft;
 
     double* restrict lat = nct_range_NC_DOUBLE(29.5, 84, 1);
     double* restrict lon = nct_range_NC_DOUBLE(-179.5, 180, 1);
@@ -79,11 +72,11 @@ int main() {
 	return 1;
     }
 
-    nct_vset tallenn = {0};
+    nct_set tallenn = {0};
     int dimids[] = {0,1,2};
-    nct_add_dim(&tallenn, nct_range_NC_INT(0,366,1), 366, NC_INT, "time");
-    nct_add_dim(&tallenn, lat, 55, NC_DOUBLE, "lat");
-    nct_add_dim(&tallenn, lon, 360, NC_DOUBLE, "lon");
+    nct_dim2coord(nct_add_dim(&tallenn, 366, "time"), nct_range_NC_INT(0,366,1), NC_INT);
+    nct_dim2coord(nct_add_dim(&tallenn, 55, "lat"), lat, NC_DOUBLE);
+    nct_dim2coord(nct_add_dim(&tallenn, 360, "lon"), lon, NC_DOUBLE);
     nct_add_varatt_text(tallenn.vars[0], "units", strdup("days since 0000-00-00"), 1);
     nct_add_varatt_text(tallenn.vars[0], "calendar", "proleptic_gregorian", 0);
     nct_add_var(&tallenn, frozen, NC_FLOAT, "data", 3, dimids);
@@ -98,9 +91,9 @@ int main() {
     for(int y=y0; y<2022; y++) {
 	printf("\033[A\rvuosi %i\033[K\n", y);
 	sprintf(apustr, "FT_720_%i.nc", y);
-	nct_read_ncfile_gd0(&ftset, apustr);
-	ft = nct_next_truevar(ftset.vars[0], 0)->data;
-	int tpit = NCTDIM(ftset, "time").len;
+	nct_readm_nc(ftset, apustr);
+	unsigned char* ft = nct_firstvar(&ftset)->data;
+	int tpit = nct_get_dim(&ftset, "time")->len;
 	tallenn.dims[0]->len = tpit;
 	memset(frozen,   0, 366*resol*4);
 	memset(partly,   0, 366*resol*4);
@@ -133,32 +126,32 @@ int main() {
 
 	tallenn.vars[3]->data = frozen;
 	sprintf(apustr, "ft_percent/frozen_percent_pixel_%i.nc", y);
-	nct_write_ncfile(&tallenn, apustr);
+	nct_write_nc(&tallenn, apustr);
 
 	tallenn.vars[3]->data = partly;
 	sprintf(apustr, "ft_percent/partly_frozen_percent_pixel_%i.nc", y);
-	nct_write_ncfile(&tallenn, apustr);
+	nct_write_nc(&tallenn, apustr);
 
 	tallenn.vars[3]->data = thaw;
 	sprintf(apustr, "ft_percent/thaw_percent_pixel_%i.nc", y);
-	nct_write_ncfile(&tallenn, apustr);
+	nct_write_nc(&tallenn, apustr);
 
 	tallenn.vars[3]->data = NULL;
-	nct_free_vset(&ftset);
+	nct_free1(&ftset);
     }
 
     /* Number of pixels on aina sama, joten tallennetaan ilman aikakoordinaattia. */
-    NCTVAR(tallenn,"lat").nonfreeable_data = 1;
-    NCTVAR(tallenn,"lon").nonfreeable_data = 1;
-    nct_free_vset(&tallenn);
-    tallenn = (nct_vset){0};
-    nct_add_dim(&tallenn, lat, 55, NC_DOUBLE, "lat");
-    nct_add_dim(&tallenn, lon, 360, NC_DOUBLE, "lon");
+    nct_get_var(&tallenn,"lat")->not_freeable = 1;
+    nct_get_var(&tallenn,"lon")->not_freeable = 1;
+    nct_free1(&tallenn);
+    tallenn = (nct_set){0};
+    nct_dim2coord(nct_add_dim(&tallenn, 55, "lat"), lat, NC_DOUBLE);
+    nct_dim2coord(nct_add_dim(&tallenn, 360, "lon"), lon, NC_DOUBLE);
     int dimids2[] = {0,1};
     nct_add_var(&tallenn, numgrids, NC_UBYTE, "data", 2, dimids);
-    nct_write_ncfile(&tallenn, "ft_percent/number_of_pixels.nc");
+    nct_write_nc(&tallenn, "ft_percent/number_of_pixels.nc");
 
-    nct_free_vset(&tallenn);
+    nct_free1(&tallenn);
     free(frozen);
     free(partly);
     free(thaw);

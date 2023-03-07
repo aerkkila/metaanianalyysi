@@ -1,4 +1,4 @@
-#include <nctietue2.h>
+#include <nctietue3.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -42,6 +42,8 @@ int tty;
 #endif
 #define luott_0 0.025
 #define luott_1 0.975
+const int vakio = 0; // 1 tai 0 sen mukaan otetaanko vakiotermi vai ei
+
 char aprintapu[256];
 char* aprintf(const char* muoto, ...) {
     va_list args;
@@ -320,7 +322,7 @@ void* sovita_monta_säie(void* varg) {
 	    ind %= dt->pit;
 	    gsl_vector_set(yvec, i, dt->vuo[ind]);
 	    gsl_vector_set(wvec, i, dt->alat[ind]);
-	    gsl_matrix_set(xmatrix, i, 0, 1); // vakiotermi
+	    gsl_matrix_set(xmatrix, i, 0, vakio); // vakiotermi
 	    for(int j=1; j<nmuutt; j++)
 		gsl_matrix_set(xmatrix, i, j, dt->wdata[j][ind]);
 	}
@@ -357,7 +359,7 @@ void sovita_monta(const data_t* dt, double* kertoimet, double* r2, int nboot) {
     for(size_t i=0; i<dt->pit; i++) {
 	gsl_vector_set(yvec, i, dt->vuo[i]);
 	gsl_vector_set(wvec, i, dt->alat[i]);
-	gsl_matrix_set(xmatrix, i, 0, 1); // vakiotermi
+	gsl_matrix_set(xmatrix, i, 0, vakio); // vakiotermi
 	for(int j=1; j<nmuutt; j++)
 	    gsl_matrix_set(xmatrix, i, j, dt->wdata[j][i]);
     }
@@ -382,7 +384,7 @@ double ristivalidoi(const data_t* dt, int määrä) {
 	    for(int i=alku; i<loppu; i++, ind++) {
 		gsl_vector_set(yvec, ind, dt->vuo[i]);
 		gsl_vector_set(wvec, ind, dt->alat[i]);
-		gsl_matrix_set(xmatrix, ind, 0, 1); // vakiotermi
+		gsl_matrix_set(xmatrix, ind, 0, vakio); // vakiotermi
 		for(int j=0; j<nmuutt; j++)
 		    gsl_matrix_set(xmatrix, ind, j, dt->wdata[j][i]);
 	    }
@@ -415,16 +417,16 @@ double ristivalidoi(const data_t* dt, int määrä) {
 
 int hae_alku(nct_var* v, struct tm* aika) {
     nct_anyd t = nct_mktime0(v, NULL);
-    assert(t.d == nct_days);
+    //assert(t.d == nct_days);
     return (mktime(aika) - t.a.t) / 86400;
 }
 
 #define hila 1
 #define ASTE 0.017453293
-void luo_suhteellinen_pintaala(data_t* dt, nct_vset* vuovs) {
+void luo_suhteellinen_pintaala(data_t* dt, nct_set* vuovs) {
     dt->alat = malloc(dt->resol*sizeof(double));
-    int d1 = nct_get_varlen(nct_get_var(vuovs, "lon"));
-    double *lat = nct_load_var_with(nct_get_var(vuovs, "lat"), -1, nc_get_var_double, sizeof(double))->data;
+    int d1 = nct_get_var(vuovs, "lon")->len;
+    double *lat = nct_loadg_as(vuovs, "lat", NC_DOUBLE)->data;
     int ind=0;
     do {
 	double ala = sin(((double)lat[ind/d1]+hila*0.5) * ASTE) - sin(((double)lat[ind/d1]-hila*0.5) * ASTE);
@@ -619,7 +621,6 @@ void piirrä_sovitus(FILE *f, const double* kertoimet, int nboot, int wlaji) {
 }
 
 int main(int argc, char** argv) {
-    nct_vset wetlset = {0};
     nct_var *var = NULL;
     int ppnum = 1;
     data_t dt;
@@ -631,25 +632,25 @@ int main(int argc, char** argv) {
     tm1.tm_year = 2020-1900;
     dt.aikaa = (mktime(&tm1) - mktime(&tm0)) / 86400;
 
-    nct_read_ncfile_gd(&wetlset, ncdir "BAWLD1x1.nc");
+    nct_readm_nc(wetlset, ncdir "BAWLD1x1.nc");
     for(int i=0; i<wpit; i++) {
 	assert((var = nct_get_var(&wetlset, wetlnimet[i])));
 	dt.wdata[i] = var->data;
     }
 
-    dt.resol = nct_get_varlen(var);
+    dt.resol = var->len;
 
-    nct_vset *vuovs = nct_read_ncfile_info(ncdir "flux1x1.nc");
-    int alku = hae_alku(nct_get_var(vuovs, "time"), &tm0);
-    dt.vuo = nct_load_var_with(nct_get_var(vuovs, pripost_sisään[ppnum]), -1, nc_get_var_double, sizeof(double))->data;
+    nct_set* vuovs = nct_read_ncf(ncdir "flux1x1.nc", nct_rlazy|nct_ratt);
+    int alku = hae_alku(nct_loadg(vuovs, "time"), &tm0);
+    dt.vuo = nct_loadg_as(vuovs, pripost_sisään[ppnum], NC_DOUBLE)->data;
     assert((intptr_t)dt.vuo >= 0x800);
     dt.vuo += alku*dt.resol;
 
     luo_suhteellinen_pintaala(&dt, vuovs);
 
-    nct_vset* vvv = nct_read_ncfile_info(ncdir "kaudet.nc");
-    var = nct_load_var(nct_next_truevar(vvv->vars[0], 0), -1);
-    alku = hae_alku(nct_get_var(vvv, "time"), &tm0);
+    nct_set* vvv = nct_read_ncf(ncdir "kaudet.nc", nct_rlazy|nct_ratt);
+    var = nct_load(nct_firstvar(vvv));
+    alku = hae_alku(nct_loadg(vvv, "time"), &tm0);
     char* kausic = var->data + alku*dt.resol;
 
     FILE* f = NULL;
@@ -783,9 +784,7 @@ int main(int argc, char** argv) {
 	vapauta(pclose, f);
 
     vapauta_dt1(&dt1);
-    nct_free_vset(vvv);
-    nct_free_vset(&wetlset);
-    nct_free_vset(vuovs);
+    nct_free(vvv, &wetlset, vuovs);
     free(dt.alat);
     fclose(stdout); // voi olla vaihdettu tiedostoksi
 }

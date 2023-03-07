@@ -1,4 +1,4 @@
-#include <nctietue2.h>
+#include <nctietue3.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -15,7 +15,7 @@ const double r2 = 6362.1320*6362.1320; // km, jotta luvut ovat maltillisempia
 #define Lat(i) (lat0+(i)/360)
 #define Pintaala(i) PINTAALA(Lat(i)*ASTE, ASTE)
 
-#define KANSIO "vuodata2302/"
+#define KANSIO "vuodata2302_1/"
 #define LOPUSTA_PUUTTUU 1 // Metaanidatasta viimeisen vuoden lopussa puuttuvien päivien määrä. Esim. 1 -> 30.12. viimeinen
 const char* ikirnimet[]      = {"nonpermafrost", "sporadic", "discontinuous", "continuous"};
 const char* köppnimet[]      = {"Db", "Dc", "Dd", "ET"};
@@ -192,25 +192,23 @@ void* _lue_köpp() {
     return luok;
 }
 void* _lue_ikir() {
-    nct_vset *vset = nct_read_ncfile("./ikirdata.nc");
-    int varid = nct_get_varid(vset, "luokka");
-    char* ret = vset->vars[varid]->data;
-    vset->vars[varid]->nonfreeable_data = 1;
-    nct_var* var = &NCTVAR(*vset, "vuosi");
-    ikirvuosi0 = ((short*)var->data)[0]; // ei ole väliä, onko short vai int
-    ikirvuosia = nct_get_varlen(var);
-    nct_free_vset(vset);
+    nct_readm_nc(set, "./ikirdata.nc");
+    nct_var* var = nct_get_var(&set, "luokka");
+    char* ret = var->data;
+    var->not_freeable = 1;
+    var = nct_get_var(&set, "vuosi");
+    ikirvuosi0 = nct_get_integer(var, 0);
+    ikirvuosia = var->len;
+    nct_free1(&set);
     luoknimet = (typeof(luoknimet))&ikirnimet;
     luokkia = sizeof(ikirnimet)/sizeof(*ikirnimet);
     return ret;
 }
 void* _lue_wetl() {
-    nct_vset* luok_vs = nct_read_ncfile_info("./BAWLD1x1.nc");
+    nct_set* luok_vs = nct_read_ncf("./BAWLD1x1.nc", nct_rlazy);
     int pit = sizeof(wetlnimet)/sizeof(*wetlnimet);
-    for(int i=0; i<pit; i++) {
-	int varid = nct_get_varid(luok_vs, wetlnimet[i]);
-	nct_load_var_with(luok_vs->vars[varid], varid, nc_get_var_double, sizeof(double));
-    }
+    for(int i=0; i<pit; i++)
+	nct_loadg_as(luok_vs, wetlnimet[i], NC_DOUBLE);
     luoknimet = (typeof(luoknimet))&wetlnimet;
     luokkia = pit;
     return luok_vs;
@@ -230,13 +228,13 @@ void rajaa_aluetta_kosteikon_perusteella(char* alue, const struct tiedot* restri
     double* mix;
     switch(alueenum) {
 	case temperate_e:
-	    mix = nct_read_from_ncfile("BAWLD1x1.nc", "wetland_prf", nc_get_var_double, sizeof(double));
+	    mix = nct_read_from_nc_as("BAWLD1x1.nc", "wetland_prf", NC_DOUBLE);
 	    for(int i=0; i<td->res; i++)
 		alue[i] &= (0.03 < mix[i]/td->WET[i] && mix[i]/td->WET[i] < 0.97);
 	    free(mix);
 	    break;
 	case nontemperate_e:
-	    mix = nct_read_from_ncfile("BAWLD1x1.nc", "wetland_prf", nc_get_var_double, sizeof(double));
+	    mix = nct_read_from_nc_as("BAWLD1x1.nc", "wetland_prf", NC_DOUBLE);
 	    for(int i=0; i<td->res; i++)
 		alue[i] &= !(0.03 < mix[i]/td->WET[i] && mix[i]/td->WET[i] < 0.97);
 	    free(mix);
@@ -252,7 +250,7 @@ void rajaa_aluetta_kosteikon_perusteella(char* alue, const struct tiedot* restri
 	    alue[i] &= td->WET[i] >= 0.05;
 }
 
-void aseta_alku_ja_loppu(struct tiedot* restrict td, nct_vset* kauvset, int kausi) {
+void aseta_alku_ja_loppu(struct tiedot* restrict td, nct_set* kauvset, int kausi) {
     if(kausi == whole_year_e) {
 	int vuosia = td->v1 - td->v0;
 	td->alut =  malloc(    td->res*vuosia*2*sizeof(short));
@@ -275,13 +273,13 @@ void aseta_alku_ja_loppu(struct tiedot* restrict td, nct_vset* kauvset, int kaus
     sprintf(nimi, "%s_start", kaudet[kausi]);
     apu = nct_get_var(kauvset, nimi);
     if(!apu->data)
-	nct_load_var(apu, -1);
+	nct_load(apu);
     td->alut = apu->data;
 
     sprintf(nimi, "%s_end", kaudet[kausi]);
     apu = nct_get_var(kauvset, nimi);
     if(!apu->data)
-	nct_load_var(apu, -1);
+	nct_load(apu);
     td->loput = apu->data;
 }
 
@@ -393,7 +391,7 @@ void kirjoita_csvhen_vuosittain(char* buf[nvars], int sij[nvars], vakiotulos tul
 	sij[var] += sprintf(buf[var]+sij[var], muoto[var], varfun[var](tulos));
 }
 
-void tee_lajin_kaudet(struct tiedot* tiedot, const char* luoknimi, nct_vset* kauvset, FILE** f) {
+void tee_lajin_kaudet(struct tiedot* tiedot, const char* luoknimi, nct_set* kauvset, FILE** f) {
     jakajien_summa = 0;
     for(int kausi=0; kausi<kausia; kausi++) {
 	aseta_alku_ja_loppu(tiedot, kauvset, kausi);
@@ -409,7 +407,7 @@ void tee_lajin_kaudet(struct tiedot* tiedot, const char* luoknimi, nct_vset* kau
     }
 }
 
-void tee_lajin_kaudet_vuosittain(struct tiedot* tiedot, nct_vset* kauvset, char* buf[nvars], int sij[nvars]) {
+void tee_lajin_kaudet_vuosittain(struct tiedot* tiedot, nct_set* kauvset, char* buf[nvars], int sij[nvars]) {
     const char v00 = tiedot->v0;
     const char v10 = tiedot->v1;
     for(int kausi=0; kausi<kausia; kausi++) {
@@ -457,8 +455,8 @@ void vie_tiedostoksi(char* buf[][nvars], int sij[][nvars]) {
 }
 
 int main(int argc, char** argv) {
-    nct_vset *aluevset, *kauvset, *vuovset, *bawvset;
-    nct_var *maski, *vuoaika;
+    nct_set *aluevset, *kauvset, *vuovset, *bawvset;
+    nct_var *maski;
 
     if(argumentit(argc, argv))
 	return 1;
@@ -469,29 +467,28 @@ int main(int argc, char** argv) {
 	luokitus = NULL;
     }
     else
-	bawvset = nct_read_ncfile_info("BAWLD1x1.nc");
+	bawvset = nct_read_ncf("BAWLD1x1.nc", nct_rlazy);
 
-    aluevset = nct_read_ncfile("aluemaski.nc");
-    vuovset  = nct_read_ncfile_info(vlnum>1? "../vuo_2212/flux1x1_.nc": "flux1x1.nc");
-    kauvset  = nct_read_ncfile_info("kausien_päivät_int16.nc");
-    maski    = nct_next_truevar(aluevset->vars[0], 0);
-    vuoaika  = nct_get_var(vuovset, "time");
-    nct_load_var(vuoaika, -1);
+    aluevset = nct_read_nc("aluemaski.nc");
+    vuovset  = nct_read_ncf(vlnum>1? "../vuo_2212/flux1x1_.nc": "flux1x1.nc", nct_rlazy|nct_ratt);
+    kauvset  = nct_read_ncf("kausien_päivät_int16.nc", nct_rlazy);
+    maski    = nct_firstvar(aluevset);
+    nct_loadg(vuovset, "time");
 
     lat0 = nct_get_floating(nct_get_var(aluevset, "lat"), 0);
     
     struct tiedot tiedot = {
-	.vuo    = nct_load_data_with(vuovset, vuolaji_sisään[vlnum], nc_get_var_double, sizeof(double)),
-	.WET    = nct_load_data_with(bawvset, "wetland",             nc_get_var_double, sizeof(double)),
-	.vuodet = nct_load_data_with(kauvset, "vuosi",               nc_get_var_int,    sizeof(int)),
+	.vuo    = nct_loadg_as(vuovset, vuolaji_sisään[vlnum], NC_DOUBLE)->data,
+	.WET    = nct_loadg_as(bawvset, "wetland",             NC_DOUBLE)->data,
+	.vuodet = nct_loadg_as(kauvset, "vuosi",               NC_INT)->data,  
 	.alue   = maski->data,
-	.res    = nct_get_varlen(maski),
-	.aika0  = nct_mktime0(vuoaika, NULL).a.t,
+	.res    = maski->len,
+	.aika0  = nct_mktime0g(vuovset, "time", NULL).a.t,
 	.summan_kerroin  = _palauta_1,
 	.jakajan_kerroin = kosteikko? _jakajan_kerroin_kost: _palauta_1,
     };
     tiedot.v0 = vuosi0_ - tiedot.vuodet[0];
-    vuosi1kaikki = nct_get_integer(nct_get_var(kauvset, "vuosi"), -1) + 1;
+    vuosi1kaikki = nct_get_integer_last(nct_get_var(kauvset, "vuosi"), 1) + 1;
     tiedot.v1 = (vuosittain? vuosi1kaikki: vuosi1_) - tiedot.vuodet[0];
     rajaa_aluetta_kosteikon_perusteella(tiedot.alue, &tiedot, 0);
 
@@ -555,7 +552,7 @@ int main(int argc, char** argv) {
 	    tee_lajin_kaudet(&tiedot, (*luoknimet)[laji], kauvset, f);
     }
     if(luokenum == wetl_e) {
-	tiedot.alue = nct_read_from_ncfile("aluemaski.nc", "maski", NULL, 0);
+	tiedot.alue = nct_read_from_nc("aluemaski.nc", "maski");
 	rajaa_aluetta_kosteikon_perusteella(tiedot.alue, &tiedot, nonwetl_flag);
 	tiedot.summan_kerroin = _palauta_1;
 	tiedot.jakajan_kerroin = _palauta_1;
@@ -580,8 +577,5 @@ int main(int argc, char** argv) {
     free(luokitus);
     free(toinen_aluemaski);
     free(bufbuf);
-    nct_free_vset(aluevset);
-    nct_free_vset(bawvset);
-    nct_free_vset(vuovset);
-    nct_free_vset(kauvset);
+    nct_free(aluevset, bawvset, vuovset, kauvset);
 }

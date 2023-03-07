@@ -3,8 +3,8 @@
 all: vt.target vtpri.target vuojakaumadata.target vuojakaumadata_vuosittain.target vuosijainnit.nc kuvat.target taulukot.target
 argv =
 
-vuodata.out: vuodata.c
-	gcc -Wall -o $@ $< -lm `pkg-config --libs nctietue2` -Ofast
+vuodata.out: vuodata3.c
+	gcc -Wall -o $@ $< -lm -lnctietue3 -Ofast
 vvt.target: vvk vvw vvi vvt vvkk vvik
 vvk: vuodata.out
 	./$< vuosittain köpp $(argv)
@@ -61,7 +61,7 @@ vwppri: vuodata.out
 # jolloin epälukujen tarkistus ei toimi.
 # Olisi hyvä vaihtaa liukuluvut int16:en ja käyttää sovittua täyttöarvoa epälukujen sijaan.
 vuojakaumadata.out: vuojakaumadata.c
-	gcc -Wall $< -o $@ `pkg-config --libs nctietue2 gsl` -g -O3
+	gcc -Wall $< -o $@ `pkg-config --libs gsl` -lnctietue3 -g -O3
 vuojakauma_ikir: vuojakaumadata.out
 	./$< ikir post
 vuojakauma_köpp: vuojakaumadata.out
@@ -76,7 +76,7 @@ vuojakaumadata.target: vuojakauma_ikir vuojakauma_köpp vuojakauma_wetl vuojakau
 
 # vuojakaumadata vuosittain
 vuojakaumadata_vuosittain.out: vuojakaumadata.c
-	gcc -Wall $< -o $@ `pkg-config --libs nctietue2 gsl` -g -O3 -DVUODET_ERIKSEEN=1
+	gcc -Wall $< -o $@ `pkg-config --libs gsl` -lnctietue3 -g -O3 -DVUODET_ERIKSEEN=1
 vuojakauma_vuosittain_ikir: vuojakaumadata_vuosittain.out
 	./$< ikir post
 vuojakauma_vuosittain_köpp: vuojakaumadata_vuosittain.out
@@ -89,7 +89,7 @@ vuojakaumadata_vuosittain.target: vuojakauma_vuosittain_ikir vuojakauma_vuositta
 vuosijainnit.nc: vuosijainnit.out
 	./$<
 vuosijainnit.out: vuosijainnit.c
-	gcc -Wall -o $@ $< `pkg-config --libs nctietue2` -lm -Ofast -g
+	gcc -Wall -o $@ $< -lnctietue3 -lm -Ofast -g
 
 kuvat.target: vuosijainnit.nc
 	./aluejaot.py -s

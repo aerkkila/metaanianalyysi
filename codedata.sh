@@ -10,19 +10,12 @@ kansio=${kansio}/codedata
 k0=$kansio
 mkdir -p $kansio/kuvia
 
-kansio=$k0/nctietue2
+kansio=$k0/nctietue3
 mkdir -p $kansio
 cd $kansio
-git -C ~/nctietue2 archive master | tar -x -C $kansio
-rm -rf .gitignore tools
-echo Second paragraph at ../README > README
-ed -s $kansio/config.mk <<EOF
-/Uncomment
-;s/^/#/
-w
-q
-EOF
-cd -
+git -C ~/nctietue3 archive master | tar -x -C $kansio
+rm -rf .gitignore
+echo See the second paragraph at ../README. > README
 
 kansio=$k0/latex_source_of_the_article
 mkdir -p $kansio
@@ -165,7 +158,7 @@ all: a.out
 	./a.out
 
 a.out:
-	gcc -o $@ -O3 muunna_shapefile.c -lnetcdf -lshp -pthread -lm
+	gcc -o $@ -O3 köppen.c -lnetcdf -lshp -pthread -lm
 EOF
 
 kansio=$k0/create_pintaalat
@@ -179,7 +172,7 @@ cat >$kansio/Makefile <<EOF
 all: vt.target vtpri.target vvt.target
 
 vuodata.out: vuodata.c
-	gcc -Wall -o \$@ \$< -lm \`pkg-config --libs nctietue2\` -Ofast
+	gcc -Wall -o \$@ \$< -lm -lnctietue3 -Ofast
 vvt.target: vvk vvw vvi vvt vvkk vvik
 vvk: vuodata.out
 	./\$< vuosittain köpp \$(argv)
@@ -237,7 +230,7 @@ cp vuosijainnit.c $kansio
 cat >$kansio/Makefile <<EOF
 all: vuosijainnit.nc
 vuosijainnit.out: vuosijainnit.c
-	gcc -Wall -o \$@ \$< \`pkg-config --libs nctietue2\` -lm -O3
+	gcc -Wall -o \$@ \$< -lnctietue3 -lm -Ofast -g
 vuosijainnit.nc: vuosijainnit.out
 	./\$<
 EOF
@@ -251,7 +244,7 @@ total: vuojakauma_ikir vuojakauma_köpp vuojakauma_wetl
 annually: vuojakauma_vuosittain_ikir vuojakauma_vuosittain_köpp vuojakauma_vuosittain_wetl
 
 vuojakaumadata.out: vuojakaumadata.c
-	gcc -Wall \$< -o \$@ \`pkg-config --libs nctietue2 gsl\` -g -O3
+	gcc -Wall \$< -o \$@ \`pkg-config --libs gsl\` -lnctietue3 -g -O3
 
 vuojakauma_ikir: vuojakaumadata.out
 	./\$< ikir post
@@ -261,7 +254,7 @@ vuojakauma_wetl: vuojakaumadata.out
 	./\$< wetl post
 
 vuojakaumadata_vuosittain.out: vuojakaumadata.c
-	gcc -Wall \$< -o \$@ \`pkg-config --libs nctietue2 gsl\` -g -O3 -DVUODET_ERIKSEEN=1
+	gcc -Wall \$< -o \$@ \`pkg-config --libs gsl\` -lnctietue3 -g -O3 -DVUODET_ERIKSEEN=1
 vuojakauma_vuosittain_ikir: vuojakaumadata_vuosittain.out
 	./\$< ikir post
 vuojakauma_vuosittain_köpp: vuojakaumadata_vuosittain.out
@@ -284,7 +277,6 @@ cp $a/ft_percents_pixel_ease.c $kansio
 cp -l $a/EASE_2_l*.nc $kansio
 #cp -l $HOME/smos_uusi/FT_720_*.nc $kansio/data # isoja
 cat >$kansio/README <<EOF
-Compiler needs argument \`pkg-config --libs nctietue2\`.
 The code reads annual data files named as FT_720_yyyy.nc.
 To run the codes, go to ./create data first.
 and compile and run yhdistä_vuosittain.c to turn the files into requested format.
@@ -296,7 +288,6 @@ cp $HOME/smos_uusi/yhdistä_vuosittain.c $kansio
 cat >$kansio/README <<EOF
 This is the code that was used to combine each year into one file
 and fill missing dates with values read from previous existing date.
-Compiler needs argument \`pkg-config --libs nctietue2\`.
 
 Data can be downloaded from 
 https://nsdc.fmi.fi/services/SMOSService/
@@ -334,38 +325,27 @@ for f in `find $k0 -type f`; do head -1 $f | grep -q "^#!" && chmod 755 $f; done
 cat > $k0/README <<EOF
 Many of the C-codes will probably only work on Unix-like operating systems.
 It is necessary to run create_links.sh before attempting to run most codes elsewhere than in the root directory.
-It is also necessary to install nctietue2-library (see next paragraph) before running some of the C-codes.
+It is also necessary to install nctietue3-library (see next paragraph) before running some of the C-codes.
 
-Go to nctietue2 directory which is included here and then it can be installed normally with:
+Go to nctietue3 directory which is included here and then it can be installed normally with:
     make
     make install # as root
 To remove the library, run:
     make uninstall # as root
-To install without root privilidges, change variable prefix in config.mk to \$HOME/.local
-
-Alternatively, this can also be done without root privilidges:
-    make
-    export PKG_CONFIG_PATH=\$PWD:\$PKG_CONFIG_PATH
-    export LD_LIBRARY_PATH=\$PWD:\$LD_LIBRARY_PATH
-    export cflags="-I\$PWD -L\$PWD"
-    sed -Ei "s|gcc (.*pkg-config.*nctietue2)|gcc \$cflags \1|" \`find .. -name Makefile\`
-Then to compile without a Makefile, use 'gcc \$cflags ...', if nctietue2 is used in the code.
-In this case nothing is intalled and therefore no need to uninstall.
-Last sed command edits Makefiles and should be run only once, otherwise the changes will cumulate.
+To install without root privilidges, change variable prefix in config.mk to \$HOME/.local.
+In that case one may have to replace '#include <nctietue3.h>' with '#include "path_to_nctietue3/nctietue3.h"' in the C-codes.
 
 The root directory contains all codes that make the final results used in the article.
 Codes needed to create \$data are one level deeper in directory called create_\$data.
 
-Compilation:
+Compilation of C-codes:
 Sometimes a Makefile is given.
-Sometimes compilation command is in comment at the beginning of a C-code.
-If nctietue2-library is used in C code, it should be compiled with argument \`pkg-config --libs nctietue2\`.
+If nctietue3-library is used in C code, it should be compiled with argument -lnctietue3.
+Optimization level -Ofast cannot be used in vuojakaumadata.c.
 Most C codes use non-ascii utf8 characters in variable names
 which old compiler versions cannot compile (for gcc, version ≥ 10.1).
 
-Some python files may be given twice with different names for naming reasons (i.e. figX.py == tableY.py).
-
-File names:
+Understanding file names:
 aluemaski			region mask
 ikirdata                        permafrost data
 kaudet                          seasons
