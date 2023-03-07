@@ -192,7 +192,7 @@ void kirjoita_data(int ppnum, float* taul) {
 #if LAUHKEUS
 int main() {
     pituudet();
-    pit_wetl -= 2;
+    pit_wetl -= 1;
     float* taul = malloc(pit_wetl * pit_kaudet * 2 * sizeof(float));
     for(int ppnum=0; ppnum<2; ppnum++) {
 	if(lue_data(ppnum, "wetland", wetlnimet, pit_wetl, taul)) {
