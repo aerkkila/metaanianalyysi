@@ -55,7 +55,7 @@ They should be compiled with argument \`pkg-config --libs nctietue2\`
 	   Years in same figure, areas and seasons separately. \
 	   Makes also a table about relative standard deviation of annual averages. \
 	   Can be run with argument päivä to make similar figures of season start days.
-   - **permafrost_wetland_kartta.py** &rarr; permafrost_wetland_kartta.png
+   - **kosteikkoalueet.py** &rarr; kosteikkoalueet.png
 	   Permafrost and non-permafrost wetland category areas separated on a map.
    - **xvuo_laatikko.py** &rarr; xvuo_laatikko_wetland.png
    - **osajää.py** &rarr; osajää.png

@@ -315,7 +315,7 @@ aika_päättyi:;
     nct_copy_var(&k, latvar, 1);
     nct_copy_var(&k, lonvar, 1);
     nct_add_var(&k, kausi, NC_BYTE, "kausi", 3, dimids);
-    nct_write_nc(&k, "kaudet1.nc");
+    nct_write_nc(&k, "kaudet.nc");
     nct_free1(&k);
 
     k = (nct_set){0};
