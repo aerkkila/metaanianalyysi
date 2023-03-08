@@ -4,7 +4,7 @@ bawld.nc: data bawld.out lisäluokat.out
 	./lisäluokat.out bawld.nc
 
 lisäluokat.out: lisäluokat.c
-	gcc -o $@ $< -g -Wall `pkg-config --libs nctietue2`
+	gcc -o $@ $< -g -Wall -lnctietue3
 
 bawld.out: bawld.c bawldtunnisteet.h
 	gcc -o $@ $< -g -Wall -lshp -lnetcdf -lm -lproj -pthread -Ofast

@@ -1,6 +1,6 @@
 ## Codes used to analyze methane flux modelling results
-Most C-codes in this repository use this library github.com/aerkkila/nctietue2.git to handle netcdf files.
-They should be compiled with argument \`pkg-config --libs nctietue2\`
+Most C-codes in this repository use this library github.com/aerkkila/nctietue3.git to handle netcdf files.
+They are compiled with argument -lnctietue3.
 
 1. **Following codes create the data that rest of the codes need. These may read external data which is not in this repository.**
    - **BAWLD<area>.py** &rarr; BAWLD05x05<area>.nc, BAWLD1x1<area>.nc \
@@ -41,8 +41,6 @@ They should be compiled with argument \`pkg-config --libs nctietue2\`
 	   Map of used climate or permafrost classification
    - **yhdistelmäalueet.py** &rarr; yhdistelmäalueet.tex \
 	   Latex table about how much climate and permafrost classifications and wetland overlap.
-   - **prf_kasvil_taulukko.py** &rarr; prf_kasvil_taulukko_['1000km2','prosentti'].csv \
-	   csv-table about how much permafrost region and BAWLD classes overlap (*has to be updated*)
    - **vuotaul_latex.c** &rarr; vuosummat['',_tiivistelmä]_['pri','post']['',_k1].tex \
 	   latex table about average fluxes and season part of whole year emission \
 	   Reads vuotaulukot/\*.csv.
@@ -62,6 +60,5 @@ They should be compiled with argument \`pkg-config --libs nctietue2\`
 	   Figure about relation between frozen percent and partly frozen percent
 
 **Other**
-- **köppenpintaalat<area>.c** areas of climate classes
 - **ikir_alkuloppu.py** &rarr; ikir[0123]_{season}_start.png \
 	   Unused. Histogram of frequency of season start dates in different permafrost regions.

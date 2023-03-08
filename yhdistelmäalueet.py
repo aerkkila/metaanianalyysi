@@ -19,14 +19,16 @@ def lue_data():
 
     ds = Dataset('BAWLD1x1.nc')
     wetl = np.ma.getdata(ds['wetland']).flatten()
+    wetlmaski = np.ma.getdata(ds['pct']).flatten() # mikä osuus hilaruudusta on mukana bawld-luokituksessa
     ds.close()
+    wetlmaski = wetlmaski > 0
 
     ds = Dataset('aluemaski.nc')
     maski = np.ma.getdata(ds['maski']).flatten().astype(bool)
     alat = np.load('pintaalat.npy')
     ds.close()
 
-    return ikir[maski], köpp[:,maski], wetl[maski], alat[maski]
+    return ikir[maski], köpp[:,maski], wetl[maski], alat[maski], wetlmaski[maski]
 
 def main():
     ikir, köpp, wetl, alat = lue_data()

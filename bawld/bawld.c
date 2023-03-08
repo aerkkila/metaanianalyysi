@@ -182,13 +182,13 @@ int main(int argc, char** argv) {
     NCFUNK(nc_inq_dim, ncid, id, NULL, &pit_lat);
     lat = malloc(pit_lat*sizeof(double));
     NCFUNK(nc_inq_varid, ncid, "lat", &id);
-    NCFUNK(nc_get_var, ncid, id, lat);
+    NCFUNK(nc_get_var_double, ncid, id, lat);
 
     NCFUNK(nc_inq_dimid, ncid, "lon", &id);            //lon
     NCFUNK(nc_inq_dim, ncid, id, NULL, &pit_lon);
     lon = malloc(pit_lon*sizeof(double));
     NCFUNK(nc_inq_varid, ncid, "lon", &id);
-    NCFUNK(nc_get_var, ncid, id, lon);
+    NCFUNK(nc_get_var_double, ncid, id, lon);
 
     NCFUNK(nc_close, ncid);
     pit_latlon = pit_lat*pit_lon;

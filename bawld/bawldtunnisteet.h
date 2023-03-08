@@ -10,3 +10,4 @@
 { "FEN", "fen"            },
 { "LAK", "lake"           },
 { "RIV", "river"          },
+{ "Area_Pct", "pct"       },
