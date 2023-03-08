@@ -3,7 +3,7 @@
 all: vt.target vtpri.target vuojakaumadata.target vuojakaumadata_vuosittain.target vuosijainnit.nc kuvat.target taulukot.target
 argv =
 
-vuodata.out: vuodata3.c
+vuodata.out: vuodata.c
 	gcc -Wall -o $@ $< -lm -lnctietue3 -Ofast
 vvt.target: vvk vvw vvi vvt vvkk vvik
 vvk: vuodata.out
@@ -95,8 +95,8 @@ kuvat.target: vuosijainnit.nc
 	./aluejaot.py -s
 	./kaudet_laatikko.py -s
 	./kosteikkoalueet.py -s
-	./vuojakaumalaatikko.py -s
-	./vuojakaumalaatikko_vuosittain.py -s -nf
+	./vuojakaumat.py -s
+	./vuojakaumat_vuosittain.py -s -nf
 	./vuosijainnit.py -s
 
 vuotaul.target:

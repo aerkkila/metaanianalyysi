@@ -39,11 +39,12 @@ void kirjoita_data(FILE* f) {
     const char** kaikkinimet[] = {wetlnimet, ikirnimet, köppnimet};
     int pitdet[] = {pit_wetl, pit_ikir, pit_köpp};
     K("\\begin{tabular}{l|rrr}\n");
-    K(" & °N all area & °N area 1");
+    K(" & °N all area & °N area wl");
     K(" \\\\\n\\midrule\n");
     kirjoita_osio(f, itaul, ikirnimet, 2); K("\\midrule\n");
     kirjoita_osio(f, ktaul, köppnimet, 2); K("\\midrule\n");
-    _kirjoita_osio(f, wtaul, wetlnimet, 2, arrpit(wetlnimet)-1);
+    _kirjoita_osio(f, wtaul, wetlnimet, 2, arrpit(wetlnimet)-2);
+    K("wetland & %.3f \\\\\n", wtaul[arrpit(wetlnimet)-2][0]);
     K("nonwetland & %.3f \\\\\n", wtaul[arrpit(wetlnimet)-1][0]);
     K("\\end{tabular}\n");
 }
@@ -93,7 +94,7 @@ kelpaa:
     goto kelpaa;
 }
 
-#define kansio0 "./vuodata2302/"
+#define kansio0 "./vuodata/"
 
 int main() {
     lue_tiedosto(kansio0"wetlandvuo_biopost_whole_year_k0.csv", wtaul, 0, wetlnimet, pit_wetl);

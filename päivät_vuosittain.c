@@ -30,7 +30,7 @@ enum                      {köpp_e,   ikir_e, wetl_e} luokenum;
 const char* muuttujat[] = {"start", "end", "length"};
 enum                      {start_e, end_e, length_e, muuttujia} mitkä;
 const char*** luoknimet;
-const char* kansio = "kausidata2301";
+const char* kansio = "kausidata";
 #define kausia 3
 #define wraja 0.05
 

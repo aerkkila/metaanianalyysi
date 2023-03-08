@@ -22,7 +22,7 @@ void lue_jäätym(short tulos[3][4][jvuosia]) {
     char* nimet[] = {"start", "end", "length"};
     char nimi[64];
     for(int e0=0; e0<3; e0++) {
-	sprintf(nimi, "../kausidata2301/%s_ikir.csv", nimet[e0]);
+	sprintf(nimi, "../kausidata/%s_ikir.csv", nimet[e0]);
 	int fd = open(nimi, O_RDONLY);
 	struct stat st;
 	fstat(fd, &st);

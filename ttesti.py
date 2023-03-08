@@ -8,7 +8,7 @@ welch_t = lambda x1,x2,s1,s2,n1,n2: (x1 - x2) / (s1/n1 + s2/n2)**0.5
 dof = lambda s1,n1,s2,n2: (s1/n1 + s2/n2)**2 / (s1**2/(n1**3-n1**2) + s2**2/(n2**3-n2**2))
 
 # tiedosto = "vuotaulukot/kahtia/wetlandvuo_post_%s_k0.csv"
-tiedosto = "vuodata2302/nontemperate/wetlandvuo_biopost_%s_k0.csv"
+tiedosto = "vuodata/nontemperate/wetlandvuo_biopost_%s_k0.csv"
 
 f = open(tiedosto %'summer', 'r')
 f.readline()

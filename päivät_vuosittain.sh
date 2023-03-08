@@ -17,6 +17,6 @@ make päivät_vuosittain.out
 laske köpp
 laske ikir
 laske wetl
-cat kausidata2301/length_*.csv > kausidata2301/length.csv
-cat kausidata2301/start_*.csv > kausidata2301/start.csv
-cat kausidata2301/end_*.csv > kausidata2301/end.csv
+cat kausidata/length_*.csv > kausidata/length.csv
+cat kausidata/start_*.csv > kausidata/start.csv
+cat kausidata/end_*.csv > kausidata/end.csv

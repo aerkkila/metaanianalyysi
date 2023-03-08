@@ -128,8 +128,8 @@ palaa:
     return ret;
 }
 
-#define vuodirmakro "../vuodata2301/vuosittain/"
-#define kausidirmakro "../kausidata2301/"
+#define vuodirmakro "../vuodata/vuosittain/"
+#define kausidirmakro "../kausidata/"
 static char* tiedosto;
 static int tiedpit;
 static char* nimet_vuo[] = {"ikir.csv", "köppen.csv", "wetland.csv", "total.csv", NULL};

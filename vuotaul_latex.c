@@ -13,11 +13,11 @@
 #endif
 
 #if LAUHKEUS == 0
-#define kansio "vuodata2302/"
+#define kansio "vuodata/"
 #elif LAUHKEUS == 1
-#define kansio "vuodata2302/nontemperate/"
+#define kansio "vuodata/nontemperate/"
 #elif LAUHKEUS == 2
-#define kansio "vuodata2302/temperate/"
+#define kansio "vuodata/temperate/"
 #endif
 
 const char* pripost[] = {"pri", "post"};

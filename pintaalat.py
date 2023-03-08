@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/bin/env python3
 # muodostaa litteän taulukon, jossa on 55*360-resoluution 1x1-asteisen alueen pintaalat
 
 import numpy as np

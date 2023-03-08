@@ -15,7 +15,7 @@ const double r2 = 6362.1320*6362.1320; // km, jotta luvut ovat maltillisempia
 #define Lat(i) (lat0+(i)/360)
 #define Pintaala(i) PINTAALA(Lat(i)*ASTE, ASTE)
 
-#define KANSIO "vuodata2302_1/"
+#define KANSIO "vuodata/"
 #define LOPUSTA_PUUTTUU 1 // Metaanidatasta viimeisen vuoden lopussa puuttuvien päivien määrä. Esim. 1 -> 30.12. viimeinen
 const char* ikirnimet[]      = {"nonpermafrost", "sporadic", "discontinuous", "continuous"};
 const char* köppnimet[]      = {"Db", "Dc", "Dd", "ET"};
