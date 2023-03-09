@@ -42,4 +42,7 @@ fclose(f)
 
 x = np.arange(len(kaudet)*len(lajit))
 y = y.flatten()
+
+# err[0,n] sisältää virheen alaspäin odotusarvosta y[n]
+# err[1,n] sisältää virheen ylöspäin odotusarvosta y[n]
 err = err.reshape([err.shape[0], err.shape[1]*err.shape[2]])

@@ -2,7 +2,7 @@
 **wregressio<area>.c** finds methane flux values for wetland subcategories using linear regression with all frac(category)/frac(wetland) as explanatory variables and flux/frac(wetland) as y. Bog-fen-marsh and permafrost_bog-tundra-wetland areas are handled separately. Program executes in these steps.
 
 1. Find the optimal limit for flux using cross validation. \
-   Higher fluxes are discarded and the same number of lowest flux values are also discarded.
+   Higher fluxes are discarded and the same surface area with lowest flux values is also discarded.
 
 2. Predict the flux and get confidence interval using the bootstrapping method.
 
