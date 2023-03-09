@@ -38,15 +38,18 @@ def main():
         for ii in range(len(luokat.ikir)):
             taul[ii,ki] = np.sum(alat[(köpp[ki]) & (ikir==ii)]) * 1e-3
         # kosteikko tälle ilmastoluokalle
-        tmpmaski = (köpp[ki]) & (wetl>=0.05)
-        taul[ii+1,ki] = np.sum(alat[tmpmaski] * wetl[tmpmaski]) * 1e-3
-        taul[ii+2,ki] = taul[ii+1,ki] / np.sum(alat[köpp[ki] & wetlmaski]) * 1e6
-        taul[ii+3,ki] = taul[ii+1,ki] / np.sum(alat[köpp[ki]]) * 1e6
+        tmpmaski = köpp[ki] & (wetl>=0.05)
+        wetmaski = köpp[ki] & wetlmaski
+        taul[ii+1,ki] = np.sum(alat[tmpmaski] * wetl[tmpmaski]) * 1e-3 # wetland-pintaala
+        taul[ii+2,ki] = np.sum(alat[wetmaski] * wetl[wetmaski]) / np.sum(alat[wetmaski]) * 1e3 # luokan varsinainen wetland-osuus ilman 0.05 rajaakaan
+        taul[ii+3,ki] = taul[ii+1,ki] / np.sum(alat[köpp[ki]]) * 1e6 # käytetyn wetland alan ja luokan alan suhde
     # kosteikot kaikille ikiroutaluokille
     for ii in range(len(luokat.ikir)):
-        tmpmaski = (ikir==ii) & (wetl>=0.05)
+        ikirnyt = (ikir==ii)
+        tmpmaski = ikirnyt & (wetl>=0.05)
+        wetmaski = ikirnyt & wetlmaski
         taul[ii,ki+1] = np.sum(alat[tmpmaski] * wetl[tmpmaski]) * 1e-3
-        taul[ii,ki+2] = taul[ii,ki+1] / np.sum(alat[(ikir==ii) & wetlmaski]) * 1e6
+        taul[ii,ki+2] = np.sum(alat[wetmaski] * wetl[wetmaski]) / np.sum(alat[wetmaski]) * 1e3
         taul[ii,ki+3] = taul[ii,ki+1] / np.sum(alat[ikir==ii]) * 1e6
 
     f = open('yhdistelmäalueet.tex', 'w')
