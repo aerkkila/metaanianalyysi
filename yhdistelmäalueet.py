@@ -31,8 +31,8 @@ def lue_data():
     return ikir[maski], köpp[:,maski], wetl[maski], alat[maski], wetlmaski[maski]
 
 def main():
-    ikir, köpp, wetl, alat = lue_data()
-    taul = np.empty([len(luokat.ikir)+2, len(luokat.köpp)+2], int) # +2 wetland-luokasta, alue ja osuus
+    ikir, köpp, wetl, alat, wetlmaski = lue_data()
+    taul = np.empty([len(luokat.ikir)+3, len(luokat.köpp)+3], int) # +3 wetland-luokasta, alue ja osuus yhteensä ja bawld-alueella
 
     for ki in range(len(luokat.köpp)):
         for ii in range(len(luokat.ikir)):
@@ -40,12 +40,14 @@ def main():
         # kosteikko tälle ilmastoluokalle
         tmpmaski = (köpp[ki]) & (wetl>=0.05)
         taul[ii+1,ki] = np.sum(alat[tmpmaski] * wetl[tmpmaski]) * 1e-3
-        taul[ii+2,ki] = taul[ii+1,ki] / np.sum(alat[köpp[ki]]) * 1e6
+        taul[ii+2,ki] = taul[ii+1,ki] / np.sum(alat[köpp[ki] & wetlmaski]) * 1e6
+        taul[ii+3,ki] = taul[ii+1,ki] / np.sum(alat[köpp[ki]]) * 1e6
     # kosteikot kaikille ikiroutaluokille
     for ii in range(len(luokat.ikir)):
         tmpmaski = (ikir==ii) & (wetl>=0.05)
         taul[ii,ki+1] = np.sum(alat[tmpmaski] * wetl[tmpmaski]) * 1e-3
-        taul[ii,ki+2] = taul[ii,ki+1] / np.sum(alat[ikir==ii]) * 1e6
+        taul[ii,ki+2] = taul[ii,ki+1] / np.sum(alat[(ikir==ii) & wetlmaski]) * 1e6
+        taul[ii,ki+3] = taul[ii,ki+1] / np.sum(alat[ikir==ii]) * 1e6
 
     f = open('yhdistelmäalueet.tex', 'w')
     f.write('\\begin{tabular}{l|%s' %('r'*(len(luokat.köpp)+1)))
@@ -59,8 +61,10 @@ def main():
         f.write(i.replace('_',' '))
         for ki in range(len(luokat.köpp)+2):
             f.write(' & %i' %(taul[ii,ki]))
+        f.write(' / %i' %(taul[ii,ki+1]))
         f.write(' \\\\\n')
 
+    # pohjalle tulee ilmaston kosteikkoluokat
     f.write('wetland')
     for ki in range(len(luokat.köpp)):
         f.write(' & %i' %(taul[len(luokat.ikir),ki]))
@@ -70,6 +74,7 @@ def main():
     f.write('wetland ‰')
     for ki in range(len(luokat.köpp)):
         f.write(' & %i' %(taul[len(luokat.ikir)+1,ki]))
+        f.write(' / %i' %(taul[len(luokat.ikir)+2,ki]))
     f.write(' & & \\\\\n')
 
     f.write('\\end{tabular}\n')
