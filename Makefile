@@ -1,10 +1,13 @@
-# pintaalat.py ja kaudet.c pitää olla ajettuina ennen tätä
-#all: vuotaul_00.target vuotaul_10.target vuotaul_01.target vuotaul_02.target vuojakaumadata.target vuojakaumadata_vuosittain.target vuosijainnit.nc kuvat taulukot.target
+# kaudet.c pitää olla ajettuna ennen tätä
 all: vt.target vtpri.target vuojakaumadata.target vuojakaumadata_vuosittain.target vuosijainnit.nc kuvat.target taulukot.target
 argv =
 
-vuodata.out: vuodata.c
-	gcc -Wall -o $@ $< -lm -lnctietue3 -Ofast
+pintaalat.h: pintaalat.c
+	gcc -Wall pintaalat.c -lproj -lnctietue3 -g
+	./a.out
+
+vuodata.out: vuodata.c pintaalat.h
+	gcc -Wall -o $@ $< -lnctietue3 -Ofast
 vvt.target: vvk vvw vvi vvt vvkk vvik
 vvk: vuodata.out
 	./$< vuosittain köpp $(argv)
@@ -60,7 +63,7 @@ vwppri: vuodata.out
 # koska silloin on käytössä -ffast-math, joka sisältää -ffinite-math-only,
 # jolloin epälukujen tarkistus ei toimi.
 # Olisi hyvä vaihtaa liukuluvut int16:en ja käyttää sovittua täyttöarvoa epälukujen sijaan.
-vuojakaumadata.out: vuojakaumadata.c
+vuojakaumadata.out: vuojakaumadata.c pintaalat.h
 	gcc -Wall $< -o $@ `pkg-config --libs gsl` -lnctietue3 -g -O3
 vuojakauma_ikir: vuojakaumadata.out
 	./$< ikir post
@@ -75,7 +78,7 @@ vuojakauma_ikirkost: vuojakaumadata.out
 vuojakaumadata.target: vuojakauma_ikir vuojakauma_köpp vuojakauma_wetl vuojakauma_ikirkost vuojakauma_köppkost
 
 # vuojakaumadata vuosittain
-vuojakaumadata_vuosittain.out: vuojakaumadata.c
+vuojakaumadata_vuosittain.out: vuojakaumadata.c pintaalat.h
 	gcc -Wall $< -o $@ `pkg-config --libs gsl` -lnctietue3 -g -O3 -DVUODET_ERIKSEEN=1
 vuojakauma_vuosittain_ikir: vuojakaumadata_vuosittain.out
 	./$< ikir post
@@ -88,7 +91,7 @@ vuojakaumadata_vuosittain.target: vuojakauma_vuosittain_ikir vuojakauma_vuositta
 
 vuosijainnit.nc: vuosijainnit.out
 	./$<
-vuosijainnit.out: vuosijainnit.c
+vuosijainnit.out: vuosijainnit.c pintaalat.h
 	gcc -Wall -o $@ $< -lnctietue3 -lm -Ofast -g
 
 kuvat.target: vuosijainnit.nc
@@ -116,7 +119,7 @@ taulukot.target: vuotaul.target
 
 # Näitä ei sisälly all-kohteeseen
 # Lienevät vanhentuneita
-päivät_vuosittain.out: päivät_vuosittain.c
+päivät_vuosittain.out: päivät_vuosittain.c pintaalat.h
 	gcc -Wall $< -o $@ `pkg-config --libs nctietue2 gsl` -lm -g -O3
 päivät_vuosittain_ikir: päivät_vuosittain.out
 	./päivät_vuosittain.out kaikki_muuttujat ikir

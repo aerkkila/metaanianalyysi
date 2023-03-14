@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
 #include <stdarg.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -12,13 +11,10 @@
 #include <assert.h>
 #include <time.h>
 #include <err.h>
+#include "pintaalat.h"
 
 #define ARRPIT(a) (sizeof(a)/sizeof(*(a)))
 #define MIN(a,b) (a)<(b)? (a): (b)
-#define ASTE 0.017453293
-const double r2 = 6362132.0*6362132.0;
-#define SUHT_ALA(lat, hila) (sin((((double)lat)+(hila)*0.5) * ASTE) - sin((((double)lat)-(hila)*0.5) * ASTE))
-#define SUHT2ABS_KERR(hila) (r2 * ASTE * (hila))
 
 #ifndef VUODET_ERIKSEEN
 #define VUODET_ERIKSEEN 0
@@ -41,7 +37,6 @@ const char*** luoknimet;
 static nct_set *luok_vs;
 static int       ppnum;
 static char  *restrict luok_c;
-static double *restrict alat;
 static double* kost;
 static int ikirvuosi0, ikirvuosia, vuosi0, vuosi1, t1max;
 char* kansio;
@@ -217,7 +212,7 @@ void aikasilmukka_kosteikko(struct laskenta* args, int r, double* kost, double* 
     int t0, t1;
     if(kost[r] < wraja) return;
     if(alkuun(args, r, &t0, &t1)) return;
-    double ala = alat[r/360];
+    double ala = pintaalat[r/360];
     for(int t=t0; t<t1; t++) {
 	int ind_t = t*resol + r;
 	args->vuoulos[args->sijainti]   = args->vuoptr[ind_t] / kost[r];
@@ -230,7 +225,7 @@ void aikasilmukka_kosteikko(struct laskenta* args, int r, double* kost, double* 
 void aikasilmukka(struct laskenta* args, int r) {
     int t0, t1;
     if(alkuun(args, r, &t0, &t1)) return;
-    double ala = alat[r/360];
+    double ala = pintaalat[r/360];
     for(int t=t0; t<t1; t++) {
 	int ind_t = t*resol + r;
 	args->vuoulos[args->sijainti]   = args->vuoptr[ind_t];
@@ -333,7 +328,7 @@ void laita_emissio(struct laskenta* args) {
     for(int kausi=0; kausi<kausia; kausi++) {
 	fprintf(f, "%s", kaudet[kausi]);
 	for(int v=0; v<vuosi1-vuosi0; v++)
-	    fprintf(f, ",%.4lf", args->emissio[kausi*(vuosi1-vuosi0)+v] * SUHT2ABS_KERR(1) * 86400 * 16.0416 * 1e-12);
+	    fprintf(f, ",%.4lf", args->emissio[kausi*(vuosi1-vuosi0)+v] * 86400 * 16.0416 * 1e-12);
 	fputc('\n', f);
     }
     fclose(f);
@@ -378,11 +373,6 @@ int main(int argc, char** argv) {
     apuvar = nct_loadg_as(&vuo, "lat", NC_FLOAT);
     int latpit = apuvar->len;
     assert(lonpit*latpit == resol);
-    float* lat = apuvar->data;
-    double _alat[latpit];
-    alat = _alat;
-    for(int i=0; i<latpit; i++)
-	alat[i] = SUHT_ALA(lat[i], 1);
 
     nct_set *kausivset = nct_read_nc("kausien_päivät.nc");
     nct_var* vuosivar = nct_get_var(kausivset, "vuosi");

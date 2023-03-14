@@ -1,6 +1,5 @@
 #include <nctietue2.h>
 #include <stdio.h>
-#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
@@ -8,12 +7,9 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <err.h>
+#include "../pintaalat.h"
 
-const double r2 = 6362.1320*6362.1320; // km, jotta luvut ovat maltillisempia
-#define PINTAALA(lat, hila) ((hila) * r2 * (sin((lat)+0.5*(hila)) - sin((lat)-0.5*(hila))))
-#define ASTE 0.017453293
-#define Lat(i) (lat0+(i)/360)
-#define Pintaala(i) PINTAALA(Lat(i)*ASTE, ASTE)
+#define lonpit 360
 
 int montako_päivää(time_t aika0, int vuosi, short päivä) {
     struct tm aikatm = {
@@ -120,7 +116,7 @@ int main() {
     for(int r=0; r<19800; r++) {
 	if(!maski[r])
 	    continue;
-	double ala = Pintaala(r);
+	double ala = pintaalat[r/lonpit];
 	for(int v=0; v<vuosia; v++) {
 	    int alku = alut[v];
 	    int loppu = loput[v];

@@ -1,16 +1,10 @@
 #include <nctietue3.h>
 #include <stdlib.h>
 #include <string.h>
+#include "pintaalat.h"
 
-#include <math.h>
-const double r2 = 6362132.0*6362132.0;
-#define PINTAALA(lat, hila) ((hila) * r2 * (sin((lat)+0.5*(hila)) - sin((lat)-0.5*(hila))))
-#define ASTE 0.017453293
-double *lat;
 int lonpit;
-double pintaala(int i) {
-    return PINTAALA(lat[i/lonpit]*ASTE, ASTE);
-}
+#define pintaala(i) (pintaalat[i/lonpit])
 
 #define VIRHE -1234567
 int montako_päivää(time_t aika0, int vuosi, short päivä) {
@@ -148,7 +142,6 @@ int main(int argc, char** argv) {
     nct_set tallenn = {0};
     nct_copy_var(&tallenn, nct_get_var(aluevset, "lat"), 1);
     nct_copy_var(&tallenn, nct_get_var(aluevset, "lon"), 1);
-    lat = tallenn.vars[0]->data;
     lonpit = tallenn.vars[1]->len;
     
     for(int j=0; j<luokkia; j++) {

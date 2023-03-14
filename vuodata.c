@@ -7,14 +7,11 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/stat.h>
-#include <math.h>
+#include "pintaalat.h"
 
-const double r2 = 6362.1320*6362.1320; // km, jotta luvut ovat maltillisempia
-#define PINTAALA(lat, hila) ((hila) * r2 * (sin((lat)+0.5*(hila)) - sin((lat)-0.5*(hila))))
-#define ASTE 0.017453293
 #define Lat(i) (lat0+(i)/360)
-#define Pintaala(i) PINTAALA(Lat(i)*ASTE, ASTE)
 
+#define lonpit 360
 #define KANSIO "vuodata/"
 #define LOPUSTA_PUUTTUU 1 // Metaanidatasta viimeisen vuoden lopussa puuttuvien päivien määrä. Esim. 1 -> 30.12. viimeinen
 const char* ikirnimet[]      = {"nonpermafrost", "sporadic", "discontinuous", "continuous"};
@@ -114,7 +111,7 @@ double laske_piste(const struct tiedot* restrict tiedot, int i) {
     if(i == pisteen_jakaja(i))
 	return jakaja;
     jakaja = summa = 0;
-    double ala = Pintaala(i);
+    double ala = pintaalat[i/lonpit];
     int vuosia = 0;
     for(int v=tiedot->v0; v<tiedot->v1; v++) {
 	if(luokenum==ikir_e && tiedot->ikir[v*tiedot->res+i] != tiedot->luokka)
@@ -150,7 +147,7 @@ void laske(const struct tiedot* restrict tiedot, struct tulos* tulos) {
 	tulos->sum1 += tulos->summat[n];
 	tulos->jak1 += (tulos->jakajat[n] = laske_piste(tiedot, pisteen_jakaja(i)));
 	tulos->lat  += Lat(i) * tulos->jakajat[n];
-	tulos->alat[n] = Pintaala(i) * tiedot->jakajan_kerroin(tiedot, i);
+	tulos->alat[n] = pintaalat[i/lonpit] * tiedot->jakajan_kerroin(tiedot, i);
 	n++;
     }
     tulos->pisteitä = n;

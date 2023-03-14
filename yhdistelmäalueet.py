@@ -2,6 +2,9 @@
 from netCDF4 import Dataset
 import numpy as np
 import luokat, re
+from pintaalat import pintaalat
+
+lonpit = 360
 
 def lue_data():
     ds = Dataset('ikirdata.nc')
@@ -25,8 +28,9 @@ def lue_data():
 
     ds = Dataset('aluemaski.nc')
     maski = np.ma.getdata(ds['maski']).flatten().astype(bool)
-    alat = np.load('pintaalat.npy')
     ds.close()
+
+    alat = np.repeat(pintaalat, lonpit)
 
     return ikir[maski], köpp[:,maski], wetl[maski], alat[maski], wetlmaski[maski]
 

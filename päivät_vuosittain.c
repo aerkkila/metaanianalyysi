@@ -12,12 +12,10 @@
 #include <assert.h>
 #include <time.h>
 #include <err.h>
+#include "pintaalat.h"
 
 #define ARRPIT(a) (sizeof(a)/sizeof(*(a)))
 #define MIN(a,b) (a)<(b)? (a): (b)
-#define ASTE 0.017453293
-const double r2 = 6362132.0*6362132.0;
-#define SUHT_ALA(lat, hila) (sin((((double)lat)+(hila)*0.5) * ASTE) - sin((((double)lat)-(hila)*0.5) * ASTE))
 
 const int resol = 19800;
 
@@ -160,7 +158,7 @@ void täytä_kosteikkodata(struct laskenta* args) {
 	if (!args->maski[r] || osuus0ptr[r] < wraja) continue;
 	float päivä = args->kausiptr[args->vuosi*resol+r];
 	if (päivä != päivä) continue;
-	päivä_keskiarvoon_w(args, alat[r/360], args->kausi, päivä, osuus1ptr[r]);
+	päivä_keskiarvoon_w(args, pintaalat[r/360], args->kausi, päivä, osuus1ptr[r]);
     }
 }
 
@@ -169,7 +167,7 @@ void täytä_köppendata(struct laskenta* args) {
 	if (!args->maski[r] || luok_c[r] != args->lajinum) continue;
 	float päivä = args->kausiptr[args->vuosi*resol+r];
 	if (päivä != päivä) continue;
-	päivä_keskiarvoon(args, alat[r/360], args->kausi, päivä);
+	päivä_keskiarvoon(args, pintaalat[r/360], args->kausi, päivä);
     }
 }
 
@@ -181,7 +179,7 @@ void täytä_ikirdata(struct laskenta* args) {
 	if (!args->maski[r] || luok_c[ikirv*resol+r] != args->lajinum) continue;
 	float päivä = args->kausiptr[args->vuosi*resol+r];
 	if (päivä != päivä) continue;
-	päivä_keskiarvoon(args, alat[r/360], args->kausi, päivä);
+	päivä_keskiarvoon(args, pintaalat[r/360], args->kausi, päivä);
     }
 }
 
@@ -257,12 +255,7 @@ alku:
     nct_read_ncfile_gd(&maskivset, "aluemaski.nc");
     int lonpit = nct_get_varlen(&NCTVAR(maskivset, "lon"));
     int latpit = nct_get_varlen(&NCTVAR(maskivset, "lat"));
-    double *lat = nct_get_var(&maskivset, "lat")->data;
     assert(lonpit*latpit == resol);
-    double _alat[latpit];
-    alat = _alat;
-    for(int i=0; i<latpit; i++)
-	alat[i] = SUHT_ALA(lat[i], 1);
     char* maski = nct_next_truevar(maskivset.vars[0], 0)->data;
 
     nct_vset *kausivset = nct_read_ncfile("kausien_päivät.nc");

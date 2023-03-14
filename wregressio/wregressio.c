@@ -6,7 +6,6 @@
 #include <gsl/gsl_multifit.h>
 #include <gsl/gsl_fit.h>
 #include <gsl/gsl_statistics.h>
-#include <math.h>
 #include <stdint.h>
 #include <stdarg.h>
 #include <string.h>
@@ -14,6 +13,7 @@
 #include <unistd.h>
 #include <sys/stat.h> // mkdir
 #include <err.h>
+#include "../pintaalat.h"
 
 const char* wetlnimet_0[]    = {"wetland", "bog", "fen", "marsh"};
 const char* wetlandnimi_0    = "wetland_warm";
@@ -34,7 +34,6 @@ const char* pripost_ulos[]   = {"pri", "post"};
 #define perusväri do { if(tty) printf("\033[0m"); } while(0)
 int tty;
 
-#define SUHT2ABS_KERR 6362132.0*6362132.0 * 0.017453293 * 1 // r2 * ASTE * hila
 #define ncdir "../"
 
 #ifndef menetelmä
@@ -421,18 +420,14 @@ int hae_alku(nct_var* v, struct tm* aika) {
     return (mktime(aika) - t.a.t) / 86400;
 }
 
-#define hila 1
-#define ASTE 0.017453293
-void luo_suhteellinen_pintaala(data_t* dt, nct_set* vuovs) {
+void luo_pintaala(data_t* dt, nct_set* vuovs) {
     dt->alat = malloc(dt->resol*sizeof(double));
-    int d1 = nct_get_var(vuovs, "lon")->len;
-    double *lat = nct_loadg_as(vuovs, "lat", NC_DOUBLE)->data;
+    int lonpit = nct_get_var(vuovs, "lon")->len;
+    int latpit = ARRPIT(pintaalat);
     int ind=0;
-    do {
-	double ala = sin(((double)lat[ind/d1]+hila*0.5) * ASTE) - sin(((double)lat[ind/d1]-hila*0.5) * ASTE);
-	for(int i=0; i<d1; i++)
-	    dt->alat[ind++] = ala;
-    } while(ind < dt->resol);
+    for(int j=0; j<latpit; j++)
+	for(int i=0; i<lonpit; i++)
+	    dt->alat[ind++] = pintaalat[j];
 }
 
 void alusta_dt1(data_t* dt) {
@@ -646,7 +641,7 @@ int main(int argc, char** argv) {
     assert((intptr_t)dt.vuo >= 0x800);
     dt.vuo += alku*dt.resol;
 
-    luo_suhteellinen_pintaala(&dt, vuovs);
+    luo_pintaala(&dt, vuovs);
 
     nct_set* vvv = nct_read_ncf(ncdir "kaudet.nc", nct_rlazy|nct_ratt);
     var = nct_load(nct_firstvar(vvv));

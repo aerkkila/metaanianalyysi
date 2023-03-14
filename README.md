@@ -1,9 +1,9 @@
-## Codes used to analyze methane flux modelling results
+## Codes used to write a publication about environmental methane drivers.
 Most C-codes in this repository use this library github.com/aerkkila/nctietue3.git to handle netcdf files.
 They are compiled with argument -lnctietue3.
 
 1. **Following codes create the data that rest of the codes need. These may read external data which is not in this repository.**
-   - **BAWLD<area>.py** &rarr; BAWLD05x05<area>.nc, BAWLD1x1<area>.nc \
+   - **bawld/bawld.c** &rarr; BAWLD1x1<area>.nc \
 	   BAWLD classification
    - **ikirdata<area>.py** &rarr; ikirdata<area>.nc, ikirdata<area>.npy \
 	   permafrost classification
@@ -15,6 +15,9 @@ They are compiled with argument -lnctietue3.
 	   Reads shapefile of köppen classification and outputs netcdf file.
    - **köppenmaski<area>.py** &rarr; köppenmaski<area>.npy, köppenmaski<area>.txt \
 	   Climate class for each grid cell.
+   - **pintaalat<area>.c** &rarr pintaalat<area>.h, pintaalat<area>.py \
+   	   Creates surface areas on different latitudes using proj-library. \
+	   Outputs the array as C and python code which can be included into C or Python codes.
 
 2. **Following codes process data further from part 1** These make the hard work.
    - **vuojakaumadata<area>.c** &rarr; vuojakaumadata/\*.bin, vuojakaumadata/vuosittain/\*.bin, vuojakaumadata/vuosittain/*.csv \
@@ -55,10 +58,7 @@ They are compiled with argument -lnctietue3.
 	   Can be run with argument päivä to make similar figures of season start days.
    - **kosteikkoalueet.py** &rarr; kosteikkoalueet.png
 	   Permafrost and non-permafrost wetland category areas separated on a map.
-   - **xvuo_laatikko.py** &rarr; xvuo_laatikko_wetland.png
-   - **osajää.py** &rarr; osajää.png
-	   Figure about relation between frozen percent and partly frozen percent
 
 **Other**
-- **ikir_alkuloppu.py** &rarr; ikir[0123]_{season}_start.png \
-	   Unused. Histogram of frequency of season start dates in different permafrost regions.
+   - **vanhoja**, **puolivanhoja**, **säiliö** \
+   	old codes which could be removed but has been archived instead
