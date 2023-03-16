@@ -21,9 +21,9 @@ int main() {
     geod_init(&g, 6378137, 1/298.257222101); // WGS84
     double ala1, ala2;
 
-    FILE* H = fopen("pintaalat.h", "w");
+    FILE* H  = fopen("pintaalat.h", "w");
     FILE* py = fopen("pintaalat.py", "w");
-    fprintf(H, "static const double pintaalat[] = {\n    ");
+    fprintf(H,  "static const double pintaalat[] = {\n    ");
     fprintf(py, "pintaalat = [\n    ");
 
     for(int j=0; ; j++) {
@@ -34,20 +34,20 @@ int main() {
 		lat[j]+latväli05, 0, lat[j]+latväli05, lonväli,
 		NULL, NULL, NULL, NULL, NULL, NULL, &ala2);
 	double ala = (ala2-ala1) * 1e-6;
-	fprintf(H, "%lf", ala);
+	fprintf(H,  "%lf", ala);
 	fprintf(py, "%lf", ala);
 	if (j==latpit-1)
 	    break;
 	if (!((j+1)%7)) {
-	    fprintf(H, ",\n    ");
+	    fprintf(H,  ",\n    ");
 	    fprintf(py, ",\n    ");
 	}
 	else {
-	    fprintf(H, ", ");
+	    fprintf(H,  ", ");
 	    fprintf(py, ", ");
 	}
     }
-    fprintf(H, "\n};\n");
+    fprintf(H,  "\n};\n");
     fprintf(py, "\n]\n");
     fclose(H);
     fclose(py);
