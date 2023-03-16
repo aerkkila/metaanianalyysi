@@ -352,7 +352,7 @@ int main(int argc, char** argv) {
     if(argumentit(argc, argv))
 	return 1;
     char kansio_[60];
-    sprintf(kansio_, "vuojakaumadata2302%s%s", kost? "/kost": "", VUODET_ERIKSEEN? "/vuosittain": "");
+    sprintf(kansio_, "vuojakaumadata%s%s", kost? "/kost": "", VUODET_ERIKSEEN? "/vuosittain": "");
     kansio = kansio_;
     nct_var* apuvar;
     const char** _luoknimet[] = { [kopp_e]=koppnimet, [ikir_e]=ikirnimet, [wetl_e]=wetlnimet, };

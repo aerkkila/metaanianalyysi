@@ -156,7 +156,7 @@ int main(int argc, char** argv) {
 	nct_add_var(&tallenn, data, NC_FLOAT, (char*)luokat[j], 2, varid);
     }
 
-    nct_write_nc(&tallenn, "vuosijainnit3.nc");
+    nct_write_nc(&tallenn, "vuosijainnit.nc");
 
     nct_free(&tallenn, aluevset, bawvset, vuovset, kauvset);
 }

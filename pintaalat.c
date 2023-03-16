@@ -6,7 +6,6 @@ int main() {
     double *lat, *lon, latväli05, lonväli;
     int latpit;
 
-    /* Alustetaan yllä olevat. */
     nct_readm_ncf(set, "aluemaski.nc", nct_rlazy);
     nct_var* v = nct_loadg_as(&set, "lat", NC_DOUBLE);
     latpit = v->len;
@@ -16,7 +15,6 @@ int main() {
     lon = v->data;
     lonväli = lon[1]-lon[0];
 
-    /* Alustetaan geoidi. */
     struct geod_geodesic g;
     geod_init(&g, 6378137, 1/298.257222101); // WGS84
     double ala1, ala2;

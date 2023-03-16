@@ -52,7 +52,7 @@ static char* lmaskit;
 SHPObject** shpoliot;
 size_t pit_lat, pit_lon, pit_latlon;
 int köppluokkia;
-double *lat, *lon;
+float *lat, *lon;
 nc_kirj_tyyppi* nc_kirj_data;
 dbftyyppi* dbfdata;
 
@@ -136,14 +136,14 @@ int main(int argc, char** argv) {
     NCFUNK(nc_open, nc_luett_nimi, NC_NOWRITE, &ncid);
     NCFUNK(nc_inq_dimid, ncid, "lat", &id);            // lat
     NCFUNK(nc_inq_dim, ncid, id, NULL, &pit_lat);
-    lat = malloc(pit_lat*sizeof(double));
+    lat = malloc(pit_lat*sizeof(float));
     NCFUNK(nc_inq_varid, ncid, "lat", &id);
-    NCFUNK(nc_get_var, ncid, id, lat);
+    NCFUNK(nc_get_var_float, ncid, id, lat);
     NCFUNK(nc_inq_dimid, ncid, "lon", &id);            // lon
     NCFUNK(nc_inq_dim, ncid, id, NULL, &pit_lon);
-    lon = malloc(pit_lon*sizeof(double));
+    lon = malloc(pit_lon*sizeof(float));
     NCFUNK(nc_inq_varid, ncid, "lon", &id);
-    NCFUNK(nc_get_var, ncid, id, lon);
+    NCFUNK(nc_get_var_float, ncid, id, lon);
     NCFUNK(nc_close, ncid);
 
     pit_latlon = pit_lat*pit_lon;
@@ -246,10 +246,10 @@ void kirjoita_netcdf() {
     int ncid, latid, lonid, varid;
     NCFUNK(nc_create, nc_kirj_nimi, NC_CLOBBER|NC_NETCDF4, &ncid);
     NCFUNK(nc_def_dim, ncid, "lat", pit_lat, &latid);
-    NCFUNK(nc_def_var, ncid, "lat", NC_DOUBLE, 1, &latid, &varid);
+    NCFUNK(nc_def_var, ncid, "lat", NC_FLOAT, 1, &latid, &varid);
     NCFUNK(nc_put_var, ncid, varid, lat);
     NCFUNK(nc_def_dim, ncid, "lon", pit_lon, &lonid);
-    NCFUNK(nc_def_var, ncid, "lon", NC_DOUBLE, 1, &lonid, &varid);
+    NCFUNK(nc_def_var, ncid, "lon", NC_FLOAT, 1, &lonid, &varid);
     NCFUNK(nc_put_var, ncid, varid, lon);
     int latlonid[] = {latid,lonid};
     NCFUNK(nc_def_var, ncid, "luokka", NC_KIRJTYYPPI_ENUM, 2, latlonid, &varid);
