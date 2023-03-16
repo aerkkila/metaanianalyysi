@@ -12,17 +12,11 @@
 #define syksy jäätym
 #define kesä 1
 
-#ifdef Short
 typedef short päi_tyy;
 const char* nimi_ulos = "kausien_päivät_int16.nc";
 const int nctyyppi = NC_SHORT;
 #define täyttö 999
-#else
-typedef float päi_tyy;
-const char* nimi_ulos = "kausien_päivät.nc";
-const int nctyyppi = NC_FLOAT;
-#define täyttö (0.0f/0.0f)
-#endif
+const char* nimi_ulos_float = "kausien_päivät.nc";
 
 #define jäätyykö(froz, part) ((froz)*9+(part) >= 0.9)
 //#define jäätyykö(froz, part) (froz >= 0.1)
@@ -332,6 +326,18 @@ aika_päättyi:;
     nct_add_var(&k, pl.t[0], nctyyppi, "winter_start",   3, dimids);
     nct_add_var(&k, pl.t[1], nctyyppi, "winter_end",     3, dimids);
     nct_write_nc(&k, nimi_ulos);
+
+    /* tallenetaan myös float-muodossa */
+    nct_foreach(&k, var) {
+	var->dtype = NC_FLOAT;
+	float* fdata = realloc(var->data, var->len*sizeof(float));
+	short* sdata = (short*)fdata;
+	if (fdata)	var->data = fdata;
+	else		{ warn("malloc"); break; }
+	for(int i=var->len-1; i>=0; i--)
+	    fdata[i] = sdata[i]==täyttö ? 0.0/0.0 : sdata[i];
+    }
+    nct_write_nc(&k, nimi_ulos_float);
 
     free(maski);
     nct_free(&k, partly, frozen);
