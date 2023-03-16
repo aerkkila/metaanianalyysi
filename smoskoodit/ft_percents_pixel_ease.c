@@ -58,7 +58,6 @@ int* tee_valintaindeksit(double* lat, double* lon) {
 int main() {
     int nfrozen, npartly, nthaw;
     char apustr[256];
-    unsigned char *aluemaski;
 
     double* restrict lat = nct_range_NC_DOUBLE(29.5, 84, 1);
     double* restrict lon = nct_range_NC_DOUBLE(-179.5, 180, 1);
@@ -147,7 +146,6 @@ int main() {
     tallenn = (nct_set){0};
     nct_dim2coord(nct_add_dim(&tallenn, 55, "lat"), lat, NC_DOUBLE);
     nct_dim2coord(nct_add_dim(&tallenn, 360, "lon"), lon, NC_DOUBLE);
-    int dimids2[] = {0,1};
     nct_add_var(&tallenn, numgrids, NC_UBYTE, "data", 2, dimids);
     nct_write_nc(&tallenn, "ft_percent/number_of_pixels.nc");
 

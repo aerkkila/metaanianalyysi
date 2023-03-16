@@ -38,7 +38,7 @@ void _kirjoita_osio(FILE* f, taul_t taul, const char** nimet, int sarakkeita, in
 void kirjoita_data(FILE* f) {
     const char** kaikkinimet[] = {wetlnimet, ikirnimet, köppnimet};
     int pitdet[] = {pit_wetl, pit_ikir, pit_köpp};
-    K("\\begin{tabular}{l|rrr}\n");
+    K("\\begin{tabular}{l|rr}\n");
     K(" & °N all area & °N area wl");
     K(" \\\\\n\\midrule\n");
     kirjoita_osio(f, itaul, ikirnimet, 2); K("\\midrule\n");
