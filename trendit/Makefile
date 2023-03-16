@@ -6,3 +6,6 @@ mannk.out.c: mannk.pyx lue.c tulosta.c
 
 mannk.so: mannk.out.c
 	gcc -Wno-format-security -fpic -shared -I/usr/include/python3.10 -o $@ $< -g
+
+# en jaksa automatisoida näitä,
+# mutta tarvittaessa ajetaan esim make -C .. vvt.target argv=antro
