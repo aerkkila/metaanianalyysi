@@ -4,9 +4,7 @@ from netCDF4 import Dataset
 from laatikkokuvaaja import laatikkokuvaaja
 from matplotlib.pyplot import *
 import luokat, sys, time
-
-aste = 0.0174532925199
-SPINTAALA = lambda _lat: np.sin((_lat+1)*aste) - np.sin(_lat*aste)
+from pintaalat import pintaalat
 
 kaudet = luokat.kaudet[1:]
 pd_muuttujat = [['%s_start' %k, '%s_end' %k] for k in kaudet]
@@ -70,8 +68,7 @@ def main():
     ikirdata   = toimikoon_ikirouta(ikirdata_).flatten()
     ikirdata_.close()
 
-    painot = np.array([SPINTAALA(lat) for lat in päivädata['lat'][:]])
-    painot = np.tile(np.repeat(painot, 360), vuosi1-vuosi0)
+    painot = np.tile(np.repeat(pintaalat, 360), vuosi1-vuosi0)
 
     xnimet_ikir = ['PF%i' %i for i in range(4)]
     xnimet_köpp = luokat.köpp

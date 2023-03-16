@@ -35,7 +35,6 @@ const char* kansio = "kausidata";
 static char ei_katkaistuja, kertymä, kaikki_muuttujat;
 static nct_vset *luok_vs;
 static char  *restrict luok_c;
-static double *restrict alat;
 static int ikirvuosi0, ikirvuosia, vuosi0, vuosi1;
 
 struct laskenta {

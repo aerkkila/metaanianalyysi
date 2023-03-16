@@ -118,7 +118,7 @@ taulukot.target: vuotaul.target
 	./lattaul.out
 
 # Näitä ei sisälly all-kohteeseen
-# Lienevät vanhentuneita
+# Käytetään trendiosiossa
 päivät_vuosittain.out: päivät_vuosittain.c pintaalat.h
 	gcc -Wall $< -o $@ `pkg-config --libs nctietue2 gsl` -lm -g -O3
 päivät_vuosittain_ikir: päivät_vuosittain.out
@@ -128,4 +128,4 @@ päivät_vuosittain_köpp: päivät_vuosittain.out
 päivät_vuosittain_wetl: päivät_vuosittain.out
 	./päivät_vuosittain.out kaikki_muuttujat wetl
 päivät_vuosittain.target: päivät_vuosittain_ikir päivät_vuosittain_köpp päivät_vuosittain_wetl
-	cat kausidata2301/*_*.csv > kausidata2301/data.csv
+	cat kausidata/*_*.csv > kausidata/data.csv
