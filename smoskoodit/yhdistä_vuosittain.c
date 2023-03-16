@@ -1,13 +1,12 @@
-#include <nctietue2.h>
+#include <nctietue3.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 #include <time.h>
 
-/* Yhdistää sulamisdatasta kunkin vuoden tiedostot yhdeksi täyttäen puuttuvat päivät edellisellä arvolla
-   kääntäjä tarvitsee argumentin `pkg-config --libs nctietue2`
-   github.com/aerkkila/nctietue2 pitää olla asennettuna*/
+/* Yhdistää sulamisdatasta kunkin vuoden tiedostot yhdeksi täyttäen puuttuvat päivät edellisellä arvolla.
+   Kääntäjä tarvitsee argumentit -lnctietue3 -lnetcdf */
 
 const int pit = 720*720;
 const int year0=2010, year1=2022;
@@ -16,27 +15,29 @@ int main() {
     char units[60];
     strcpy(units, "days since 0000-00-00"); // jotta strlen on heti oikein
     /* Tämä lukeminen on vain muistin alustamiseksi */
-    nct_vset* vset = nct_read_ncfile("purettu/FT_20140101.nc");
-    int varid = nct_get_varid(vset, "L3FT");
+    nct_set* set = nct_read_nc("purettu/FT_20140101.nc");
+    int varid = nct_get_varid(set, "L3FT");
     char tiednimi[35];
     unsigned char* uusi = malloc(366*pit);
     if(!uusi) {
 	fprintf(stderr, "malloc uusi epäonnistui\n");
 	return 1;
     }
-    double* taul = vset->vars[varid]->data;
+    double* taul = set->vars[varid]->data;
     struct tm aikatm = {0};
 
     strcpy(tiednimi, "purettu/");
     char* tiednimi1 = tiednimi + strlen(tiednimi);
 
-    nct_vset tallenn = {0};
-    nct_add_dim(&tallenn, nct_range_NC_USHORT(0,366,1), 366, NC_USHORT, "time");
+    nct_var* var;
+    nct_set tallenn = {0};
+    
+    nct_put_interval(nct_dim2coord(nct_add_dim(&tallenn, 366, "time"), NULL, NC_USHORT), 0, 1);
     nct_add_varatt_text(tallenn.vars[0], "units",    units,                 0);
     nct_add_varatt_text(tallenn.vars[0], "calendar", "proleptic_gregorian", 0);
-    char* dimnames[] = {"time", "y", "x"};
-    size_t dimlens[] = {-1,     720, 720};
-    nct_add_var_(&tallenn, uusi, NC_UBYTE, "data", 3, NULL, dimlens, dimnames);
+    nct_add_dim(&tallenn, 720, "y");
+    nct_add_dim(&tallenn, 720, "x");
+    nct_add_var_alldims(&tallenn, uusi, NC_UBYTE, "data");
 
     puts("");
     int yday0=-1;
@@ -53,10 +54,10 @@ int main() {
 		    continue;
 		printf("\033[A\r%s\033[K\n", tiednimi1+3);
 		fflush(stdout);
-		NCFUNK(nc_open, tiednimi, NC_NOWRITE, &vset->ncid);
-		nct_load_var(vset->vars[varid], varid); // Kirjoittaa olemassaolevan päälle, joten ei ole muistivuoto.
-		NCFUNK(nc_close, vset->ncid);
-		vset->ncid = -1;
+		ncfunk(nc_open, tiednimi, NC_NOWRITE, &set->ncid);
+		nct_load(set->vars[varid]); // Kirjoittaa olemassaolevan päälle, joten ei ole muistivuoto.
+		ncfunk(nc_close, set->ncid);
+		set->ncid = -1;
 		/* Datasta puuttuu osa päivistä. Tässä täytetään puuttuvat kohdat viimeisimmällä arvolla.
 		   Kun päiviä ei puutu, while-silmukka käydään vain kerran. */
 		mktime(&aikatm);
@@ -86,9 +87,8 @@ int main() {
 	char tallnimi[32];
 	tallenn.dims[0]->len = aikatm.tm_yday+1;
 	sprintf(tallnimi, "FT_720_%i.nc", y);
-	nct_write_ncfile(&tallenn, tallnimi);
+	nct_write_nc(&tallenn, tallnimi);
     }
-    nct_free_vset(&tallenn);
-    nct_free_vset(vset);
+    nct_free(&tallenn, set);
     return 0;
 }
