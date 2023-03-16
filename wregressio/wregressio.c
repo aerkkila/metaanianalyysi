@@ -23,8 +23,6 @@ const char *wetlandnimi, **wetlnimet;
 int wpit;
 const char* kaudet[]         = {"whole_year", "summer", "freezing", "winter"};
 enum                           {whole_year_e, summer_e, freezing_e, winter_e};
-const char* menetelmät[]     = {"keskiarvo", "huippuarvo", "kaikki"};
-enum			       {keskiarvo_e, huippuarvo_e, kaikki_e};
 const char* pripost_sisään[] = {"flux_bio_prior", "flux_bio_posterior"};
 const char* pripost_ulos[]   = {"pri", "post"};
 
@@ -36,9 +34,6 @@ int tty;
 
 #define ncdir "../"
 
-#ifndef menetelmä
-#define menetelmä keskiarvo_e // kaikki_e ja huipparvo_e eivät käsittele vuorajaa oikein
-#endif
 #define luott_0 0.025
 #define luott_1 0.975
 const int vakio = 0; // 1 tai 0 sen mukaan otetaanko vakiotermi vai ei
@@ -145,45 +140,9 @@ double summa(double* dt, int n) {
     for(int i=0; i<n; i++) s += dt[i];
     return s;
 }
-#if 0
-int luo_data_kaikki(const data_t* dt, data_t* dt1, char* kausic, double wraja, double vuoraja) {
-    char r_ei_kelpaa[dt->resol];
-    memset(r_ei_kelpaa, 2, dt->resol);
-    dt1->pit = dt1->keskivuo = 0;
-    for(int t=0; t<dt->aikaa; t+=3) {
-	int tdt = t*dt->resol;
-	for(int r=0; r<dt->resol; r++) {
-	    if(!kausic[r] || dt->wdata[0][r] < wraja) continue;
 
-	    if(r_ei_kelpaa[r] == 2) {
-		double summa=0;
-		for(int i=1; i<wpit; i++)
-		    summa += dt->wdata[i][r] / dt->wdata[0][r];
-		r_ei_kelpaa[r] = summa < 0.97;
-	    }
-
-	    if(r_ei_kelpaa[r]) continue;
-	    if(kausic[tdt+r] != kausi && kausi != whole_year_e) continue;
-	    double yrite = dt->vuo[tdt+r] / dt->wdata[0][r] * 1e9;
-	    if(yrite > vuoraja) continue;
-	    dt1->vuo[dt1->pit]  = yrite;
-	    dt1->keskivuo       += dt->vuo[tdt+r] * dt->alat[r];
-	    dt1->alat[dt1->pit] = dt->alat[r];
-	    dt1->wdata[0][dt1->pit] = dt->wdata[0][r];
-	    for(int i=1; i<wpit; i++)
-		dt1->wdata[i][dt1->pit] = dt->wdata[i][r] / dt->wdata[0][r];
-	    dt1->wdata[0][dt1->pit] = dt->wdata[0][r];
-	    dt1->pit++;
-	}
-    }
-    dt1->keskivuo = NAN;//*= SUHT2ABS_KERR;
-    return 0;
-}
-#endif
 int luo_data(const data_t* dt, data_t* dt1, char* kausic, double wraja, double vuoraja) {
     dt1->pit = dt1->keskivuo = 0;
-    //if(menetelmä == kaikki_e) return luo_data_kaikki(dt, dt1, kausic, wraja, vuoraja);
-    /* Tässä on nyt keskitytty saamaan keskiarvomenetelmä oikein ja huippuarvoa ei ole tarkoituksena käyttää. */
     int poistettuja = 0;
     double poistettu_ala = 0;
     double *summat = malloc(dt->resol*sizeof(double)); // kerätään ensin tähän ja lasketaan yhteen vasta lopussa,
@@ -197,63 +156,32 @@ int luo_data(const data_t* dt, data_t* dt1, char* kausic, double wraja, double v
 	    summa += dt->wdata[i][r] / dt->wdata[0][r];
 	if(summa < 0.97) continue;
 
-	switch(menetelmä) {
-	case keskiarvo_e:
-	    /* Lasketaan yhteen yksi hilaruutu koko ajalta kyseisellä kaudella. */
-	    summa = 0;
-	    double ala_ja_aika = 0;
-	    if(kausi==whole_year_e)
-		for(int t=0; t<dt->aikaa; t++) {
+	/* Käytetään keskiarvoja. */
+	/* Lasketaan yhteen yksi hilaruutu koko ajalta kyseisellä kaudella. */
+	summa = 0;
+	double ala_ja_aika = 0;
+	if(kausi==whole_year_e)
+	    for(int t=0; t<dt->aikaa; t++) {
+		summa += dt->vuo[t*dt->resol + r] * dt->alat[r];
+		ala_ja_aika += dt->alat[r];
+	    }
+	else
+	    for(int t=0; t<dt->aikaa; t++)
+		if(kausic[t*dt->resol + r] == kausi) {
 		    summa += dt->vuo[t*dt->resol + r] * dt->alat[r];
 		    ala_ja_aika += dt->alat[r];
 		}
-	    else
-		for(int t=0; t<dt->aikaa; t++)
-		    if(kausic[t*dt->resol + r] == kausi) {
-			summa += dt->vuo[t*dt->resol + r] * dt->alat[r];
-			ala_ja_aika += dt->alat[r];
-		    }
 
-	    /* Lasketaan keskiarvo (yrite) jakamalla summa pinta-alalla ja ajalla */
-	    if(ala_ja_aika==0) continue;
-	    double yrite = summa / ala_ja_aika / dt->wdata[0][r] * 1e9; // vuo / kosteikon osuus
-	    if(yrite >= vuoraja) {
-		poistettuja++;
-		poistettu_ala += dt->alat[r];
-		continue; }
-	    dt1->vuo[dt1->pit] = yrite;
-	    summat[dt1->pit] = summa;
-	    aikaalat[dt1->pit] = ala_ja_aika * dt->wdata[0][r];
-	    break;
-#if 0
-	case huippuarvo_e: // muuttujan nimi on hämäävästi summa
-	    summa = -INFINITY;
-	    int argmax = -1;
-	    if(kausi==whole_year_e)
-		for(int t=0; t<dt->aikaa; t++) {
-		    double yrite = dt->vuo[t*dt->resol+r] / dt->wdata[0][r] * 1e9;
-		    if(summa < yrite && vuoraja >= yrite) {
-			argmax = t*dt->resol+r;
-			summa = yrite;
-		    }
-		}
-	    else
-		for(int t=0; t<dt->aikaa; t++) {
-		    if(kausic[t*dt->resol+r] != kausi) continue;
-		    double yrite = dt->vuo[t*dt->resol+r] / dt->wdata[0][r] * 1e9;
-		    if(summa < yrite && vuoraja >= yrite) {
-			argmax = t*dt->resol+r;
-			summa = yrite;
-		    }
-		}
-	    if(summa==-INFINITY) continue;
-	    dt1->vuo[dt1->pit] = summa;
-	    dt1->keskivuo      += NAN;//dt->vuo[argmax] * dt->alat[argmax % dt->resol];
-	    break;
-#endif
-	default:
-	    asm("int $3");
-	}
+	/* Lasketaan keskiarvo (yrite) jakamalla summa pinta-alalla ja ajalla */
+	if(ala_ja_aika==0) continue;
+	double yrite = summa / ala_ja_aika / dt->wdata[0][r] * 1e9; // vuo / kosteikon osuus
+	if(yrite >= vuoraja) {
+	    poistettuja++;
+	    poistettu_ala += dt->alat[r];
+	    continue; }
+	dt1->vuo[dt1->pit] = yrite;
+	summat[dt1->pit] = summa;
+	aikaalat[dt1->pit] = ala_ja_aika * dt->wdata[0][r];
 
 	dt1->alat[dt1->pit] = dt->alat[r];
 	for(int i=1; i<wpit; i++)
@@ -431,7 +359,7 @@ void luo_pintaala(data_t* dt, nct_set* vuovs) {
 }
 
 void alusta_dt1(data_t* dt) {
-    int rt = dt->resol*(menetelmä==kaikki_e ? dt->aikaa : 1);
+    int rt = dt->resol;
     dt->vuo = malloc(rt*sizeof(double));
     dt->alat = malloc(rt*sizeof(double));
     for(int i=0; i<wpit; i++)
