@@ -59,8 +59,8 @@ struct data_t {
     double *wdata[8]; // luku on tarkoituksella tarvittavaa suurempi
     double keskivuo;
     int resol;
-    int aikaa;
     int pit;
+    time_t t0_vuo;
     double *alat;
     double ala;
 };
@@ -141,15 +141,50 @@ double summa(double* dt, int n) {
     return s;
 }
 
-int luo_data(const data_t* dt, data_t* dt1, char* kausic, double wraja, double vuoraja) {
+#define VIRHE -1234567
+#define PÄIVÄTÄYTTÖ 999
+int päiviä_nollapäivästä(time_t aika0, int vuosi, short päivä) {
+    if(päivä == PÄIVÄTÄYTTÖ)
+	return VIRHE;
+    struct tm aikatm = {
+	.tm_year = vuosi-1900,
+	.tm_mon  = 0,
+	.tm_mday = 1+päivä,
+    };
+    time_t kohdeaika = mktime(&aikatm);
+    return (kohdeaika - aika0) / 86400;
+}
+
+const char* varnimet[] = {
+    [summer_e	*2]	= "summer_start",
+    [summer_e	*2+1]	= "summer_end",
+    [winter_e	*2]	= "winter_start",
+    [winter_e	*2+1]	= "winter_end",
+    [freezing_e	*2]	= "freezing_start",
+    [freezing_e	*2+1]	= "freezing_end",
+};
+
+int luo_data(const data_t* dt, data_t* dt1, nct_set* päivät, double wraja, double vuoraja) {
     dt1->pit = dt1->keskivuo = 0;
     int poistettuja = 0;
     double poistettu_ala = 0;
     double *summat = malloc(dt->resol*sizeof(double)); // kerätään ensin tähän ja lasketaan yhteen vasta lopussa,
     //                                                    koska vasta lopussa tiedetään, montako pienintä jätetään ottamatta
     double *aikaalat = malloc(dt->resol*sizeof(double));
+    nct_var* var = nct_get_var(päivät, "vuosi");
+    int vuosia = var->len;
+    int vuosi0 = nct_get_integer(var, 0);
+    short *alut, *loput;
+    if (kausi != whole_year_e) {
+	var = nct_get_var(päivät, varnimet[kausi*2]);
+	alut = var->data ? var->data : nct_load(var)->data;
+	var = nct_get_var(päivät, varnimet[kausi*2+1]);
+	loput = var->data ? var->data : nct_load(var)->data;
+    }
+    else
+	alut = loput = NULL; // Tällä vältetään kääntäjän varoitus.
+
     for(int r=0; r<dt->resol; r++) {
-	if(!kausic[r]) continue;
 	if(dt->wdata[0][r] < wraja) continue;
 	double summa=0;
 	for(int i=1; i<wpit; i++)
@@ -160,17 +195,26 @@ int luo_data(const data_t* dt, data_t* dt1, char* kausic, double wraja, double v
 	/* Lasketaan yhteen yksi hilaruutu koko ajalta kyseisellä kaudella. */
 	summa = 0;
 	double ala_ja_aika = 0;
-	if(kausi==whole_year_e)
-	    for(int t=0; t<dt->aikaa; t++) {
+	if(kausi==whole_year_e) {
+	    int alku  = päiviä_nollapäivästä(dt->t0_vuo, vuosi0, 0);
+	    int loppu = päiviä_nollapäivästä(dt->t0_vuo, vuosi0+vuosia, 0);
+	    for(int t=alku; t<loppu; t++) {
 		summa += dt->vuo[t*dt->resol + r] * dt->alat[r];
 		ala_ja_aika += dt->alat[r];
 	    }
-	else
-	    for(int t=0; t<dt->aikaa; t++)
-		if(kausic[t*dt->resol + r] == kausi) {
+	}
+	else {
+	    for(int v=0; v<vuosia; v++) {
+		int alku  = päiviä_nollapäivästä(dt->t0_vuo, v+vuosi0, alut [v*dt->resol+r]);
+		int loppu = päiviä_nollapäivästä(dt->t0_vuo, v+vuosi0, loput[v*dt->resol+r]);
+		if(alku==VIRHE || loppu==VIRHE)
+		    continue;
+		for(int t=alku; t<loppu; t++) {
 		    summa += dt->vuo[t*dt->resol + r] * dt->alat[r];
 		    ala_ja_aika += dt->alat[r];
 		}
+	    }
+	}
 
 	/* Lasketaan keskiarvo (yrite) jakamalla summa pinta-alalla ja ajalla */
 	if(ala_ja_aika==0) continue;
@@ -191,16 +235,20 @@ int luo_data(const data_t* dt, data_t* dt1, char* kausic, double wraja, double v
     }
     /* Nyt jätetään pois pieniä arvoja sen mukaan kuin suuria on jätetty. */
     int poistetaan = montako_poistetaan_alusta(dt1, poistettu_ala);
-    if(dt1->pit - poistetaan < 20) return 1;
     /* Vaikka poistettuja ei olisi, osa rutiineista olettaa datan olevan järjestyksessä. */
     järjestä_vuon_mukaan(dt1, summat, aikaalat);
-    poista_alusta_määrän_perusteella(dt1, poistetaan);
-    /* dt1->pit on nyt oikein, mutta summat alkaa poisjätettävillä arvoilla. */
-    dt1->keskivuo = summa(summat+poistetaan, dt1->pit) / summa(aikaalat+poistetaan, dt1->pit) * 1e9;
+    int ret = 0;
+    if(dt1->pit - poistetaan >= 20) {
+	poista_alusta_määrän_perusteella(dt1, poistetaan);
+	/* dt1->pit on nyt oikein, mutta summat alkaa poisjätettävillä arvoilla. */
+	dt1->keskivuo = summa(summat+poistetaan, dt1->pit) / summa(aikaalat+poistetaan, dt1->pit) * 1e9;
+	dt1->ala = summa(dt1->alat, dt1->pit); // Tätä tarvitaan vain, jos rang_aste != 0.
+    }
+    else
+	ret = 1;
     free(summat);
     free(aikaalat);
-    dt1->ala = summa(dt1->alat, dt1->pit); // Tätä tarvitaan vain, jos rang_aste != 0.
-    return 0;
+    return ret;
 }
 
 typedef struct {
@@ -342,12 +390,6 @@ double ristivalidoi(const data_t* dt, int määrä) {
     return virtaama / wetlala * 1e9;
 }
 
-int hae_alku(nct_var* v, struct tm* aika) {
-    nct_anyd t = nct_mktime0(v, NULL);
-    //assert(t.d == nct_days);
-    return (mktime(aika) - t.a.t) / 86400;
-}
-
 void luo_pintaala(data_t* dt, nct_set* vuovs) {
     dt->alat = malloc(dt->resol*sizeof(double));
     int lonpit = nct_get_var(vuovs, "lon")->len;
@@ -476,8 +518,9 @@ double maksimi(const data_t* dt) {
     return max;
 }
 
+int vertauskohta;
 int vertaa_double(const void* a, const void* b) {
-    double d = *(double*)a - *(double*)b;
+    double d = ((double*)a)[vertauskohta] - ((double*)b)[vertauskohta];
     return d<0? -1: d==0? 0: 1;
 }
 
@@ -533,6 +576,7 @@ void piirrä_sovitus(FILE *f, const double* kertoimet, int nboot, int wlaji) {
 	double d = kerr*i;
 	for(int i=0; i<nboot; i++)
 	    tulos[i] = laske_tulos(d, krt[i]);
+	vertauskohta = 0;
 	qsort(tulos, nboot, sizeof(double), vertaa_double);
 	kirjx[i] = d;
 	kirj1[i] = gsl_stats_quantile_from_sorted_data(tulos, 1, nboot, luott_0);
@@ -550,11 +594,6 @@ int main(int argc, char** argv) {
     tty = isatty(STDOUT_FILENO);
     argumentit(argc, argv);
 
-    struct tm tm0 = {.tm_year=2012-1900, .tm_mon=8-1, .tm_mday=15};
-    struct tm tm1 = tm0;
-    tm1.tm_year = 2020-1900;
-    dt.aikaa = (mktime(&tm1) - mktime(&tm0)) / 86400;
-
     nct_readm_nc(wetlset, ncdir "BAWLD1x1.nc");
     for(int i=0; i<wpit; i++) {
 	assert((var = nct_get_var(&wetlset, wetlnimet[i])));
@@ -564,17 +603,18 @@ int main(int argc, char** argv) {
     dt.resol = var->len;
 
     nct_set* vuovs = nct_read_ncf(ncdir "flux1x1.nc", nct_rlazy|nct_ratt);
-    int alku = hae_alku(nct_loadg(vuovs, "time"), &tm0);
+    var = nct_get_var(vuovs, "time");
+    dt.t0_vuo = nct_mktime0(var, NULL).a.t;
+    dt.t0_vuo += nct_getl_integer(var, 0) * 86400; // in case data doesn't start from epoch
+
     dt.vuo = nct_loadg_as(vuovs, pripost_sisään[ppnum], NC_DOUBLE)->data;
     assert((intptr_t)dt.vuo >= 0x800);
-    dt.vuo += alku*dt.resol;
 
     luo_pintaala(&dt, vuovs);
 
-    nct_set* vvv = nct_read_ncf(ncdir "kaudet.nc", nct_rlazy|nct_ratt);
-    var = nct_load(nct_firstvar(vvv));
-    alku = hae_alku(nct_loadg(vvv, "time"), &tm0);
-    char* kausic = var->data + alku*dt.resol;
+    nct_set* päivät = nct_read_ncf(ncdir "kausien_päivät_int16.nc", nct_rlazy);
+    var = nct_get_var(päivät, "vuosi");
+    nct_load(var);
 
     FILE* f = NULL;
     int pit = wpit;
@@ -590,7 +630,7 @@ int main(int argc, char** argv) {
     if(!tallenna)
 	printf("%-7s %-7s %-7s %-7s %-7s\n", "yläraja", "ennuste", "oikea", "yrite", "osuma");
     for(int i=0; i<rajapit; i++) {
-	if(luo_data(&dt, &dt1, kausic, 0.05, vuorajat[i]))
+	if(luo_data(&dt, &dt1, päivät, 0.05, vuorajat[i]))
 	    break;
 	if(vuorajat[i] != vuorajat[i])
 	    alaa_kaikkiaan = dt1.ala;
@@ -620,7 +660,7 @@ int main(int argc, char** argv) {
     double alaraja = NAN;
     for(double d=-8; d<=8; d+=1) {
 	double raja = vuorajat[paras_i]+d;
-	if(luo_data(&dt, &dt1, kausic, 0.05, raja))
+	if(luo_data(&dt, &dt1, päivät, 0.05, raja))
 	    continue;
 	double rangaistus = 1;
 	for(int _i=0; _i<rang_aste; _i++)
@@ -646,7 +686,7 @@ int main(int argc, char** argv) {
     }
 
     /* Piirretään pisteet wetland-osuuden funktiona, ja valitut vuon ylä- ja alarajat. */
-    if(luo_data(&dt, &dt1, kausic, 0.05, NAN))
+    if(luo_data(&dt, &dt1, päivät, 0.05, NAN))
 	varoita(__FILE__, __LINE__);
     if(!f)
 	assert((f = popen(aprintf("./piirrä.py %s", python_arg), "w")));
@@ -659,7 +699,7 @@ int main(int argc, char** argv) {
     assert(fwrite(&alaraja, 8, 1, f) == 1);
 
 #ifdef RAJAUSKUVAAJA
-    if(luo_data(&dt, &dt1, kausic, 0.05, paras_raja))
+    if(luo_data(&dt, &dt1, päivät, 0.05, paras_raja))
 	varoita(__FILE__, __LINE__);
     for(int i=1; i<pit; i++) {
 	double epäluku = NAN;
@@ -673,10 +713,10 @@ int main(int argc, char** argv) {
 
     /* Kertoimet-muuttujassa on alussa vakiotermi ja kertoimet.
        Sitten jokaisesta bootstrap-sovituksesta vakio ja tulos eli vakio+kerroin[i]. */
-    double kertoimet[pit*(nboot_glob+2)]; // +2, koska qsort vaihtaa aina pit kappaletta myös lopussa
+    double kertoimet[pit*(nboot_glob+1)]; // +1, koska alussa on pääsovitus ja sitten bootstrapping
     double r2;
 
-    assert(!luo_data(&dt, &dt1, kausic, 0.05, paras_raja));
+    assert(!luo_data(&dt, &dt1, päivät, 0.05, paras_raja));
     sovita_monta(&dt1, kertoimet, &r2, nboot_glob);
     printf("rajat: %-3.0lf %-3.0lf\n", paras_raja, alaraja);
     printf("hyväksyttyä: %.4lf\n", dt1.ala / alaa_kaikkiaan);
@@ -690,15 +730,14 @@ int main(int argc, char** argv) {
     assert(fwrite(&dt1.pit, 4, 1, f) == 1);
     assert(fwrite(dt1.wdata[0], 8, dt1.pit, f) == dt1.pit);
     assert(fwrite(dt1.vuo,      8, dt1.pit, f) == dt1.pit);
-    //fwrite(kertoimet+0, 8, 1, f);
-    for(int i=1; i<pit; i++) {
-	qsort(kertoimet+pit+i, nboot_glob, 8*pit, vertaa_double); // pit kpl eri muuttujia on aina peräkkäin
+    for(int i=1; i<pit; i++) { // sijalla 0 on vakiotermi
+	vertauskohta = i;
+	qsort(kertoimet+pit, nboot_glob, sizeof(double)*pit, vertaa_double); // pit kpl eri muuttujia on aina peräkkäin
 	double matala = gsl_stats_quantile_from_sorted_data(kertoimet+pit+i, pit, nboot_glob, luott_0);
 	double korkea = gsl_stats_quantile_from_sorted_data(kertoimet+pit+i, pit, nboot_glob, luott_1);
 	fprintf(f, "%s\n%s\n", wetlnimet[i], kaudet[kausi]);
 	fwrite(dt1.wdata[i], 8, dt1.pit, f);
 	piirrä_sovitus(f, kertoimet, nboot_glob, i);
-	//fwrite(kertoimet+i, 8, 1, f);
 	printf("%-15s %-8.3lf %-8.3lf %.3lf\n", wetlnimet[i], kertoimet[i]+kertoimet[0], matala, korkea);
     }
     vapauta(pclose, f);
@@ -707,7 +746,7 @@ int main(int argc, char** argv) {
 	vapauta(pclose, f);
 
     vapauta_dt1(&dt1);
-    nct_free(vvv, &wetlset, vuovs);
+    nct_free(päivät, &wetlset, vuovs);
     free(dt.alat);
     fclose(stdout); // voi olla vaihdettu tiedostoksi
 }
