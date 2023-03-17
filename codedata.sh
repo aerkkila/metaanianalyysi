@@ -46,6 +46,7 @@ cp -lr \
     $kansio
 
 rm -rf $kansio/vuodata/vuosittain
+rm -rf $kansio/vuojakaumadata/vuosittain
 
 nimet0=
 nimet1=
@@ -413,4 +414,4 @@ EOF
 # Lopuksi koodit ilman suuria tiedostoja
 k1=$HOME/codedata1
 cp -rl $k0 $k1
-rm -r $k1/flux1x1.nc $k1/create_kaudet/ft_percent $k1/create_kaudet/create_ft_percent/EASE*.nc
+rm -r $k1/flux1x1.nc $k1/create_kausien_päivät/ft_percent $k1/create_kausien_päivät/create_ft_percent/EASE*.nc
