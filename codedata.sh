@@ -61,7 +61,6 @@ kopioi() {
 nimet0='
 aluejaot.py
 kaudet_laatikko.py
-kosteikkoalueet.py
 vuojakaumat.py
 vuosijainnit.py
 ttesti_luokat.py
@@ -70,9 +69,8 @@ ttesti.py
 nimet1='
 fig01.py
 fig02,03.py
-fig04.py
-fig05,06.py
-fig07.py
+fig04,05.py
+fig06.py
 ttest_wetlcateg.py
 ttest_mixed-pure.py
 '
@@ -119,7 +117,7 @@ cat >$k0/tableA1,A5.sh <<-EOF
 	mv vuosummat_epälauhkea_pri.tex tableA5.tex
 EOF
 
-kansio=$k0/fig08,AppendixB
+kansio=$k0/fig07,AppendixB
 mkdir -p $kansio
 cd wregressio
 cp laske.sh Makefile virhepalkit.pyx setup.py virhepalkit.py piirrä.py taulukko_rajat.c wregressio.c yhdistä.sh $kansio
@@ -141,7 +139,7 @@ Command line arguments to wregressio.out include:
 After wregressio.out one should run 'cat tallenteet/* > sovitteet.txt' to combine the files that wregressio.out created.
 
 Thereafter one can run the rest of codes:
-virhepalkit.py to create figure 8. That uses virhepalkit.pyx to read sovitteet.txt.
+virhepalkit.py to create figure 7. That uses virhepalkit.pyx to read sovitteet.txt.
 taulukko_rajat.c to create table B1. This can be compiled normally without additional arguments.
 yhdistä.sh to combine single figures into panels.
 EOF

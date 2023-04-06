@@ -41,7 +41,7 @@ They are compiled with argument -lnctietue3.
    - **kaudet_laatikko.py** &rarr; kausilaatikko_{season}\_['length','start']\_ikirköpp.png \
 	   Boxplot of season start day or length in different climate and permafrost classifications.
    - **aluejaot.py** &rarr; aluejaot.png \
-	   Map of used climate or permafrost classification
+	   Map of used climate, permafrost classification and wetland classifications
    - **yhdistelmäalueet.py** &rarr; yhdistelmäalueet.tex \
 	   Latex table about how much climate and permafrost classifications and wetland overlap.
    - **vuotaul_latex.c** &rarr; vuosummat['',_tiivistelmä]_['pri','post']['',_k1].tex \
@@ -56,9 +56,7 @@ They are compiled with argument -lnctietue3.
 	   Years in same figure, areas and seasons separately. \
 	   Makes also a table about relative standard deviation of annual averages. \
 	   Can be run with argument päivä to make similar figures of season start days.
-   - **kosteikkoalueet.py** &rarr; kosteikkoalueet.png
-	   Permafrost and non-permafrost wetland category areas separated on a map.
 
 **Other**
    - **vanhoja**, **puolivanhoja**, **säiliö** \
-   	old codes which could be removed but has been archived instead
+   	old codes which could have been removed but has been archived instead
