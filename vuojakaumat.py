@@ -42,8 +42,9 @@ def lue(luokitus, kost):
 def aja(dt, nimet, tunniste):
     värit = 'rkb'*dt.shape[0]
     värit = [*värit]
+    värit = np.array(värit).reshape([len(värit)//3, 3]).flatten(order=flatjarj)
     tulos = laatikkokuvaaja(dt.flatten(order=flatjarj), fliers='', vari=värit, avgmarker='.')
-    laita_keskiarvot(tulos['avg'], nimet, tunniste)
+    #laita_keskiarvot(tulos['avg'], nimet, tunniste)
     xticks(tulos['xsij'], labels=[s.replace('_',' ') for s in nimet.flatten(order=flatjarj)], rotation=90, ha='center')
     ax = gca()
     #[t.set_color(v) for t,v in zip(ax.xaxis.get_ticklabels(), värit)]
