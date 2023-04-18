@@ -113,8 +113,9 @@ def main():
                 pdatastot_köpp[iluok] = pdatastot_köpp[iluok][maski]
                 painostot_köpp[iluok] = painostot_köpp[iluok][maski]
 
+            gca().set_axisbelow(1)
             tulos = laatikkokuvaaja(np.concatenate([pdatastot_ikir.flatten(), pdatastot_köpp.flatten()]),
-                                    fliers='', avgmarker='o',
+                                    fliers='', avgmarker='o', fill=1, vari=np.append(['#798079']*4, ['#aaaaaa']*4),
                                     painostot = np.concatenate([painostot_ikir.flatten(), painostot_köpp.flatten()]))
             viimeistele(tulos, np.concatenate([xnimet_ikir, xnimet_köpp]), '%s %s' %(kausi, nimi))
 

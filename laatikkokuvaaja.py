@@ -25,7 +25,18 @@ def wpercentile(arr, painot, lista, on_valmis=False):
         ret[i] = alaraja_arr + (ylaraja_arr-alaraja_arr)*valin_osuus
     return ret
 
-def laatikkokuvaaja(lista, xsij=None, fliers='.', painostot=None, valmis=False, vari='b', avgmarker=False, sijainti='0'):
+def mustavalko(rgb):
+    avg = np.average(rgb, weights=[0.8,1,0.3])
+    if avg > 0.2:
+        return 'k'
+    h = '#707080' # return harmaa aiheuttaisi varoituksen myöhemmin
+    harmaa = mpl.colors.to_rgb(h)
+    neliö = (rgb[0]-harmaa[0])**2 + (rgb[1]-harmaa[1])**2 + (rgb[2]-harmaa[2])**2
+    return 'k' if neliö/3 < 0.3**2 else h
+
+def laatikkokuvaaja(lista, xsij=None, fliers='.', painostot=None, valmis=False, vari='b', avgmarker=False, sijainti='0', fill=False):
+    if fill:
+        mustavalk = [mustavalko(mpl.colors.to_rgb(v)) for v in vari]
     laatikoita = len(lista)
     if xsij is None:
         xsij = np.linspace(0,1,laatikoita+1)
@@ -73,16 +84,16 @@ def laatikkokuvaaja(lista, xsij=None, fliers='.', painostot=None, valmis=False, 
     ax = gca()
     errorbar(xsij[:-1], laatikot[:,1], yerr=yerr_a, fmt='none', ecolor=vari)
     errorbar(xsij[:-1], laatikot[:,2], yerr=yerr_y, fmt='none', ecolor=vari)
-    errorbar(xsij[:-1], mediaanit, xerr=levtaul/2, fmt='none', ecolor=vari, linewidth=2)
-    if(avgmarker):
-        avg = [np.mean(l) for l in lista]
-        scatter(xsij[:-1], avg, marker=avgmarker, c=vari)
+    errorbar(xsij[:-1], mediaanit, xerr=levtaul/2, fmt='none', ecolor=mustavalk if fill else vari, linewidth=2)
     if fliers:
         for i in range(laatikoita):
             y = lista[i][ (lista[i]>laatikot[i,-1]) | (lista[i]<laatikot[i,0]) ]
             plot(np.tile(xsij[[i]], len(y)), y, fliers, color='r')
-    pc = mpl.collections.PatchCollection(suor, facecolor="#00000000", edgecolor=vari)
+    pc = mpl.collections.PatchCollection(suor, facecolor=vari if fill else "#00000000", edgecolor=vari)
     ax.add_collection(pc)
+    if(avgmarker):
+        avg = [np.mean(l) for l in lista]
+        scatter(xsij[:-1], avg, marker=avgmarker, c=mustavalk if fill else vari, zorder=10)
     xticks(xsij0)
     ax.set_xlim(xsij[0]-lev/2-0.02, xsij[-2]+lev/2+0.02)
     ret = {'xsij':xsij0[:-1], 'xsij1':xsij[:-1], 'laatikot':laatikot, 'mediaanit':mediaanit}
