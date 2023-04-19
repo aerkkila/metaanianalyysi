@@ -23,7 +23,7 @@ f.close();
 def laske(d1,d2,suure):
     tsuure = welch_t(d1[0],d2[0],d1[1],d2[1],d1[2],d2[2])
     df = dof(d1[1], d1[2], d2[1], d2[2])
-    print("%15s: \033[1m%.5f\033[0m %.5f, %.2f (%.0f)" %(suure, t.cdf(tsuure, df),tsuure, df, d1[2]+d2[2]))
+    print("%15s: \033[1m%.5f\033[0m %.5f, %.2f (%.0f)" %(suure, 1-np.abs(0.5-t.cdf(tsuure, df))*2, tsuure, df, d1[2]+d2[2]))
 
 def työstä_kausi(tiedosto):
     lkt = luokat.wetl[1:]
