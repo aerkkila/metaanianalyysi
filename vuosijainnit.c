@@ -42,7 +42,7 @@ double yksi_piste(const struct tiedot* restrict tiedot, int i) {
 	    summa += tiedot->vuo[t*tiedot->res+i] / tiedot->WET[i] * tiedot->wet[i] * ala;
 	jakaja += tiedot->wet[i] * (loppu-alku) * ala;
     }
-    return summa * 1e9;
+    return summa * 1e9; // mol -> nmol
 }
 
 double summa_ja_jakaja(const struct tiedot* restrict tiedot, int kumpi) {
@@ -64,7 +64,7 @@ double summa_ja_jakaja(const struct tiedot* restrict tiedot, int kumpi) {
 	    jakaja += tiedot->wet[i] * (loppu-alku) * ala;
 	}
     }
-    return summa*1e9;
+    return summa * 1e9; // mol -> nmol
 }
 
 char* luo_alue(const double* prfwet, const double* WET, char* alue, int xyres) {
@@ -107,7 +107,7 @@ void* tee_luokka(void* varg) {
 	    continue; }
 	double summa1  = yksi_piste(tiedot, i);
 	double jakaja1 = yksi_piste(tiedot, -1);
-	uusidata[i] = (keskivuo - (summa-summa1) / (jakaja-jakaja1)) / pintaala(i) * 1e9;
+	uusidata[i] = (keskivuo - (summa-summa1) / (jakaja-jakaja1)) / pintaala(i) * 1e3; // 1/km² -> 1/(1000 km²)
     }
 
     return uusidata;

@@ -2,27 +2,33 @@ import matplotlib as mpl
 from matplotlib.pyplot import *
 import numpy as np
 
+# argumentti on_valmis=True tarkoittaa, että painot-taulukko ei sisällä painoja,
+# vaan sisältää jo oikeat prosenttipisteet arr on järjestyksessä
 def wpercentile(arr, painot, lista, on_valmis=False):
     ret = np.empty(len(lista))
     if on_valmis:
         rajat = painot
         sarr = arr
     else:
+        # muodostetaan rajat ja sarr
         jarj = np.argsort(arr)
         sarr = np.array(arr)[jarj]
-        rajat = np.array(painot, np.float64)[jarj].cumsum()
+        nanind = np.searchsorted(sarr, np.nan)
+        sarr = sarr[:nanind]
+        rajat = np.array(painot, np.float64)[jarj][:nanind].cumsum()
         jakaja = rajat[-1] + (rajat[-1]-rajat[-2])
         for i in range(len(rajat)):
             rajat[i] /= jakaja
     for i,p0 in enumerate(lista):
         p           = p0/100
         ind         = np.searchsorted(rajat, p, side='right')
+        # interpoloidaan lineaarisesti tarkemmin
         alaraja     = rajat[0 if ind==0 else ind-1] # rajat-taulukko sisältää ylärajat
         ylaraja     = rajat[ind-1 if ind>=len(rajat) else ind]
-        valin_osuus = (p-alaraja)/(ylaraja-alaraja)
-        ylaraja_arr = sarr[ind-1] if ind>=len(sarr) else sarr[ind]
+        välin_osuus = (p-alaraja)/(ylaraja-alaraja)
+        yläraja_arr = sarr[ind-1] if ind>=len(sarr) else sarr[ind]
         alaraja_arr = sarr[ind] if ind==0 else sarr[ind-1]
-        ret[i] = alaraja_arr + (ylaraja_arr-alaraja_arr)*valin_osuus
+        ret[i] = alaraja_arr + (yläraja_arr-alaraja_arr)*välin_osuus
     return ret
 
 def mustavalko(rgb):
