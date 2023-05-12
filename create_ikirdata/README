@@ -5,3 +5,9 @@ Permafrost data is created by running make which runs three programs:
 	   to calculate permafrost classes on 1° × 1° projection.
 	   Outputs also pisteitä.nc which tells how many original grid cells are used in each 1° × 1° grid cell.
 	3. osuus.c which creates the final product ikirdata.nc.
+
+Reference:
+Obu, J., Westermann, S., Barboux, C., Bartsch, A., Delaloye, R., Grosse, G., Heim, B., Hugelius, G., Irrgang, A., and Kääb, A.:
+ESA permafrost climate change initiative (permafrost_cci):
+Permafrost extent for the northern hemisphere, v3. 0, The Centre for Environmental Data Analysis, RAL Space,
+https://doi.org/10.5285/6e2091cb0c8b4106921b63cd5357c97c, 2021.

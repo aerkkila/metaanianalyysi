@@ -1,25 +1,22 @@
 #!/bin/sh
 
-if [ "$1" = 'rm' ]; then
-    rm -rf ~/codedata
-    rm -rf ~/codedata1
-fi
-kansio=$HOME/codedata
-k0=$kansio
+k0=$HOME/codes_and_data
+k1=$HOME/codes_and_small_data
+[ "$1" = 'rm' ] && rm -rf $k0 $k1
+kansio=$k0
 mkdir -p $kansio/kuvia
 
 kansio=$k0/nctietue3
 mkdir -p $kansio
 cd $kansio
 git -C ~/nctietue3 archive master | tar -x -C $kansio
-rm -rf .gitignore examples/*.nc
 sed -i "s/^CFLAGS\(\W*=.*\)$/CFLAGS\1 -O2/" config.mk
-echo "Install with make; make install. For more details, see ../README" > README
 cd -
 
-kansio=$k0/latex_source_of_the_article
+kansio=$k0/article_source
 mkdir -p $kansio
 git -C ~/metaanijulkaisu archive master | tar -x -C $kansio
+( cd $kansio; latexpand --keep-includes template.tex |cat -s > tmp.tex; mv tmp.tex template.tex ) # poistaa kommentit
 
 kansio=$k0
 cp -l \
@@ -71,8 +68,8 @@ fig01.py
 fig02,03.py
 fig04,05.py
 fig06.py
-ttest_wetlcateg.py
-ttest_mixed-pure.py
+ttest_categ.py
+ttest_areas.py
 '
 kopioi
 
@@ -146,26 +143,7 @@ EOF
 
 kansio=$k0/create_ikirdata
 mkdir -p $kansio
-cp ikirdata.py $kansio
-cp /media/levy/Tyotiedostot/PermafrostExtent/PRF_Extent20*_1x1.tif $kansio
-ed -s $kansio/ikirdata.py <<EOF
-/from config import
-.d
-,s/kansio *=.*/kansio = '.\\/'/
-w
-q
-EOF
-
-cat >$kansio/README <<EOF
-This code (ikirdata.py) was used to create ikirdata.nc from TIF-images.
-I have lost those TIF-images so recreating ikirdata.nc is not possible using this code.
-The same permafrost data can however be downloaded from the web server (see reference) but it is in another format so this code is not useful.
-
-Reference:
-Obu, J., Westermann, S., Barboux, C., Bartsch, A., Delaloye, R., Grosse, G., Heim, B., Hugelius, G., Irrgang, A., and Kääb, A.: ESA
-permafrost climate change initiative (permafrost_cci): Permafrost extent for the northern hemisphere, v3. 0, The Centre for Environmental
-Data Analysis, RAL Space, https://doi.org/10.5285/6e2091cb0c8b4106921b63cd5357c97c, 2021.
-EOF
+git -C create_ikirdata archive master | tar -x -C $kansio
 
 kansio=$k0/create_köppen
 mkdir -p $kansio
@@ -195,7 +173,7 @@ but data can be downloaded using a web browser.
 
 After download, run make.
 köppen.c reads the shapefile and outputs netcdf file.
-Shapelib and netcdf has to be installed.
+Shapelib and netcdf have to be installed.
 
 Reference:
 Kottek, M., J. Grieser, C. Beck, B. Rudolf, and F. Rubel, 2006: World Map of the Köppen-Geiger climate classification updated. Meteorol. Z., 15, 259-263. DOI: 10.1127/0941-2948/2006/0130.
@@ -335,8 +313,6 @@ Data can be downloaded from
 https://nsdc.fmi.fi/services/SMOSService/
 (Rautiainen, K., Parkkinen, T., Lemmetyinen, J., Schwank, M., Wiesmann, A., Ikonen, J., Derksen, C., Davydov, S., Davydova, A., Boike, J., Langer, M., Drusch, M., and Pulliainen, J. 2016. SMOS prototype algorithm for detecting autumn soil freezing, Remote Sensing of Environment, 180, 346-360. DOI: 10.1016/j.rse.2016.01.012).
 
-Probably that data is a different version than which was used in the article so results may differ slightly.
-
 Downloaded data files should be in netcdf form and renamed as FT_yyyymmdd.nc.
 Something like 'mmv "W_XX-ESA,SMOS,NH_25KM_EASE2_*_[or]_*.nc" FT_#1.nc' should rename the files correctly.
 EOF
@@ -369,35 +345,70 @@ cat > $k0/create_links.sh <<EOF
 EOF
 for f in `find $k0 -type f`; do head -1 $f | grep -q "^#!" && chmod 755 $f; done # suoritettaviin tiedostoihin suoritusoikeus
 
-cat > $k0/README <<EOF
-Many of the C-codes will probably only work on Unix-like operating systems.
-It is necessary to run create_links.sh before attempting to run most codes elsewhere than in the root directory.
+cat > $k0/README.rst <<EOF
+=======
+License
+=======
+Codes are under GPL3 license. They can be freely edited and shared as long as the same license is used.
+See file called LICENSE for more information.
+
+============
+Installation
+============
+The codes work at least on Linux. Many of the C-codes and shell scripts are likely to work only on Unix-like operating systems.
+It is necessary to run create_links.sh before attempting to run most codes elsewhere than in this root directory.
 It is also necessary to install nctietue3-library (see next paragraph) before running some of the C-codes.
 
-Go to nctietue3 directory which is included here and then it can be installed normally with:
-    make
-    make install # as root
+To install nctietue3-library, go to nctietue3 directory which is included here and then it can be installed normally with:
+>>> make
+>>> make install # as root
 To remove the library, run:
-    make uninstall # as root
-To install without root privilidges, change variable prefix in config.mk to \$HOME/.local.
-In that case one may have to replace '#include <nctietue3.h>' with '#include "path_to_nctietue3/nctietue3.h"' in the C-codes.
+>>> make uninstall # as root
+To install without root privilidges, change variable 'prefix' in config.mk to \$HOME/.local.
 
+===========
+Compilation
+===========
+If nctietue3 was installed without root privilidges to \$HOME/.local,
+one may have to edit the C-codes replacing '#include <nctietue3.h>' with '#include "\$HOME/.local/nctietue3.h"'.
+or pass argument '-I/\$HOME/.local' to the compiler.
+
+If neither a README-file nor a Makefile is given for a C-file, default to compiling with:
+>>> gcc file.c -O2
+If necessary, add '-lnctietue3'.
+If a Makefile is given, compile with:
+>>> make
+
+Possible issues:
+----------------
+Optimization level -Ofast cannot be used in vuojakaumadata.c due to -ffinite-math-only optimization.
+Most C codes use non-ascii utf8 characters in variable names
+which old compiler versions cannot compile (for gcc, version < 10.1).
+Also old Python versions may not work due to utf8 variable names.
+
+=====
+Usage
+=====
 The root directory contains all codes that make the final results used in the article.
 Codes needed to create \$data are one level deeper in directory called create_\$data.
 
-Compilation of C-codes:
-Sometimes a Makefile is given.
-If nctietue3-library is used in C code, it should be compiled with argument -lnctietue3.
-Optimization level -Ofast cannot be used in vuojakaumadata.c.
-Most C codes use non-ascii utf8 characters in variable names
-which old compiler versions cannot compile (for gcc, version ≥ 10.1).
+Statistical significances
+-------------------------
+Some statistical significances were only mentioned in text and not shown in any table or figure.
+A guide to calculate those:
 
-ttest_mixed-pure.py tests which wetland categories have significantly different average flux on temperate and nontemperate wetland area.
+"Difference between sporadic permafrost and non-permafrost was significant in summer and freezing period (p < 0.001)."
+>>> ./ttest_categ.py ikir
 
-ttest_wetlcateg.py tests which wetland categories differ significantly from each other.
-By default it uses the whole area but it can take command line arguments temperate or nontemperate to use onlythat area.
+"Permafrost bog -- is the only class which differs significantly from other classes in summer (p < 0.01)."
+"Tundra wetland -- In winter it differs almost significantly from fen (p $\approx$ 0.05)."
+>>> ./ttest_categ.py temperate
 
-Understanding file names:
+"Differences between corresponding (same wetland class and season) average fluxes in temperate and --"
+>>> ./ttest_areas.py
+
+File names:
+-----------
 aluemaski			region mask
 ikirdata                        permafrost data
 kaudet                          seasons
@@ -410,6 +421,5 @@ vuotaulukot			flux tables
 EOF
 
 # Lopuksi koodit ilman suuria tiedostoja
-k1=$HOME/codedata1
 cp -rl $k0 $k1
 rm -r $k1/flux1x1.nc $k1/create_kausien_päivät/ft_percent $k1/create_kausien_päivät/create_ft_percent/EASE*.nc
