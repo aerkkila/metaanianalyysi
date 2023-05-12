@@ -4,7 +4,7 @@ from matplotlib.pyplot import *
 
 hakemisto = '../'
 
-lajit = [l.decode('UTF-8') for l in lajit]
+lajit = [l.decode('UTF-8').replace('_',' ') for l in lajit]
 rcParams.update({'figure.figsize':(10,8), 'font.size':15})
 assert(len(x)%3 == 0)
 pit = len(x) // 3
@@ -25,7 +25,7 @@ ylabel('nmol m$^{-2}$ s$^{-1}$')
 grid('on', axis='y')
 lim = gca().get_yticks()[1:-1]
 yticks(np.arange(lim[0], lim[-1], 2.5))
-legend(loc='upper right')
+legend(loc='upper right', fancybox=0)
 
 # piirretään suurennosalue talvesta
 ax = gca()

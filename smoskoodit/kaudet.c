@@ -181,8 +181,8 @@ void alusta_taitesekunnit() {
 
 int main(int argc, char** argv) {
     nct_readflags = nct_ratt;
-    nct_set* partly = nct_read_mfnc_regex(kansio "^partly_frozen_percent_pixel_[0-9]*.nc$", 0, NULL);
-    nct_set* frozen = nct_read_mfnc_regex(kansio "^frozen_percent_pixel_[0-9]*.nc$", 0, NULL);
+    nct_set* partly = nct_read_mfnc_regex(kansio "partly_frozen_percent_pixel_[0-9]*.nc$", 0, NULL);
+    nct_set* frozen = nct_read_mfnc_regex(kansio "frozen_percent_pixel_[0-9]*.nc$", 0, NULL);
     char* maski = nct_read_from_nc("aluemaski.nc", NULL);
 
     mktime(&aika0tm);
