@@ -1,0 +1,7 @@
+Permafrost data is created by running make which runs three programs:
+	1. lataa.sh which downloads the permafrost data. Downloaded size is 3,4 G.
+	2. luo_muunnosindeksit.c which creates muunnosindeksit.bin
+	   This tells for the next program which original laea-projection grid cells are used
+	   to calculate permafrost classes on 1° × 1° projection.
+	   Outputs also pisteitä.nc which tells how many original grid cells are used in each 1° × 1° grid cell.
+	3. osuus.c which creates the final product ikirdata.nc.
