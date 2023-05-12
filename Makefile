@@ -97,7 +97,7 @@ vuosijainnit.out: vuosijainnit.c pintaalat.h
 kuvat.target: vuosijainnit.nc
 	./aluejaot.py -s
 	./kaudet_laatikko.py -s
-	./kosteikkoalueet.py -s
+	./yhdistelmäalueet.py -s
 	./vuojakaumat.py -s
 	./vuojakaumat_vuosittain.py -s -nf
 	./vuosijainnit.py -s
