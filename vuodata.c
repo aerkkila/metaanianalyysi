@@ -14,7 +14,7 @@
 #define lonpit 360
 #define KANSIO "vuodata/"
 #define LOPUSTA_PUUTTUU 1 // Metaanidatasta viimeisen vuoden lopussa puuttuvien päivien määrä. Esim. 1 -> 30.12. viimeinen
-const char* ikirnimet[]      = {"nonpermafrost", "sporadic", "discontinuous", "continuous"};
+const char* ikirnimet[]      = {"non-permafrost", "sporadic", "discontinuous", "continuous"};
 const char* köppnimet[]      = {"Db", "Dc", "Dd", "ET"};
 const char* wetlnimet[]      = {"wetland", "bog", "fen", "marsh", "permafrost_bog", "tundra_wetland"};
 const char* totlnimet[]      = {"total"};
@@ -556,12 +556,12 @@ int main(int argc, char** argv) {
 	if(vuosittain) {
 	    for(int i=0; i<nvars; i++) {
 		buf[luokkia][i] = bufbuf + buff_size*nvars*luokkia + buff_size*i;
-		sij[luokkia][i] = alusta_csv_vuosittain("nonwetland", i, tiedot.vuodet[0], vuosi1kaikki, buf[luokkia][i]);
+		sij[luokkia][i] = alusta_csv_vuosittain("non-wetland", i, tiedot.vuodet[0], vuosi1kaikki, buf[luokkia][i]);
 	    }
 	    tee_lajin_kaudet_vuosittain(&tiedot, kauvset, buf[luokkia], sij[luokkia]);
 	}
 	else
-	    tee_lajin_kaudet(&tiedot, "nonwetland", kauvset, f);
+	    tee_lajin_kaudet(&tiedot, "non-wetland", kauvset, f);
 	free(tiedot.alue);
     }
 

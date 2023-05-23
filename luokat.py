@@ -1,4 +1,4 @@
-ikir        = ['nonpermafrost', 'sporadic', 'discontinuous', 'continuous']
+ikir        = ['non-permafrost', 'sporadic', 'discontinuous', 'continuous']
 köpp        = ["Db", "Dc", "Dd", "ET"]
 köppre      = ["D.b", "D.c", "D.d", "ET"]
 kopp        = köpp

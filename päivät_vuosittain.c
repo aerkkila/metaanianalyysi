@@ -19,7 +19,7 @@
 
 const int resol = 19800;
 
-const char* ikirnimet[] = {"nonpermafrost", "sporadic", "discontinuous", "continuous"};
+const char* ikirnimet[] = {"non-permafrost", "sporadic", "discontinuous", "continuous"};
 const char* köppnimet[] = {"Db", "Dc", "Dd", "ET"};
 const char* wetlnimet[] = {"wetland", "bog", "fen", "marsh", "tundra_wetland", "permafrost_bog"};
 const char* kaudet[]    = {"summer", "freezing", "winter"};

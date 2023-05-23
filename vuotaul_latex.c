@@ -23,8 +23,8 @@
 const char* pripost[] = {"pri", "post"};
 const char* kaudet[] = {"summer", "freezing", "winter"};
 const char* ylänimet[] = {"wetland", "köppen", "ikir"};
-const char* wetlnimet[] = {"bog", "fen", "marsh", "permafrost_bog", "tundra_wetland", "wetland", "nonwetland"};
-const char* ikirnimet[] = {"nonpermafrost", "sporadic", "discontinuous", "continuous"};
+const char* wetlnimet[] = {"bog", "fen", "marsh", "permafrost_bog", "tundra_wetland", "wetland", "non-wetland"};
+const char* ikirnimet[] = {"non-permafrost", "sporadic", "discontinuous", "continuous"};
 const char* köppnimet[] = {"Db", "Dc", "Dd", "ET"};
 int 
     pit_kaudet=ARRPIT(kaudet),
