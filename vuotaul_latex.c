@@ -1,8 +1,8 @@
 #include <stdio.h>
-#include <aprintf.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <stdarg.h>
 
 #define ARRPIT(a) (sizeof(a)/sizeof(*(a)))
 #ifndef KOSTEIKKO
@@ -42,6 +42,16 @@ void pituudet() {
 	    ind_jää = 1;
 	    break;
 	}
+
+}
+
+char aprintapu[512];
+char* aprintf(const char* muoto, ...) {
+    va_list args;
+    va_start(args, muoto);
+    vsprintf(aprintapu, muoto, args);
+    va_end(args);
+    return aprintapu;
 }
 
 int hae_ind(FILE* f, char* str) {
