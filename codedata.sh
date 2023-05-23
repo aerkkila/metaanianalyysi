@@ -404,11 +404,11 @@ A guide to calculate those:
 "Tundra wetland -- In winter it differs almost significantly from fen (p $\approx$ 0.05)."
 >>> ./ttest_categ.py temperate
 
-"In t-test with equal variances and using the whole study area, bog had significantly (p < 0.05) higher flux than fen in winter."
->>> ./ttest_categ.py sama
-
 "Differences between corresponding (same wetland class and season) average fluxes in temperate and --"
 >>> ./ttest_areas.py
+
+"In t-test with equal variances and using the whole study area, bog had significantly (p < 0.05) higher flux than fen in winter."
+>>> ./ttest_categ.py sama
 
 File names:
 -----------
