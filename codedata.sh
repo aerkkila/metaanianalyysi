@@ -160,18 +160,19 @@ köppen1x1maski.nc: köppen.out köppen_shp
 köppen.out: köppen.c köppentunnisteet.h
 	gcc -o \$@ -Ofast ./\$< -lnetcdf -lshp -pthread -lm
 
+1976-2000_GIS.zip:
+	curl -LO https://koeppen-geiger.vu-wien.ac.at/data/1976-2000_GIS.zip
+
 köppen_shp: 1976-2000_GIS.zip
 	mkdir -p köppen_shp
 	unzip -d köppen_shp 1976-2000_GIS.zip
 EOF
 
 cat >$kansio/README <<EOF
-Data must be downloaded from the following url:
+By running make, the data are automatically downloaded from the following url:
 https://koeppen-geiger.vu-wien.ac.at/data/1976-2000_GIS.zip
-Using curl or wget does not work on this website (tried 16.3.2023)
-but data can be downloaded using a web browser.
+If that does not work, try to download that using a web browser and thereafter, run make.
 
-After download, run make.
 köppen.c reads the shapefile and outputs netcdf file.
 Shapelib and netcdf have to be installed.
 
@@ -392,22 +393,26 @@ Usage
 The root directory contains all codes that make the final results used in the article.
 Codes needed to create \$data are one level deeper in directory called create_\$data.
 
+By default, those Python codes that create a figure will show the figures but will not save them.
+To save them, run with argument '-s'. The saved figures will go to the directory called 'kuvia'.
+A command line program 'gm' (graphicsmagick) should be installed since some of the codes use that to join the created images into a panel after saving them first as separate files.
+
 Statistical significances
 -------------------------
-Some statistical significances were only mentioned in text and not shown in any table or figure.
+Some statistical significances were only mentioned in the text and not shown in any table or figure.
 A guide to calculate those:
 
-"Difference between sporadic permafrost and non-permafrost was significant in summer and freezing period (p < 0.001)."
+"The difference between the sporadic permafrost and non-permafrost was significant in summer and freezing period (p < 0.001)."
 >>> ./ttest_categ.py ikir
 
 "Permafrost bog -- is the only class which differs significantly from other classes in summer (p < 0.01)."
 "Tundra wetland -- In winter it differs almost significantly from fen (p $\approx$ 0.05)."
 >>> ./ttest_categ.py temperate
 
-"Differences between corresponding (same wetland class and season) average fluxes in temperate and --"
+"The differences between corresponding (same wetland class and season) average fluxes in temperate and --"
 >>> ./ttest_areas.py
 
-"In t-test with equal variances and using the whole study area, bog had significantly (p < 0.05) higher flux than fen in winter."
+"In a t-test with equal variances and using the whole study area, bog had significantly (p < 0.05) higher flux than fen in winter."
 >>> ./ttest_categ.py sama
 
 File names:
