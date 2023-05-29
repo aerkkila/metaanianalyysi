@@ -10,6 +10,7 @@ kaudet = luokat.kaudet[1:]
 pd_muuttujat = [['%s_start' %k, '%s_end' %k] for k in kaudet]
 vuosi0 = 2011
 vuosi1 = 2021
+jatka_ikiroutaa = False
 karkausvuosi = [not(i%4) and (bool(i%100) or not(i%400)) for i in range(vuosi0, vuosi1)]
 
 def muunna_aika(lista):
@@ -42,8 +43,12 @@ def viimeistele(tulos, xnimet, ynimi):
         show()
 
 def toimikoon_ikirouta(ikirdata):
+    global vuosi1
     e0 = ikirdata['vuosi'][:][0] - vuosi0
     e1 = vuosi1-1 - ikirdata['vuosi'][:][-1]
+    if not jatka_ikiroutaa:
+        vuosi1 -= e1
+        e1 = 0
     muoto = list(ikirdata['luokka'].shape)
     muoto[0] += e0+e1
     uusi = np.empty(muoto, np.int8)
@@ -62,10 +67,10 @@ def toimikoon_ikirouta(ikirdata):
 def main():
     rcParams.update({'figure.figsize':(5,7), 'font.size':14})
     ikirluvut  = [0,1,2,3]
+    ikirdata_  = Dataset("ikirdata.nc", "r")
+    ikirdata   = toimikoon_ikirouta(ikirdata_).flatten() # pitää olla ennen köppeniä, koska määrää aikapituuden
     päivädata  = Dataset("kausien_päivät.nc", "r")
     köppdata   = np.tile(np.load("köppenmaski.npy"), vuosi1-vuosi0)
-    ikirdata_  = Dataset("ikirdata.nc", "r")
-    ikirdata   = toimikoon_ikirouta(ikirdata_).flatten()
     ikirdata_.close()
 
     painot = np.tile(np.repeat(pintaalat, 360), vuosi1-vuosi0)

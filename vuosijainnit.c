@@ -4,6 +4,7 @@
 #include "pintaalat.h"
 
 int lonpit;
+const int vuosi1 = 2020;
 #define pintaala(i) (pintaalat[i/lonpit])
 
 #define VIRHE -1234567
@@ -134,7 +135,7 @@ int main(int argc, char** argv) {
 	.res    = xyres,
 	.aika0  = nct_mktime0g(vuovset, "time", NULL).a.t,
     };
-    tiedot.vuosia = 2021 - tiedot.vuodet[0];
+    tiedot.vuosia = vuosi1 - tiedot.vuodet[0];
     tiedot.alue = kokoalue?
 	luo_koko_alue(   tiedot.WET, maski->data, xyres):
 	luo_alue(prfwet, tiedot.WET, maski->data, xyres);

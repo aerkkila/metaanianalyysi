@@ -26,12 +26,12 @@ const char* vuolaji_sisään[] = {"flux_bio_prior", "flux_bio_posterior", "flux_
 const char* vuolaji_ulos[]   = {"biopri", "biopost", "antropri", "antropost"};
 #define kausia 4
 #define wraja 0.05
-#define vuosi1_ 2021 // jos vuosittain, saatetaan käyttää muuta arvoa
+#define vuosi1_ 2020 // jos vuosittain, saatetaan käyttää muuta arvoa
 #define vuosi0_ 2011
 
 enum alue_e     {kokoalue_e, nontemperate_e, temperate_e} alueenum;
 enum luokitus_e luokenum;
-int vlnum=1, kosteikko, vuosittain;                // argumentteja
+int vlnum=1, kosteikko, vuosittain; // argumentteja
 int ikirvuosi0, ikirvuosia, vuosi1kaikki, luokkia; // määritettäviä
 typeof(&ikirnimet) luoknimet;
 double lat0, koko_vuoden_jakaja, jakajien_summa;
@@ -489,20 +489,22 @@ int main(int argc, char** argv) {
     tiedot.v1 = (vuosittain? vuosi1kaikki: vuosi1_) - tiedot.vuodet[0];
     rajaa_aluetta_kosteikon_perusteella(tiedot.alue, &tiedot, 0);
 
-    /* Jatketaan puuttuvat vuodet ikiroutadataan tietäen, että ikiroudan vuosia puuttuu vain lopusta.
-       Ja että sillä on ylimääräisiä vuosia alussa. */
     if(luokenum == ikir_e) {
+	/* Siirretään ikiroudan alkukohta olemaan samaa vuotta kuin muun syötteen alku. */
 	int siirto = tiedot.vuodet[0] - ikirvuosi0;
-	/* Siirretään ikiroudan alkukohta vasemmalle tätä hetkeä aiemmas. */
 	ikirvuosia -= siirto;
 	memmove(luokitus, luokitus+siirto*tiedot.res, ikirvuosia*tiedot.res);
-	luokitus = realloc(luokitus, tiedot.res*tiedot.v1);
-	if(!luokitus)
-	    err(1, "realloc luokitus %i", tiedot.res*(tiedot.v1-tiedot.v0));
-	/* Kopioidaan joka silmukassa yksi vuosi lisää loppuun. */
-	for(int v=ikirvuosia; v<tiedot.v1; v++)
-	    memcpy(luokitus+v*tiedot.res, luokitus+(v-1)*tiedot.res, tiedot.res);
 	tiedot.ikir = luokitus;
+	if (ikirvuosia > tiedot.v1) {
+	    puts("Varoitus: jatketaan ikiroutaa");
+	    luokitus = realloc(luokitus, tiedot.res*tiedot.v1);
+	    if(!luokitus)
+		err(1, "realloc luokitus %i", tiedot.res*(tiedot.v1-tiedot.v0));
+	    /* Kopioidaan joka silmukassa yksi vuosi lisää loppuun. */
+	    for(int v=ikirvuosia; v<tiedot.v1; v++)
+		memcpy(luokitus+v*tiedot.res, luokitus+(v-1)*tiedot.res, tiedot.res);
+	    tiedot.ikir = luokitus;
+	}
     }
 
     FILE* f[kausia];             // ei vuosittain

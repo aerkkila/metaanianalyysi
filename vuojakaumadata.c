@@ -35,10 +35,10 @@ const char*** luoknimet;
 #define wraja 0.05
 
 static nct_set *luok_vs;
-static int       ppnum;
+static int ppnum;
 static char  *restrict luok_c;
 static double* kost;
-static int ikirvuosi0, ikirvuosia, vuosi0, vuosi1, t1max;
+static int ikirvuosi0, ikirvuosia, vuosi0, vuosi1=2020, t1max;
 char* kansio;
 char* aluemaski; // tarvitaan koko vuoden tuloksiin
 
@@ -141,8 +141,11 @@ int argumentit(int argc, char** argv) {
     }
     if (argc <= 3)
 	return 0;
-    if (!strcmp(argv[3], "kost"))
-	kost = nct_read_from_nc_as("BAWLD1x1.nc", "wetland", NC_DOUBLE);
+    for(int i=3; i<argc; i++)
+	if (!strcmp(argv[i], "kost"))
+	    kost = nct_read_from_nc_as("BAWLD1x1.nc", "wetland", NC_DOUBLE);
+	else
+	    printf("tuntematon argumentti \"%s\"\n", argv[i]);
     return 0;
 }
 
@@ -259,8 +262,10 @@ kosteikko:
 /* Jos ikiroutaluokka vaihtuu, aloitettu kausi käydään kuitenkin loppuun samana ikiroutaluokkana. */
 void täytä_ikirdata(struct laskenta* args) {
     int ikirv = vuosi0 + args->vuosi - ikirvuosi0;
-    if (ikirv >= ikirvuosia)
+    if (ikirv >= ikirvuosia) {
+	puts("Varoitus: jatketaan ikiroutaa");
 	ikirv = ikirvuosia-1;
+    }
     if (kost) goto kosteikko;
 
     for (int r=0; r<resol; r++)
@@ -380,7 +385,8 @@ int main(int argc, char** argv) {
     vuosi0 = nct_get_integer(vuosivar, 0);
     apuvar = nct_loadg(&vuo, "time");
     t1max  = apuvar->len;
-    vuosi1 = VUODET_ERIKSEEN? 2021: 2020;
+    if(!vuosi1)
+	vuosi1 = VUODET_ERIKSEEN ? 2021 : 2020;
 
     nct_anyd res = nct_mktime(apuvar, NULL, NULL, 0);
     if(res.d < 0)

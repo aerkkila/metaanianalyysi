@@ -196,11 +196,11 @@ cp vuodata.c $kansio
 cat >$kansio/README <<EOF
 This code (vuodata.c) calculates average metahne fluxes and emissions in different areas and seasens.
 Those are read by the codes which create the published tables.
-All used data is created by running make.
+All used data are created by running make.
 
 Files with _k1.csv in the end are created using only wetland area.
 Files with _k0.csv in the end are created using all area.
-In wetland files _k0 does not mean anything.
+In the wetland files, _k0 does not mean anything.
 EOF
 
 cat >$kansio/Makefile <<EOF
@@ -261,10 +261,10 @@ kansio=$k0/create_vuojakaumadata
 mkdir -p $kansio
 cp vuojakaumadata.c $kansio
 cat >$kansio/README <<EOF
-This code (vuojakaumadata.c) calculates methane flux cumulative probability distribution on different areas and seasons.
+This code, vuojakaumadata.c, calculates the cumulative probability distribution of methane fluxes on different areas and seasons.
 Created directory vuojakaumadata/kost contains results for wetland areas only.
-All data is created by running make.
-This data is needed by the code which draws boxplots about methane emission distributions.
+All data are created by running make.
+The created data are needed by the code which draws boxplots about methane emission distributions.
 EOF
 cat >$kansio/Makefile <<EOF
 all: vuojakauma_ikir vuojakauma_köpp vuojakauma_wetl ipk kpk
@@ -296,8 +296,8 @@ cp $a/ft_percents_pixel_ease.c $kansio
 cp -l $a/EASE_2_l*.nc $kansio
 #cp -l $HOME/smos_uusi/FT_720_*.nc $kansio/data # isoja
 cat >$kansio/README <<EOF
-This code (ft_percent_pixel_ease.c) is used to convert from EASE2 coordinates to latlon coordinates
-and calculate the fraction of each FT category (../ft_percent/*) in latlon grid cells.
+This code, ft_percent_pixel_ease.c, is used to convert from EASE2 coordinates to latlon coordinates
+and to calculate the fraction of each FT category (../ft_percent/*) in latlon grid cells.
 
 The code reads annual data files named as FT_720_yyyy.nc
 which must be first created using the codes in create_data.
@@ -402,17 +402,17 @@ Statistical significances
 Some statistical significances were only mentioned in the text and not shown in any table or figure.
 A guide to calculate those:
 
-"The difference between the sporadic permafrost and non-permafrost was significant in summer and freezing period (p < 0.001)."
+"The difference between the sporadic permafrost and non-permafrost regions was significant in summer and in the freezing period (p < 0.001)."
 >>> ./ttest_categ.py ikir
 
-"Permafrost bog -- is the only class which differs significantly from other classes in summer (p < 0.01)."
-"Tundra wetland -- In winter it differs almost significantly from fen (p $\approx$ 0.05)."
+"Permafrost bogs had much smaller fluxes -- and was the only class that differed significantly from other classes in summer (p < 0.01)."
+"Tundra wetlands had the largest fluxes in both summer and winter. In winter they differed almost significantly from fens (p $\approx$ 0.05)."
 >>> ./ttest_categ.py temperate
 
-"The differences between corresponding (same wetland class and season) average fluxes in temperate and --"
+"Differences between corresponding (same wetland class and season) average fluxes in temperate and warm wetland areas were significant during summer and freezing period (p < 0.01). Marshes in summer were an exception where the difference was not significant."
 >>> ./ttest_areas.py
 
-"In a t-test with equal variances and using the whole study area, bog had significantly (p < 0.05) higher flux than fen in winter."
+"in a t-test with equal variances and using the whole study area, bogs had significantly (p < 0.05) larger flux than fens in winter."
 >>> ./ttest_categ.py sama
 
 File names:

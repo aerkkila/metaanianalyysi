@@ -37,6 +37,7 @@ int tty;
 #define luott_0 0.025
 #define luott_1 0.975
 const int vakio = 0; // 1 tai 0 sen mukaan otetaanko vakiotermi vai ei
+const int vuosi1 = 2020;
 
 char aprintapu[256];
 char* aprintf(const char* muoto, ...) {
@@ -172,8 +173,12 @@ int luo_data(const data_t* dt, data_t* dt1, nct_set* päivät, double wraja, dou
     //                                                    koska vasta lopussa tiedetään, montako pienintä jätetään ottamatta
     double *aikaalat = malloc(dt->resol*sizeof(double));
     nct_var* var = nct_get_var(päivät, "vuosi");
-    int vuosia = var->len;
     int vuosi0 = nct_get_integer(var, 0);
+    int vuosia = vuosi1-vuosi0;
+    if (var->len < vuosia) {
+	printf("Varoitus: loppuvuotta ei saavuteta\n");
+	vuosia = var->len;
+    }
     short *alut, *loput;
     if (kausi != whole_year_e) {
 	var = nct_get_var(päivät, varnimet[kausi*2]);
@@ -198,10 +203,9 @@ int luo_data(const data_t* dt, data_t* dt1, nct_set* päivät, double wraja, dou
 	if(kausi==whole_year_e) {
 	    int alku  = päiviä_nollapäivästä(dt->t0_vuo, vuosi0, 0);
 	    int loppu = päiviä_nollapäivästä(dt->t0_vuo, vuosi0+vuosia, 0);
-	    for(int t=alku; t<loppu; t++) {
+	    for(int t=alku; t<loppu; t++)
 		summa += dt->vuo[t*dt->resol + r] * dt->alat[r];
-		ala_ja_aika += dt->alat[r];
-	    }
+	    ala_ja_aika += dt->alat[r] * (loppu-alku);
 	}
 	else {
 	    for(int v=0; v<vuosia; v++) {
@@ -209,10 +213,9 @@ int luo_data(const data_t* dt, data_t* dt1, nct_set* päivät, double wraja, dou
 		int loppu = päiviä_nollapäivästä(dt->t0_vuo, v+vuosi0, loput[v*dt->resol+r]);
 		if(alku==VIRHE || loppu==VIRHE)
 		    continue;
-		for(int t=alku; t<loppu; t++) {
+		for(int t=alku; t<loppu; t++)
 		    summa += dt->vuo[t*dt->resol + r] * dt->alat[r];
-		    ala_ja_aika += dt->alat[r];
-		}
+		ala_ja_aika += dt->alat[r] * (loppu-alku);
 	    }
 	}
 
@@ -605,7 +608,7 @@ int main(int argc, char** argv) {
     nct_set* vuovs = nct_read_ncf(ncdir "flux1x1.nc", nct_rlazy|nct_ratt);
     var = nct_get_var(vuovs, "time");
     dt.t0_vuo = nct_mktime0(var, NULL).a.t;
-    dt.t0_vuo += nct_getl_integer(var, 0) * 86400; // in case data doesn't start from epoch
+    dt.t0_vuo += nct_getl_integer(var, 0) * 86400;
 
     dt.vuo = nct_loadg_as(vuovs, pripost_sisään[ppnum], NC_DOUBLE)->data;
     assert((intptr_t)dt.vuo >= 0x800);
