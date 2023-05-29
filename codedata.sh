@@ -323,7 +323,6 @@ mkdir -p $kansio
 cp bawld/*.[ch] bawld/Makefile $kansio
 cat > $kansio/README <<EOF
 Data is created by running make.
-User may want to edit Makefile to give wanted number of threds as an argument to bawld.out on line 3.
 
 Used data is BAWLD_V1___Shapefile.zip from https://doi.org/10.18739/A2C824F9X (Olefeldt et al., 2021) which should be extracted into directory called data.
 Makefile downloads and extracts it automatically.
@@ -350,12 +349,12 @@ cat > $k0/README.rst <<EOF
 =======
 License
 =======
-Codes are under GPL3 license. They can be freely edited and shared as long as the same license is used.
+These codes are under GPL3 license. They can be freely edited and shared as long as the same license is used.
 See file called LICENSE for more information.
 
-============
-Installation
-============
+============================
+Installation and compilation
+============================
 The codes work at least on Linux. Many of the C-codes and shell scripts are likely to work only on Unix-like operating systems.
 It is necessary to run create_links.sh before attempting to run most codes elsewhere than in this root directory.
 It is also necessary to install nctietue3-library (see next paragraph) before running some of the C-codes.
@@ -367,12 +366,9 @@ To remove the library, run:
 >>> make uninstall # as root
 To install without root privilidges, change variable 'prefix' in config.mk to \$HOME/.local.
 
-===========
-Compilation
-===========
 If nctietue3 was installed without root privilidges to \$HOME/.local,
-one may have to edit the C-codes replacing '#include <nctietue3.h>' with '#include "\$HOME/.local/nctietue3.h"'.
-or pass argument '-I/\$HOME/.local' to the compiler.
+one may have to edit the C-codes replacing '#include <nctietue3.h>' with '#include "\$HOME/.local/include/nctietue3.h"'.
+or pass argument '-I/\$HOME/.local/include' to the compiler.
 
 If neither a README-file nor a Makefile is given for a C-file, default to compiling with:
 >>> gcc file.c -O2

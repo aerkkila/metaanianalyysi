@@ -123,6 +123,7 @@ void kirjoita_netcdf(int ncid, void* data, const char* nimi) {
 
 int main(int argc, char** argv) {
     int id;
+    njobs = sysconf(_SC_NPROCESSORS_ONLN);
 #define Switch(a) do { char* _switchc = a; if(0)
 #define Case(a,b) else if(!strcmp(_switchc, a) || !strcmp(_switchc, b))
 #define End } while(0)

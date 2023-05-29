@@ -1,6 +1,6 @@
 all: bawld.nc
 bawld.nc: data bawld.out lisäluokat.out
-	./bawld.out -j 4
+	./bawld.out
 	./lisäluokat.out bawld.nc
 
 lisäluokat.out: lisäluokat.c
