@@ -56,6 +56,7 @@ kopioi() {
 }
 
 nimet0='
+kausiesim.py
 aluejaot.py
 kaudet_laatikko.py
 vuojakaumat.py
@@ -65,9 +66,10 @@ ttesti.py
 '
 nimet1='
 fig01.py
-fig02,03.py
-fig04,05.py
-fig06.py
+fig02.py
+fig03,04.py
+fig05,06.py
+fig07.py
 ttest_categ.py
 ttest_areas.py
 '
@@ -114,7 +116,7 @@ cat >$k0/tableA1,A5.sh <<-EOF
 	mv vuosummat_epälauhkea_pri.tex tableA5.tex
 EOF
 
-kansio=$k0/fig07,AppendixB
+kansio=$k0/fig08,AppendixB
 mkdir -p $kansio
 cd wregressio
 cp laske.sh Makefile virhepalkit.pyx setup.py virhepalkit.py piirrä.py taulukko_rajat.c wregressio.c yhdistä.sh $kansio
@@ -136,7 +138,7 @@ Command line arguments to wregressio.out include:
 After wregressio.out one should run 'cat tallenteet/* > sovitteet.txt' to combine the files that wregressio.out created.
 
 Thereafter one can run the rest of codes:
-virhepalkit.py to create figure 7. That uses virhepalkit.pyx to read sovitteet.txt.
+virhepalkit.py to create figure 8. That uses virhepalkit.pyx to read sovitteet.txt.
 taulukko_rajat.c to create table B1. This can be compiled normally without additional arguments.
 yhdistä.sh to combine single figures into panels.
 EOF
@@ -173,7 +175,7 @@ By running make, the data are automatically downloaded from the following url:
 https://koeppen-geiger.vu-wien.ac.at/data/1976-2000_GIS.zip
 If that does not work, try to download that using a web browser and thereafter, run make.
 
-köppen.c reads the shapefile and outputs netcdf file.
+köppen.c reads the shapefile and outputs a netcdf file.
 Shapelib and netcdf have to be installed.
 
 Reference:
@@ -185,7 +187,7 @@ mkdir -p $kansio
 cp pintaalat.c $kansio
 cat >$kansio/README <<EOF
 This code (pintaalat.c) creates a C-header and a python file
-with surface areas on a grid cell in each used latitude.
+with surface areas of a grid cell in each used latitude.
 They are included into all of the codes which deal with surface areas.
 Compile with -lproj -lnctietue3.
 EOF
@@ -194,7 +196,7 @@ kansio=$k0/create_vuodata
 mkdir -p $kansio
 cp vuodata.c $kansio
 cat >$kansio/README <<EOF
-This code (vuodata.c) calculates average metahne fluxes and emissions in different areas and seasens.
+This code (vuodata.c) calculates average methane fluxes and emissions in different areas and seasens.
 Those are read by the codes which create the published tables.
 All used data are created by running make.
 
@@ -308,14 +310,20 @@ mkdir -p $kansio
 cp $HOME/smos_uusi/yhdistä_vuosittain.c $kansio
 cat >$kansio/README <<EOF
 This is a code that was used to combine each year into one file
-and fill missing dates with values read from previous existing date.
+and to fill the missing dates with values read from the previous existing date.
 
-Data can be downloaded from 
+Similar data can be downloaded from 
 https://nsdc.fmi.fi/services/SMOSService/
-(Rautiainen, K., Parkkinen, T., Lemmetyinen, J., Schwank, M., Wiesmann, A., Ikonen, J., Derksen, C., Davydov, S., Davydova, A., Boike, J., Langer, M., Drusch, M., and Pulliainen, J. 2016. SMOS prototype algorithm for detecting autumn soil freezing, Remote Sensing of Environment, 180, 346-360. DOI: 10.1016/j.rse.2016.01.012).
+but the data version may be different than in the article.
+The processed data is provided in ../ft_percent/,
+but the same version of the unprocessed data as in the article is unfortunately not online.
+If necessary, contact the authors of the article (anttoni.erkkila@fmi.fi) to get that data.
 
-Downloaded data files should be in netcdf form and renamed as FT_yyyymmdd.nc.
+Downloaded data files should be renamed as FT_yyyymmdd.nc.
 Something like 'mmv "W_XX-ESA,SMOS,NH_25KM_EASE2_*_[or]_*.nc" FT_#1.nc' should rename the files correctly.
+
+Reference:
+(Rautiainen, K., Parkkinen, T., Lemmetyinen, J., Schwank, M., Wiesmann, A., Ikonen, J., Derksen, C., Davydov, S., Davydova, A., Boike, J., Langer, M., Drusch, M., and Pulliainen, J. 2016. SMOS prototype algorithm for detecting autumn soil freezing, Remote Sensing of Environment, 180, 346-360. DOI: 10.1016/j.rse.2016.01.012).
 EOF
 
 kansio=$k0/create_BAWLD1x1
