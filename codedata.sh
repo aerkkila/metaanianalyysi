@@ -379,9 +379,13 @@ If a Makefile is given, compile with:
 Possible issues:
 ----------------
 Optimization level -Ofast cannot be used in vuojakaumadata.c due to -ffinite-math-only optimization.
+
 Most C codes use non-ascii utf8 characters in variable names
 which old compiler versions cannot compile (for gcc, version < 10.1).
 Also old Python versions may not work due to utf8 variable names.
+
+Some of the terminal outputs contain ansi escape sequences.
+If the terminal does not support them, the output will look different than intended.
 
 =====
 Usage
