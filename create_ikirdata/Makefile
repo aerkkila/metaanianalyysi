@@ -1,6 +1,6 @@
 all: ikirdata.nc
 
-raaka: lataa.sh
+raaka/*: lataa.sh
 	./$<
 
 muunnos.out: luo_muunnos.c muunnosalue.h
