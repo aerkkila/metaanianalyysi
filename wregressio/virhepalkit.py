@@ -29,7 +29,7 @@ legend(loc='upper right', fancybox=0)
 
 # piirretään suurennosalue talvesta
 ax = gca()
-axins = ax.inset_axes([0.5, 0.5, 0.24, 0.48])
+axins = ax.inset_axes([0.65, 0.25, 0.20, 0.48])
 talvi = 2
 piirrä(talvi, axins)
 axins.grid('on', axis='y')
