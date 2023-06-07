@@ -5,32 +5,38 @@
 #include <unistd.h>
 #include <sys/stat.h> // mkdir
 #include <err.h>
-
-void transpose(double* taul) {
-    double* uusi = malloc(720*720*sizeof(double));
-    for(int i=0; i<720; i++)
-	for(int j=0; j<720; j++)
-	    uusi[i*720+j] = taul[j*720+i];
-    memcpy(taul, uusi, 720*720*sizeof(double));
-    free(uusi);
-}
+#include <proj.h>
 
 const int resol = 55*360;
+const int year0 = 2010;
+const int year1 = 2022;
+int xpit, ypit, xypit;
+
+#define dirname "./"
 
 #define vnta_maxpit 50
 int* tee_valintaindeksit(double* lat, double* lon) {
-    double *e2lon, *e2lat;
-    e2lon = nct_read_from_nc_as("EASE_2_lon.nc", NULL, NC_DOUBLE);
-    e2lat = nct_read_from_nc_as("EASE_2_lat.nc", NULL, NC_DOUBLE);
-    unsigned char* data = nct_read_from_nc_as("FT_720_2016.nc", "data", NC_UBYTE);
+    float *e2lon, *e2lat;
+    nct_set* set = nct_read_nc(dirname "FT_720_2016.nc");
+    char* data = nct_firstvar(set)->data;
+    nct_var* var = nct_get_var(set, "x");
+    double* x = var->data;
+    xpit = var->len;
+    var = nct_get_var(set, "y");
+    double* y = var->data;
+    ypit = var->len;
+    xypit = xpit*ypit;
 
-    /* Pituuspiirit pitää jostain syystä muuntaa näin. */
-    transpose(e2lon);
-    for(int i=0; i<720*720; i++) {
-	e2lon[i] = -e2lon[i]+180;
-	if(e2lon[i] > 180)
-	    e2lon[i] -= 360;
-    }
+    PJ_CONTEXT* ctx = proj_context_create();
+    PJ* pj = proj_create_crs_to_crs(ctx, "+proj=laea +lat_0=90", "+proj=longlat", NULL);
+    e2lat = malloc(xypit*sizeof(float)*2);
+    e2lon = e2lat + xypit;
+    for(int j=0; j<ypit; j++)
+	for(int i=0; i<xpit; i++) {
+	    PJ_XY xy = proj_trans(pj, 1, (PJ_COORD){.xy={x[i], y[j]}}).xy;
+	    e2lat[j*xpit+i] = xy.y;
+	    e2lon[j*xpit+i] = xy.x;
+	}
 
     int* indeksit = malloc(resol*vnta_maxpit*sizeof(int));
     for(int j=0; j<55; j++) {
@@ -39,19 +45,20 @@ int* tee_valintaindeksit(double* lat, double* lon) {
 	    float lon1 = lon[i];
 	    int valintapit=0;
 	    int* valinta = indeksit + (j*360+i)*vnta_maxpit;
-	    for(int k=0; k<720*720; k++)
-		if(data[k] && e2lon[k]>=lon1-0.5 && e2lon[k]<lon1+0.5 && e2lat[k]>=lat1-0.5 && e2lat[k]<lat1+0.5) {
+	    for(int k=0; k<xypit; k++)
+		if (data[k]>0 && e2lon[k]>=lon1-0.5 && e2lon[k]<lon1+0.5 && e2lat[k]>=lat1-0.5 && e2lat[k]<lat1+0.5) {
 		    valinta[valintapit++] = k;
-		    if(valintapit >= vnta_maxpit) {
+		    if (valintapit >= vnta_maxpit) {
 			fprintf(stderr, "vnta_maxpit-arvoa (%i) pitää kasvattaa\n\n", vnta_maxpit);
 			abort(); }
 		}
 	    valinta[valintapit] = -1;
 	}
     }
-    free(data);
+    proj_context_destroy(ctx);
+    proj_destroy(pj);
+    nct_free1(set);
     free(e2lat);
-    free(e2lon);
     return indeksit;
 }
 
@@ -62,11 +69,11 @@ int main() {
     double* restrict lat = nct_range_NC_DOUBLE(29.5, 84, 1);
     double* restrict lon = nct_range_NC_DOUBLE(-179.5, 180, 1);
 
-    float* frozen = malloc(366*resol*4);
-    float* partly = malloc(366*resol*4);
-    float* thaw = malloc(366*resol*4);
+    float* frozen = malloc(366*resol*sizeof(float));
+    float* partly = malloc(366*resol*sizeof(float));
+    float* thaw	  = malloc(366*resol*sizeof(float));
     char* numgrids = malloc(resol);
-    if(!thaw || !numgrids || !partly || !frozen) {
+    if (!thaw || !numgrids || !partly || !frozen) {
 	fprintf(stderr, "malloc epäonnistui\n");
 	return 1;
     }
@@ -82,21 +89,22 @@ int main() {
 
     int* vntaind = tee_valintaindeksit(lat, lon);
 
-    if(mkdir("ft_percent", 0755) && errno != EEXIST)
+    if (mkdir("ft_percent", 0755) && errno != EEXIST)
 	err(1, "mkdir ft_percent (rivi %i)", __LINE__);
 
-    int y0 = 2010;
     putchar('\n');
-    for(int y=y0; y<2022; y++) {
+    for(int y=year0; y<year1; y++) {
 	printf("\033[A\rvuosi %i\033[K\n", y);
-	sprintf(apustr, "FT_720_%i.nc", y);
+	sprintf(apustr, dirname "FT_720_%i.nc", y);
+	if (access(apustr, F_OK))
+	    break;
 	nct_readm_nc(ftset, apustr);
 	unsigned char* ft = nct_firstvar(&ftset)->data;
 	int tpit = nct_get_dim(&ftset, "time")->len;
 	tallenn.dims[0]->len = tpit;
-	memset(frozen,   0, 366*resol*4);
-	memset(partly,   0, 366*resol*4);
-	memset(thaw,     0, 366*resol*4);
+	memset(frozen,   0, 366*resol*sizeof(float));
+	memset(partly,   0, 366*resol*sizeof(float));
+	memset(thaw,     0, 366*resol*sizeof(float));
 	memset(numgrids, 0, resol);
 	for(int j=0; j<55; j++) {
 	    for(int i=0; i<360; i++) {
@@ -104,7 +112,7 @@ int main() {
 		for(int t=0; t<tpit; t++) {
 		    nfrozen = npartly = nthaw = 0;
 		    for(k=0; vntaind[ij+k]>=0; k++) {
-			unsigned char h = ft[vntaind[ij+k]+720*720*t];
+			unsigned char h = ft[vntaind[ij+k]+xypit*t];
 			nfrozen += h==3;
 			npartly += h==2;
 			nthaw   += h==1;

@@ -5,27 +5,49 @@
 #include <unistd.h>
 #include <time.h>
 
-/* Yhdistää sulamisdatasta kunkin vuoden tiedostot yhdeksi täyttäen puuttuvat päivät edellisellä arvolla.
-   Kääntäjä tarvitsee argumentit -lnctietue3 -lnetcdf */
+/* Yhdistää sulamisdatasta kunkin vuoden tiedostot yhdeksi täyttäen puuttuvat päivät edellisellä arvolla. */
 
 const int pit = 720*720;
-const int year0=2010, year1=2022;
+int year0=2010, year1=2022;
+const char* varname = "L3FT";
 
-int main() {
+int on_koordinaatit = 0;
+
+void koordinaatit(nct_set* set, nct_set* ulos) {
+    nct_var* var;
+    void* coord;
+    var = nct_get_var(set, "x");
+    nct_load_as(var, NC_DOUBLE);
+    coord = var->data;
+    var->not_freeable = 1;
+    var = nct_get_dim(ulos, "x");
+    nct_dim2coord(var, coord, NC_DOUBLE);
+
+    var = nct_get_var(set, "y");
+    nct_load_as(var, NC_DOUBLE);
+    coord = var->data;
+    var->not_freeable = 1;
+    var = nct_get_dim(ulos, "y");
+    nct_dim2coord(var, coord, NC_DOUBLE);
+
+    on_koordinaatit = 1;
+}
+
+int main(int argc, char** argv) {
+    if (argc > 2) {
+	year0 = atoi(argv[1]);
+	year1 = atoi(argv[2]);
+    }
     char units[60];
     strcpy(units, "days since 0000-00-00"); // jotta strlen on heti oikein
-    /* Tämä lukeminen on vain muistin alustamiseksi */
-    nct_set* set = nct_read_nc("purettu/FT_20140101.nc");
-    int varid = nct_get_varid(set, "L3FT");
-    char tiednimi[35];
-    unsigned char* uusi = malloc(366*pit);
+    char* uusi = malloc(366*pit);
     if(!uusi) {
 	fprintf(stderr, "malloc uusi epäonnistui\n");
 	return 1;
     }
-    double* taul = set->vars[varid]->data;
-    struct tm aikatm = {0};
 
+    struct tm aikatm = {0};
+    char tiednimi[35];
     strcpy(tiednimi, "purettu/");
     char* tiednimi1 = tiednimi + strlen(tiednimi);
 
@@ -37,7 +59,7 @@ int main() {
     nct_add_varatt_text(tallenn.vars[0], "calendar", "proleptic_gregorian", 0);
     nct_add_dim(&tallenn, 720, "y");
     nct_add_dim(&tallenn, 720, "x");
-    nct_add_var_alldims(&tallenn, uusi, NC_UBYTE, "data");
+    nct_add_var_alldims(&tallenn, uusi, NC_BYTE, "data");
 
     puts("");
     int yday0=-1;
@@ -54,10 +76,16 @@ int main() {
 		    continue;
 		printf("\033[A\r%s\033[K\n", tiednimi1+3);
 		fflush(stdout);
-		ncfunk(nc_open, tiednimi, NC_NOWRITE, &set->ncid);
-		nct_load(set->vars[varid]); // Kirjoittaa olemassaolevan päälle, joten ei ole muistivuoto.
-		ncfunk(nc_close, set->ncid);
-		set->ncid = -1;
+		nct_set* set = nct_read_ncf(tiednimi, nct_rlazy);
+		nct_var* var = nct_get_var(set, varname);
+		if (!var < 0) {
+		    printf("Ei muuttujaa %s\n", varname);
+		    exit(1);
+		}
+		nct_load_as(var, NC_UBYTE);
+		if (!on_koordinaatit)
+		    koordinaatit(set, &tallenn);
+		char* taul = var->data;
 		/* Datasta puuttuu osa päivistä. Tässä täytetään puuttuvat kohdat viimeisimmällä arvolla.
 		   Kun päiviä ei puutu, while-silmukka käydään vain kerran. */
 		mktime(&aikatm);
@@ -65,18 +93,20 @@ int main() {
 		    yday0 = aikatm.tm_yday;
 		while(päiviä < aikatm.tm_yday+1) { // Toistetaan luettua dataa kunnes kirjoitettuja päiviä on riittävästi.
 		    for(int i=0; i<pit; i++)
-			uusi[päiviä*pit+i] = (char)taul[i];
+			uusi[päiviä*pit+i] = taul[i];
 		    päiviä++;
 		}
+		nct_free1(set);
 	    }
 	}
 	/* Tarkistetaan, että vuosi kirjoitetaan loppuun, vaikka dataa puuttuisi lopusta. */
 	aikatm.tm_mday = 31;
 	aikatm.tm_mon = 11;
 	mktime(&aikatm);
+	char* ptr = uusi + (päiviä-1)*pit;
 	while (päiviä < aikatm.tm_yday+1) {
 	    for(int i=0; i<pit; i++)
-		uusi[päiviä*pit+i] = (char)taul[i];
+		uusi[päiviä*pit+i] = ptr[i];
 	    päiviä++;
 	}
 	/* Jos ensimmäisen vuoden alusta puuttuu pitkästi, niin kuin puuttuukin,
@@ -89,6 +119,6 @@ int main() {
 	sprintf(tallnimi, "FT_720_%i.nc", y);
 	nct_write_nc(&tallenn, tallnimi);
     }
-    nct_free(&tallenn, set);
+    nct_free1(&tallenn);
     return 0;
 }

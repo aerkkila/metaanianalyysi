@@ -26,6 +26,7 @@ cp -l \
     $kansio
 
 cp -lr \
+    aikaväli.py \
     ikirdata.nc \
     köppen1x1maski.nc \
     köppenmaski.npy \
@@ -288,15 +289,14 @@ EOF
 
 kansio=$k0/create_kausien_päivät
 mkdir -p $kansio/ft_percent
-a=/home/aerkkila/smos_uusi/
+a=$HOME/smos_uusi/
 cp $a/kaudet.c $kansio/kausien_päivät.c
-cp -l $HOME/smos_uusi/ft_percent/frozen_percent_pixel_*.nc $kansio/ft_percent
-cp -l $HOME/smos_uusi/ft_percent/partly_frozen_percent_pixel_*.nc $kansio/ft_percent
+cp -l $a/ft_percent/frozen_percent_pixel_*.nc $kansio/ft_percent
+cp -l $a/ft_percent/partly_frozen_percent_pixel_*.nc $kansio/ft_percent
 kansio=$kansio/create_ft_percent
 mkdir -p $kansio
 cp $a/ft_percents_pixel_ease.c $kansio
-cp -l $a/EASE_2_l*.nc $kansio
-#cp -l $HOME/smos_uusi/FT_720_*.nc $kansio/data # isoja
+sed -i 's@#define dirname.*$@#define dirname "create_data/"@' $kansio/ft_percents_pixel_ease.c
 cat >$kansio/README <<EOF
 This code, ft_percent_pixel_ease.c, is used to convert from EASE2 coordinates to latlon coordinates
 and to calculate the fraction of each FT category (../ft_percent/*) in latlon grid cells.
@@ -313,6 +313,8 @@ This is a code that was used to combine each year into one file
 and to fill the missing dates with values read from the previous existing date.
 
 Similar data can be downloaded from 
+ftp://litdb.fmi.fi/outgoing/SMOS-FTService/
+or
 https://nsdc.fmi.fi/services/SMOSService/
 but the data version may be different than in the article.
 The processed data is provided in ../ft_percent/,
@@ -320,7 +322,8 @@ but the same version of the unprocessed data as in the article is unfortunately 
 If necessary, contact the authors of the article (anttoni.erkkila@fmi.fi) to get that data.
 
 Downloaded data files should be renamed as FT_yyyymmdd.nc.
-Something like 'mmv "W_XX-ESA,SMOS,NH_25KM_EASE2_*_[or]_*.nc" FT_#1.nc' should rename the files correctly.
+Using mmv, that can be done as:
+>>> mmv "W_XX-ESA,SMOS,NH_25KM_EASE2_*_[or]_*.nc" FT_#1.nc
 
 Reference:
 (Rautiainen, K., Parkkinen, T., Lemmetyinen, J., Schwank, M., Wiesmann, A., Ikonen, J., Derksen, C., Davydov, S., Davydova, A., Boike, J., Langer, M., Drusch, M., and Pulliainen, J. 2016. SMOS prototype algorithm for detecting autumn soil freezing, Remote Sensing of Environment, 180, 346-360. DOI: 10.1016/j.rse.2016.01.012).
@@ -343,12 +346,12 @@ cat > $k0/create_links.sh <<EOF
 #!/bin/sh
 ( cd create_köppen;         ln -s ../köppen1x1maski.nc . )
 ( cd create_köppen/create_köppen1x1maski; ln -s ../../aluemaski.nc . )
-( cd create_vuodata;        ln -s ../köppenmaski.txt ../ikirdata.nc ../BAWLD1x1.nc ../flux1x1.nc ../kausien_päivät_int16.nc ../pintaalat.h ../aluemaski.nc . )
-( cd create_vuojakaumadata; ln -s ../köppenmaski.txt ../ikirdata.nc ../BAWLD1x1.nc ../flux1x1.nc ../kausien_päivät.nc ../pintaalat.h ../aluemaski.nc . )
+( cd create_vuodata;        ln -s ../köppenmaski.txt ../ikirdata.nc ../BAWLD1x1.nc ../flux1x1.nc ../kausien_päivät_int16.nc ../pintaalat.h ../aluemaski.nc ../aikaväli.py . )
+( cd create_vuojakaumadata; ln -s ../köppenmaski.txt ../ikirdata.nc ../BAWLD1x1.nc ../flux1x1.nc ../kausien_päivät.nc ../pintaalat.h ../aluemaski.nc ../aikaväli.py . )
 ( cd create_kausien_päivät; ln -s ../aluemaski.nc . )
 ( cd create_BAWLD1x1;       ln -s ../aluemaski.nc . )
 ( cd create_ikirdata;       ln -s ../luokat.py . )
-( cd create_vuosijainnit;   ln -s ../aluemaski.nc ../flux1x1.nc ../BAWLD1x1.nc ../kausien_päivät_int16.nc ../pintaalat.h . )
+( cd create_vuosijainnit;   ln -s ../aluemaski.nc ../flux1x1.nc ../BAWLD1x1.nc ../kausien_päivät_int16.nc ../pintaalat.h ../aikaväli.py . )
 ( cd create_pintaalat;      ln -s ../aluemaski.nc . )
 EOF
 for f in `find $k0 -type f`; do head -1 $f | grep -q "^#!" && chmod 755 $f; done # suoritettaviin tiedostoihin suoritusoikeus
@@ -425,6 +428,7 @@ A guide to calculate those:
 
 File names:
 -----------
+aikaväli.py			time period: defines the last year to be used in analysis
 aluemaski			region mask
 ikirdata                        permafrost data
 kaudet                          seasons
@@ -438,4 +442,4 @@ EOF
 
 # Lopuksi koodit ilman suuria tiedostoja
 cp -rl $k0 $k1
-rm -r $k1/flux1x1.nc $k1/create_kausien_päivät/ft_percent $k1/create_kausien_päivät/create_ft_percent/EASE*.nc
+rm -r $k1/flux1x1.nc $k1/create_kausien_päivät/ft_percent
