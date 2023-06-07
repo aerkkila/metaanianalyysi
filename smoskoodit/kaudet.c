@@ -417,7 +417,6 @@ aika_päättyi:;
     ncid = nct_create_nc(&k1, nimi);
 
     int len = nct_firstvar(&k)->len;
-    int xypit = alue.latpit*alue.lonpit;
     short* buff = malloc(len*sizeof(short));
     nct_foreach(&k, var) {
 	float* data = var->data;
