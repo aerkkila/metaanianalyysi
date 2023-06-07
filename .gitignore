@@ -2,6 +2,7 @@ __pycache__
 kuvia*
 köppen_shp
 testi*
+raaka
 *.nc
 *.txt
 *.csv
@@ -15,6 +16,8 @@ testi*
 *.so
 *.swp
 *.bin
+*.zip
+ne_10m_*
 tmp*
 muunna_shapefile
 vuojakaumadata/
