@@ -6,12 +6,12 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h> // mkdir
-//#include <gsl/gsl_sort.h> // korvattu omalla lajittelulla
 #include <gsl/gsl_statistics.h>
 #include <assert.h>
 #include <time.h>
 #include <err.h>
 #include "pintaalat.h"
+#include "aikaväli.py"
 
 #define ARRPIT(a) (sizeof(a)/sizeof(*(a)))
 #define MIN(a,b) (a)<(b)? (a): (b)
@@ -38,7 +38,7 @@ static nct_set *luok_vs;
 static int ppnum;
 static char  *restrict luok_c;
 static double* kost;
-static int ikirvuosi0, ikirvuosia, vuosi0, vuosi1=2020, t1max;
+static int ikirvuosi0, ikirvuosia, vuosi0, t1max;
 char* kansio;
 char* aluemaski; // tarvitaan koko vuoden tuloksiin
 
@@ -385,8 +385,6 @@ int main(int argc, char** argv) {
     vuosi0 = nct_get_integer(vuosivar, 0);
     apuvar = nct_loadg(&vuo, "time");
     t1max  = apuvar->len;
-    if(!vuosi1)
-	vuosi1 = VUODET_ERIKSEEN ? 2021 : 2020;
 
     nct_anyd res = nct_mktime(apuvar, NULL, NULL, 0);
     if(res.d < 0)

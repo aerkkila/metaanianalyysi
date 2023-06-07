@@ -14,6 +14,7 @@
 #include <sys/stat.h> // mkdir
 #include <err.h>
 #include "../pintaalat.h"
+#include "../aikaväli.py"
 
 const char* wetlnimet_0[]    = {"wetland", "bog", "fen", "marsh"};
 const char* wetlandnimi_0    = "wetland_warm";
@@ -37,7 +38,6 @@ int tty;
 #define luott_0 0.025
 #define luott_1 0.975
 const int vakio = 0; // 1 tai 0 sen mukaan otetaanko vakiotermi vai ei
-const int vuosi1 = 2020;
 
 char aprintapu[256];
 char* aprintf(const char* muoto, ...) {

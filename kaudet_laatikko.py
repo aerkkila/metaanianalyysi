@@ -5,11 +5,11 @@ from laatikkokuvaaja import laatikkokuvaaja
 from matplotlib.pyplot import *
 import luokat, sys, time
 from pintaalat import pintaalat
+from aikaväli import vuosi1
 
 kaudet = luokat.kaudet[1:]
 pd_muuttujat = [['%s_start' %k, '%s_end' %k] for k in kaudet]
 vuosi0 = 2011
-vuosi1 = 2021
 jatka_ikiroutaa = False
 karkausvuosi = [not(i%4) and (bool(i%100) or not(i%400)) for i in range(vuosi0, vuosi1)]
 
@@ -44,24 +44,29 @@ def viimeistele(tulos, xnimet, ynimi):
 
 def toimikoon_ikirouta(ikirdata):
     global vuosi1
-    e0 = ikirdata['vuosi'][:][0] - vuosi0
-    e1 = vuosi1-1 - ikirdata['vuosi'][:][-1]
+    lisä_alkuun  = ikirdata['vuosi'][:][0] - vuosi0
+    lisä_loppuun = vuosi1-1 - ikirdata['vuosi'][:][-1]
     if not jatka_ikiroutaa:
-        vuosi1 -= e1
-        e1 = 0
+        if lisä_loppuun > 0:
+            vuosi1 -= lisä_loppuun
+            lisä_lopppuun = 0
     muoto = list(ikirdata['luokka'].shape)
-    muoto[0] += e0+e1
+    muoto[0] += lisä_alkuun + lisä_loppuun
     uusi = np.empty(muoto, np.int8)
-    pit = vuosi1-vuosi0
+    pit = vuosi1 - vuosi0
     data = np.ma.getdata(ikirdata['luokka'][:])
 
-    if e0 <= 0 and e1 >= 0:
-        assert(-e0+pit-e1 == data.shape[0])
-        uusi[:pit-e1, ...] = data[-e0:, ...]
-        uusi[pit-e1:, ...] = np.tile(data[-1, ...], [uusi.shape[0]-(pit-e1), 1, 1])
+    if lisä_alkuun <= 0 and lisä_loppuun >= 0:
+        assert(pit == data.shape[0]+lisä_loppuun+lisä_alkuun)
+        uusi[:pit-lisä_loppuun, ...] = data[-lisä_alkuun:, ...]
+        uusi[pit-lisä_loppuun:, ...] = np.tile(data[-1, ...], [uusi.shape[0]-(pit-lisä_loppuun), 1, 1])
+        return uusi
+    elif lisä_alkuun <= 0 and lisä_loppuun < 0:
+        assert(pit == data.shape[0]+lisä_loppuun+lisä_alkuun)
+        uusi[...] = data[-lisä_alkuun: data.shape[0]+lisä_loppuun, ...]
         return uusi
 
-    print("tämä ei toimi")
+    print("tämä ei toimi: %i, %i" %(lisä_alkuun, lisä_loppuun))
     sys.exit()
 
 def main():

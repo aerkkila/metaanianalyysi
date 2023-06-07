@@ -2,9 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include "pintaalat.h"
+#include "aikaväli.py"
 
 int lonpit;
-const int vuosi1 = 2020;
 #define pintaala(i) (pintaalat[i/lonpit])
 
 #define VIRHE -1234567

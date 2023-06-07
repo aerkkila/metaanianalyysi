@@ -1,12 +1,12 @@
 # kaudet.c pitää olla ajettuna ennen tätä
-all: vt.target vtpri.target vuojakaumadata.target vuojakaumadata_vuosittain.target vuosijainnit.nc kuvat.target taulukot.target
+all: vt.target vtpri.target vuojakaumadata.target vuosijainnit.nc kuvat.target taulukot.target
 argv =
 
 pintaalat.h: pintaalat.c
 	gcc -Wall pintaalat.c -lproj -lnctietue3 -g
 	./a.out
 
-vuodata.out: vuodata.c pintaalat.h
+vuodata.out: vuodata.c pintaalat.h aikaväli.py
 	gcc -Wall -o $@ $< -lnctietue3 -Ofast
 vvt.target: vvk vvw vvi vvt vvkk vvik
 vvk: vuodata.out
@@ -63,7 +63,7 @@ vwppri: vuodata.out
 # koska silloin on käytössä -ffast-math, joka sisältää -ffinite-math-only,
 # jolloin epälukujen tarkistus ei toimi.
 # Olisi hyvä vaihtaa liukuluvut int16:en ja käyttää sovittua täyttöarvoa epälukujen sijaan.
-vuojakaumadata.out: vuojakaumadata.c pintaalat.h
+vuojakaumadata.out: vuojakaumadata.c pintaalat.h aikaväli.py
 	gcc -Wall $< -o $@ `pkg-config --libs gsl` -lnctietue3 -g -O3
 vuojakauma_ikir: vuojakaumadata.out
 	./$< ikir post
@@ -77,18 +77,6 @@ vuojakauma_ikirkost: vuojakaumadata.out
 	./$< ikir post kost
 vuojakaumadata.target: vuojakauma_ikir vuojakauma_köpp vuojakauma_wetl vuojakauma_ikirkost vuojakauma_köppkost
 
-# vuojakaumadata vuosittain
-vuojakaumadata_vuosittain.out: vuojakaumadata.c pintaalat.h
-	gcc -Wall $< -o $@ `pkg-config --libs gsl` -lnctietue3 -g -O3 -DVUODET_ERIKSEEN=1
-vuojakauma_vuosittain_ikir: vuojakaumadata_vuosittain.out
-	./$< ikir post
-vuojakauma_vuosittain_köpp: vuojakaumadata_vuosittain.out
-	./$< köpp post
-vuojakauma_vuosittain_wetl: vuojakaumadata_vuosittain.out
-	./$< wetl post
-vuojakaumadata_vuosittain.target: vuojakauma_vuosittain_ikir vuojakauma_vuosittain_köpp vuojakauma_vuosittain_wetl
-	cat vuojakaumadata/vuosittain/emissio_*_post.csv > emissio_vuosittain.csv
-
 vuosijainnit.nc: vuosijainnit.out
 	./$<
 vuosijainnit.out: vuosijainnit.c pintaalat.h
@@ -99,8 +87,8 @@ kuvat.target: vuosijainnit.nc
 	./kaudet_laatikko.py -s
 	./yhdistelmäalueet.py -s
 	./vuojakaumat.py -s
-	./vuojakaumat_vuosittain.py -s -nf
 	./vuosijainnit.py -s
+	./kausiesim.py -s
 
 vuotaul.target:
 	gcc vuotaul_latex.c -O2 -o vuotaul.out
@@ -129,3 +117,16 @@ päivät_vuosittain_wetl: päivät_vuosittain.out
 	./päivät_vuosittain.out kaikki_muuttujat wetl
 päivät_vuosittain.target: päivät_vuosittain_ikir päivät_vuosittain_köpp päivät_vuosittain_wetl
 	cat kausidata/*_*.csv > kausidata/data.csv
+
+# vuojakaumadata vuosittain
+vuojakaumadata_vuosittain.out: vuojakaumadata.c pintaalat.h
+	gcc -Wall $< -o $@ `pkg-config --libs gsl` -lnctietue3 -g -O3 -DVUODET_ERIKSEEN=1
+vuojakauma_vuosittain_ikir: vuojakaumadata_vuosittain.out
+	./$< ikir post
+vuojakauma_vuosittain_köpp: vuojakaumadata_vuosittain.out
+	./$< köpp post
+vuojakauma_vuosittain_wetl: vuojakaumadata_vuosittain.out
+	./$< wetl post
+vuojakaumadata_vuosittain.target: vuojakauma_vuosittain_ikir vuojakauma_vuosittain_köpp vuojakauma_vuosittain_wetl
+	cat vuojakaumadata/vuosittain/emissio_*_post.csv > emissio_vuosittain.csv
+

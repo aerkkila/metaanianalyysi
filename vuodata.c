@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include "pintaalat.h"
+#include "aikaväli.py"
 
 #define Lat(i) (lat0+(i)/360)
 
@@ -26,7 +27,6 @@ const char* vuolaji_sisään[] = {"flux_bio_prior", "flux_bio_posterior", "flux_
 const char* vuolaji_ulos[]   = {"biopri", "biopost", "antropri", "antropost"};
 #define kausia 4
 #define wraja 0.05
-#define vuosi1_ 2020 // jos vuosittain, saatetaan käyttää muuta arvoa
 #define vuosi0_ 2011
 
 enum alue_e     {kokoalue_e, nontemperate_e, temperate_e} alueenum;
@@ -495,7 +495,7 @@ int main(int argc, char** argv) {
 	ikirvuosia -= siirto;
 	memmove(luokitus, luokitus+siirto*tiedot.res, ikirvuosia*tiedot.res);
 	tiedot.ikir = luokitus;
-	if (ikirvuosia > tiedot.v1) {
+	if (ikirvuosia < tiedot.v1) {
 	    puts("Varoitus: jatketaan ikiroutaa");
 	    luokitus = realloc(luokitus, tiedot.res*tiedot.v1);
 	    if(!luokitus)
