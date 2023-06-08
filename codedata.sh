@@ -10,7 +10,6 @@ kansio=$k0/nctietue3
 mkdir -p $kansio
 cd $kansio
 git -C ~/nctietue3 archive master | tar -x -C $kansio
-sed -i "s/^CFLAGS\(\W*=.*\)$/CFLAGS\1 -O2/" config.mk
 cd -
 
 kansio=$k0/article_source
@@ -440,4 +439,14 @@ EOF
 
 # Lopuksi koodit ilman suuria tiedostoja
 cp -rl $k0 $k1
-rm -r $k1/flux1x1.nc $k1/create_kausien_päivät/ft_percent
+rm -r $k1/flux1x1.nc $k1/create_kausien_päivät/ft_percent/ $k1/article_source/
+cat >$k1/__tmp <<eof
+This directory is meant for those who just want to see the codes and not the large data files.
+From this directory, the largest files are left away and therefore, all codes here cannot be run.
+This directory is created from the complete directory by running
+~$ rm -r flux1x1.nc create_kausien_päivät/ft_percent/ article_source/
+and by adding this paragraph into this file.
+
+`cat $k1/README.rst`
+eof
+mv $k1/__tmp $k1/README.rst
