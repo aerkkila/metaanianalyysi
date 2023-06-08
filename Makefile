@@ -59,12 +59,8 @@ vwppri: vuodata.out
 	./$< wetl nontemperate pri $(argv)
 
 # vuojakaumadata
-# Jos tässä on optimointina -Ofast, saadaan muistialueen ylitys,
-# koska silloin on käytössä -ffast-math, joka sisältää -ffinite-math-only,
-# jolloin epälukujen tarkistus ei toimi.
-# Olisi hyvä vaihtaa liukuluvut int16:en ja käyttää sovittua täyttöarvoa epälukujen sijaan.
 vuojakaumadata.out: vuojakaumadata.c pintaalat.h aikaväli.py
-	gcc -Wall $< -o $@ `pkg-config --libs gsl` -lnctietue3 -g -O3
+	gcc -Wall $< -o $@ `pkg-config --libs gsl` -lnctietue3 -g -Ofast
 vuojakauma_ikir: vuojakaumadata.out
 	./$< ikir post
 vuojakauma_köpp: vuojakaumadata.out

@@ -36,7 +36,6 @@ cp -lr \
     pintaalat.h \
     vuodata \
     vuojakaumadata \
-    kausien_päivät.nc \
     kausien_päivät_int16.nc \
     BAWLD1x1.nc \
     flux1x1.nc \
@@ -273,7 +272,7 @@ cat >$kansio/Makefile <<EOF
 all: vuojakauma_ikir vuojakauma_köpp vuojakauma_wetl ipk kpk
 
 vuojakaumadata.out: vuojakaumadata.c
-	gcc -Wall \$< -o \$@ \`pkg-config --libs gsl\` -lnctietue3 -g -O3
+	gcc -Wall \$< -o \$@ \`pkg-config --libs gsl\` -lnctietue3 -g -Ofast
 
 vuojakauma_ikir: vuojakaumadata.out
 	./\$< ikir post
@@ -323,7 +322,7 @@ If necessary, contact the authors of the article (anttoni.erkkila@fmi.fi) to get
 
 Downloaded data files should be renamed as FT_yyyymmdd.nc.
 Using mmv, that can be done as:
->>> mmv "W_XX-ESA,SMOS,NH_25KM_EASE2_*_[or]_*.nc" FT_#1.nc
+~$ mmv "W_XX-ESA,SMOS,NH_25KM_EASE2_*_[or]_*.nc" FT_#1.nc
 
 Reference:
 (Rautiainen, K., Parkkinen, T., Lemmetyinen, J., Schwank, M., Wiesmann, A., Ikonen, J., Derksen, C., Davydov, S., Davydova, A., Boike, J., Langer, M., Drusch, M., and Pulliainen, J. 2016. SMOS prototype algorithm for detecting autumn soil freezing, Remote Sensing of Environment, 180, 346-360. DOI: 10.1016/j.rse.2016.01.012).
@@ -347,7 +346,7 @@ cat > $k0/create_links.sh <<EOF
 ( cd create_köppen;         ln -s ../köppen1x1maski.nc . )
 ( cd create_köppen/create_köppen1x1maski; ln -s ../../aluemaski.nc . )
 ( cd create_vuodata;        ln -s ../köppenmaski.txt ../ikirdata.nc ../BAWLD1x1.nc ../flux1x1.nc ../kausien_päivät_int16.nc ../pintaalat.h ../aluemaski.nc ../aikaväli.py . )
-( cd create_vuojakaumadata; ln -s ../köppenmaski.txt ../ikirdata.nc ../BAWLD1x1.nc ../flux1x1.nc ../kausien_päivät.nc ../pintaalat.h ../aluemaski.nc ../aikaväli.py . )
+( cd create_vuojakaumadata; ln -s ../köppenmaski.txt ../ikirdata.nc ../BAWLD1x1.nc ../flux1x1.nc ../kausien_päivät_int16.nc ../pintaalat.h ../aluemaski.nc ../aikaväli.py . )
 ( cd create_kausien_päivät; ln -s ../aluemaski.nc . )
 ( cd create_BAWLD1x1;       ln -s ../aluemaski.nc . )
 ( cd create_ikirdata;       ln -s ../luokat.py . )
@@ -360,7 +359,7 @@ cat > $k0/README.rst <<EOF
 =======
 License
 =======
-These codes are under GPL3 license. They can be freely edited and shared as long as the same license is used.
+These codes are under the GPL3 license. They can be freely edited and shared as long as the same license is used.
 See file called LICENSE for more information.
 
 ============================
@@ -369,12 +368,13 @@ Installation and compilation
 The codes work at least on Linux. Many of the C-codes and shell scripts are likely to work only on Unix-like operating systems.
 It is necessary to run create_links.sh before attempting to run most codes elsewhere than in this root directory.
 It is also necessary to install nctietue3-library (see next paragraph) before running some of the C-codes.
+That is a C-library built on top of the netcdf-C-library to work with netcdf-files more easily.
 
 To install nctietue3-library, go to nctietue3 directory which is included here and then it can be installed normally with:
->>> make
->>> make install # as root
+~$ make
+~# make install
 To remove the library, run:
->>> make uninstall # as root
+~# make uninstall
 To install without root privilidges, change variable 'prefix' in config.mk to \$HOME/.local.
 
 If nctietue3 was installed without root privilidges to \$HOME/.local,
@@ -382,16 +382,14 @@ one may have to edit the C-codes replacing '#include <nctietue3.h>' with '#inclu
 or pass argument '-I/\$HOME/.local/include' to the compiler.
 
 If neither a README-file nor a Makefile is given for a C-file, default to compiling with:
->>> gcc file.c -O2
+~$ gcc file.c -O2
 If necessary, add '-lnctietue3'.
 If a Makefile is given, compile with:
->>> make
+~$ make
 
 Possible issues:
 ----------------
-Optimization level -Ofast cannot be used in vuojakaumadata.c due to -ffinite-math-only optimization.
-
-Most C codes use non-ascii utf8 characters in variable names
+Most C-codes use non-ascii utf8 characters in variable names
 which old compiler versions cannot compile (for gcc, version < 10.1).
 Also old Python versions may not work due to utf8 variable names.
 
@@ -414,17 +412,17 @@ Some statistical significances were only mentioned in the text and not shown in 
 A guide to calculate those:
 
 "The difference between the sporadic permafrost and non-permafrost regions was significant in summer and in the freezing period (p < 0.001)."
->>> ./ttest_categ.py ikir
+~$ ./ttest_categ.py ikir
 
 "Permafrost bogs had much smaller fluxes -- and was the only class that differed significantly from other classes in summer (p < 0.01)."
 "Tundra wetlands had the largest fluxes in both summer and winter. In winter they differed almost significantly from fens (p $\approx$ 0.05)."
->>> ./ttest_categ.py temperate
+~$ ./ttest_categ.py temperate
 
 "Differences between corresponding (same wetland class and season) average fluxes in temperate and warm wetland areas were significant during summer and freezing period (p < 0.01). Marshes in summer were an exception where the difference was not significant."
->>> ./ttest_areas.py
+~$ ./ttest_areas.py
 
 "in a t-test with equal variances and using the whole study area, bogs had significantly (p < 0.05) larger flux than fens in winter."
->>> ./ttest_categ.py sama
+~$ ./ttest_categ.py sama
 
 File names:
 -----------

@@ -10,13 +10,16 @@ tapaht = ['start', 'end']
 
 def main():
     vuosi = 2015
-    ds_päivät = Dataset('kausien_päivät.nc')
+    ds_päivät = Dataset('kausien_päivät_int16.nc')
     vuodet = np.ma.getdata(ds_päivät['vuosi'][:].flatten())
     indvuosi = np.searchsorted(vuodet, vuosi)
     päivät = np.empty([len(kaudet), len(tapaht)], object)
     for ikausi, kausi in enumerate(kaudet):
         for itapahtuma, tapahtuma in enumerate(tapaht):
-            päivät[ikausi,itapahtuma] = np.ma.getdata(ds_päivät['%s_%s' %(kausi, tapahtuma)][indvuosi,...].flatten())
+            dt = np.ma.getdata(ds_päivät['%s_%s' %(kausi, tapahtuma)][indvuosi,...].flatten()).astype(np.float32)
+            täyttö = dt[0]
+            dt[dt==täyttö] = np.nan
+            päivät[ikausi,itapahtuma] = dt
     ds_päivät.close()
 
     var = Dataset('%s/ft_percent/partly_frozen_percent_pixel_%i.nc' %(smosdir, vuosi-1))['data']

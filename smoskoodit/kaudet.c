@@ -31,12 +31,11 @@ static struct alue_t {
 };
 
 #define täyttö 999
-typedef float päi_tyy;
-const char* nimi_ulos = "kausien_päivät.nc";
-const int nctyyppi = NC_FLOAT;
+typedef short päi_tyy;
+const int nctyyppi = NC_SHORT;
+#define ulosdir "./"
+#define ulosnimi "kausien_päivät_int16.nc"
 
-const char* ulosdir = ".";
-const char* ulosdir16 = ".";
 #define AA
 #if defined AA
 #define kelpaako(a, b) ((a)==(a))
@@ -252,8 +251,6 @@ void alusta_taitesekunnit() {
 int main(int argc, char** argv) {
     if (mkdir(ulosdir, 0755) && errno != EEXIST)
 	err(1, "mkdir %s", ulosdir);
-    if (mkdir(ulosdir16, 0755) && errno != EEXIST)
-	err(1, "mkdir %s", ulosdir16);
     nct_readflags = nct_ratt;
     nct_set* luokkaA = nct_read_mfnc_regex(luettavaA, 0, NULL);
     nct_set* luokkaB = NULL;
@@ -405,39 +402,9 @@ aika_päättyi:;
     nct_add_var(&k, pl.j[1], nctyyppi, "freezing_end",   3, dimids);
     nct_add_var(&k, pl.t[0], nctyyppi, "winter_start",   3, dimids);
     nct_add_var(&k, pl.t[1], nctyyppi, "winter_end",     3, dimids);
-    char nimi[80];
 
     int ncid, varid;
-    /* int16 */
-    nct_set k1 = {0};
-    nct_put_interval(nct_dim2coord(nct_add_dim(&k1, vuosia, "vuosi"), NULL, NC_INT), vuosi0, 1);
-    nct_put_interval(nct_dim2coord(nct_add_dim(&k1, alue.latpit, "lat"), NULL, NC_FLOAT), alue.lat0, alue.väli);
-    nct_put_interval(nct_dim2coord(nct_add_dim(&k1, alue.lonpit, "lon"), NULL, NC_FLOAT), alue.lon0, alue.väli);
-    sprintf(nimi, "%s/kausien_päivät%s_int16.nc", ulosdir16, tunniste);
-    ncid = nct_create_nc(&k1, nimi);
-
-    int len = nct_firstvar(&k)->len;
-    short* buff = malloc(len*sizeof(short));
-    nct_foreach(&k, var) {
-	float* data = var->data;
-	for(int i=0; i<len; i++) {
-	    buff[i] = data[i];
-	    if (data[i] == täyttö)
-		data[i] = 0.0/0.0f; // nan-arvo vasta nyt, ettei niitä tarvi käsitellä koodissa
-	}
-	int varid;
-	ncfunk(nc_def_var, ncid, var->name, NC_SHORT, 3, dimids, &varid);
-	nc_put_var(ncid, varid, buff);
-    }
-    nc_inq_varid(ncid, "freezing_start", &varid);
-    nc_put_att_text(ncid, varid, "menetelmä", sizeof(menetelmä_sy), menetelmä_sy);
-    nc_inq_varid(ncid, "winter_start", &varid);
-    nc_put_att_text(ncid, varid, "menetelmä", sizeof(menetelmä_ta), menetelmä_ta);
-    ncfunk(nc_close, ncid);
-    free(buff);
-
-    sprintf(nimi, "%s/kausien_päivät%s.nc", ulosdir, tunniste);
-    ncid = nct_create_nc(&k, nimi); // luodaan vasta täällä, jotta nan-muunnos tulee voimaan silmukasta
+    ncid = nct_create_nc(&k, ulosdir ulosnimi);
     nc_inq_varid(ncid, "freezing_start", &varid);
     nc_put_att_text(ncid, varid, "menetelmä", sizeof(menetelmä_sy), menetelmä_sy);
     nc_inq_varid(ncid, "winter_start", &varid);
@@ -445,5 +412,5 @@ aika_päättyi:;
     nc_close(ncid);
     
     free(maski);
-    nct_free(&k, &k1, luokkaA);
+    nct_free(&k, luokkaA, luokkaB);
 }

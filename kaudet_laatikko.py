@@ -74,7 +74,7 @@ def main():
     ikirluvut  = [0,1,2,3]
     ikirdata_  = Dataset("ikirdata.nc", "r")
     ikirdata   = toimikoon_ikirouta(ikirdata_).flatten() # pitää olla ennen köppeniä, koska määrää aikapituuden
-    päivädata  = Dataset("kausien_päivät.nc", "r")
+    päivädata  = Dataset("kausien_päivät_int16.nc", "r")
     köppdata   = np.tile(np.load("köppenmaski.npy"), vuosi1-vuosi0)
     ikirdata_.close()
 
@@ -92,9 +92,13 @@ def main():
         vuodet     = päivädata['vuosi'][:]
         vuosimaski = (vuosi0<=vuodet) & (vuodet<vuosi1)
         vuodet     = vuodet[vuosimaski]
-        loput      = np.ma.getdata(päivädata[muutt[1]][:][vuosimaski])
-        alut       = np.ma.getdata(päivädata[muutt[0]][:][vuosimaski])
-        pitdet     = (loput-alut).flatten()
+        loput      = np.ma.getdata(päivädata[muutt[1]][:][vuosimaski]).astype(np.float32)
+        alut       = np.ma.getdata(päivädata[muutt[0]][:][vuosimaski]).astype(np.float32)
+
+        täyttö = alut[0,0,0]
+        alut[alut==täyttö] = np.nan
+        loput[loput==täyttö] = np.nan
+        pitdet = (loput-alut).flatten()
 
         # Poistetaan alkupäivistä sellaiset kohdat,
         # joissa kausi kestää usean vuoden ja on katkaistu jonain päivänä.

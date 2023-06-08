@@ -41,10 +41,12 @@ static double* kost;
 static int ikirvuosi0, ikirvuosia, vuosi0, t1max;
 char* kansio;
 char* aluemaski; // tarvitaan koko vuoden tuloksiin
+short täyttö;
 
 struct laskenta {
     const char* lajinimi;
-    float *kausiptr0, *kausiptr1, *vuoptr;
+    float *vuoptr;
+    short *kausiptr0, *kausiptr1;
     int kausi, lajinum, vuosi, vuo_t0;
     /* kirjoittaminen */
     float *vuoulos, *cdf;
@@ -174,16 +176,16 @@ static void* lue_ikir() {
 static void* lue_wetl() {
     return (luok_vs = nct_read_nc("./BAWLD1x1.nc"));
 }
-void* lue_luokitus() {
+static void* lue_luokitus() {
     static void* (*funktio[])(void) = { [kopp_e]=lue_köpp, [ikir_e]=lue_ikir, [wetl_e]=lue_wetl, };
     return funktio[luokenum]();
 }
 
-int vuoden_päivät(int vuosi) {
+static int vuoden_päivät(int vuosi) {
     return 365 + (!(vuosi%4) && ((vuosi%100) || !(vuosi%400)));
 }
 
-int hae_raja(struct laskenta* args, int päivä) {
+static int hae_raja(struct laskenta* args, int päivä) {
     struct tm tm0 = {
 	.tm_year = vuosi0+args->vuosi-1900,
 	.tm_mon  = 0,
@@ -195,15 +197,15 @@ int hae_raja(struct laskenta* args, int päivä) {
 /* Tämä hakee halutun kauden alkupäivän (t0) ja loppupäivän (t1) haluttuna vuonna
    vuodatan aikakoordinaatiksi muunnetuna.
    Jos kausi on whole_year_e, palautetaan kalenterivuoden alku- ja loppupäivä. */
-int alkuun(struct laskenta* args, int r, int* t0, int* t1) {
-    float päivä0, päivä1;
+static int alkuun(struct laskenta* args, int r, int* t0, int* t1) {
+    short päivä0, päivä1;
     if(!aluemaski[r])
 	return 1;
     päivä0 = args->kausi==whole_year_e? 0: args->kausiptr0[resol*args->vuosi+r];
-    if (päivä0 != päivä0)
+    if (päivä0 == täyttö)
 	return 1;
     päivä1 = args->kausi==whole_year_e? vuoden_päivät(args->vuosi+vuosi0): args->kausiptr1[resol*args->vuosi+r];
-    if (päivä1 != päivä1)
+    if (päivä1 == täyttö)
 	return 1;
     *t0 = hae_raja(args, päivä0);
     *t1 = hae_raja(args, päivä1);
@@ -379,8 +381,9 @@ int main(int argc, char** argv) {
     int latpit = apuvar->len;
     assert(lonpit*latpit == resol);
 
-    nct_set *kausivset = nct_read_nc("kausien_päivät.nc");
+    nct_set *kausivset = nct_read_nc("kausien_päivät_int16.nc");
     nct_var* vuosivar = nct_get_var(kausivset, "vuosi");
+    täyttö = nct_get_integer(nct_firstvar(kausivset), 0);
 
     vuosi0 = nct_get_integer(vuosivar, 0);
     apuvar = nct_loadg(&vuo, "time");
