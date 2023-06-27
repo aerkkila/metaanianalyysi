@@ -30,12 +30,10 @@ cp -lr \
     köppen1x1maski.nc \
     köppenmaski.npy \
     köppenmaski.txt \
-    aluemaski.nc \
     pintaalat.py \
     pintaalat.h \
     vuodata \
     vuojakaumadata \
-    kausien_päivät_int16.nc \
     BAWLD1x1.nc \
     flux1x1.nc \
     vuosijainnit.nc \
@@ -285,47 +283,16 @@ kpk: vuojakaumadata.out
 	./\$< köpp post kost
 EOF
 
-kansio=$k0/create_kausien_päivät
-mkdir -p $kansio/ft_percent
-a=$HOME/smos_uusi/
-cp $a/kaudet.c $kansio/kausien_päivät.c
-cp -l $a/ft_percent/frozen_percent_pixel_*.nc $kansio/ft_percent
-cp -l $a/ft_percent/partly_frozen_percent_pixel_*.nc $kansio/ft_percent
-kansio=$kansio/create_ft_percent
-mkdir -p $kansio
-cp $a/ft_percents_pixel_ease.c $kansio
-sed -i 's@#define dirname.*$@#define dirname "create_data/"@' $kansio/ft_percents_pixel_ease.c
-cat >$kansio/README <<EOF
-This code, ft_percent_pixel_ease.c, is used to convert from EASE2 coordinates to latlon coordinates
-and to calculate the fraction of each FT category (../ft_percent/*) in latlon grid cells.
-
-The code reads annual data files named as FT_720_yyyy.nc
-which must be first created using the codes in create_data.
-EOF
-
-kansio=$kansio/create_data
-mkdir -p $kansio
-cp $HOME/smos_uusi/yhdistä_vuosittain.c $kansio
-cat >$kansio/README <<EOF
-This is a code that was used to combine each year into one file
-and to fill the missing dates with values read from the previous existing date.
-
-Similar data can be downloaded from 
-ftp://litdb.fmi.fi/outgoing/SMOS-FTService/
-or
-https://nsdc.fmi.fi/services/SMOSService/
-but the data version may be different than in the article.
-The processed data is provided in ../ft_percent/,
-but the same version of the unprocessed data as in the article is unfortunately not online.
-If necessary, contact the authors of the article (anttoni.erkkila@fmi.fi) to get that data.
-
-Downloaded data files should be renamed as FT_yyyymmdd.nc.
-Using mmv, that can be done as:
-~$ mmv "W_XX-ESA,SMOS,NH_25KM_EASE2_*_[or]_*.nc" FT_#1.nc
-
-Reference:
-(Rautiainen, K., Parkkinen, T., Lemmetyinen, J., Schwank, M., Wiesmann, A., Ikonen, J., Derksen, C., Davydov, S., Davydova, A., Boike, J., Langer, M., Drusch, M., and Pulliainen, J. 2016. SMOS prototype algorithm for detecting autumn soil freezing, Remote Sensing of Environment, 180, 346-360. DOI: 10.1016/j.rse.2016.01.012).
-EOF
+kansio=create_kausien_päivät
+git archive master $kansio |tar -x -C $k0
+cp $kansio/kausien_päivät_int16.nc $k0/kansio
+cp $kansio/vuoret.nc $k0/$kansio
+cp $kansio/aluemaski.nc $k0/$kansio
+kansio=$kansio/create_ftpercent
+mkdir $k0/$kansio/ftpercent
+cp -l $kansio/ftpercent/partly_frozen_percent_*.nc $k0/$kansio/ftpercent
+cp -l $kansio/ftpercent/frozen_percent_*.nc $k0/$kansio/ftpercent
+cp -l $kansio/ftpercent/number_of_pixels.nc $k0/$kansio/ftpercent
 
 kansio=$k0/create_BAWLD1x1
 mkdir -p $kansio
@@ -342,15 +309,19 @@ EOF
 
 cat > $k0/create_links.sh <<EOF
 #!/bin/sh
+a=create_kausien_päivät
+ln -s \$a/aluemaski.nc $a/kausien_päivät_int16.nc .
+( cd \$a; ln -s create_ftpercent/ftpercent . )
+( cd \$a/create_ftpercent;   ln -s create_data/data . )
 ( cd create_köppen;         ln -s ../köppen1x1maski.nc . )
 ( cd create_köppen/create_köppen1x1maski; ln -s ../../aluemaski.nc . )
 ( cd create_vuodata;        ln -s ../köppenmaski.txt ../ikirdata.nc ../BAWLD1x1.nc ../flux1x1.nc ../kausien_päivät_int16.nc ../pintaalat.h ../aluemaski.nc ../aikaväli.py . )
 ( cd create_vuojakaumadata; ln -s ../köppenmaski.txt ../ikirdata.nc ../BAWLD1x1.nc ../flux1x1.nc ../kausien_päivät_int16.nc ../pintaalat.h ../aluemaski.nc ../aikaväli.py . )
-( cd create_kausien_päivät; ln -s ../aluemaski.nc . )
 ( cd create_BAWLD1x1;       ln -s ../aluemaski.nc . )
 ( cd create_ikirdata;       ln -s ../luokat.py . )
 ( cd create_vuosijainnit;   ln -s ../aluemaski.nc ../flux1x1.nc ../BAWLD1x1.nc ../kausien_päivät_int16.nc ../pintaalat.h ../aikaväli.py . )
 ( cd create_pintaalat;      ln -s ../aluemaski.nc . )
+
 EOF
 for f in `find $k0 -type f`; do head -1 $f | grep -q "^#!" && chmod 755 $f; done # suoritettaviin tiedostoihin suoritusoikeus
 
@@ -365,7 +336,7 @@ See file called LICENSE for more information.
 Installation and compilation
 ============================
 The codes work at least on Linux. Many of the C-codes and shell scripts are likely to work only on Unix-like operating systems.
-It is necessary to run create_links.sh before attempting to run most codes elsewhere than in this root directory.
+One must start by running create_links.sh before doing anything else.
 It is also necessary to install nctietue3-library (see next paragraph) before running some of the C-codes.
 That is a C-library built on top of the netcdf-C-library to work with netcdf-files more easily.
 
@@ -382,7 +353,7 @@ or pass argument '-I/\$HOME/.local/include' to the compiler.
 
 If neither a README-file nor a Makefile is given for a C-file, default to compiling with:
 ~$ gcc file.c -O2
-If necessary, add '-lnctietue3'.
+If necessary, add '-lnctietue3 -lnetcdf -lproj'.
 If a Makefile is given, compile with:
 ~$ make
 
@@ -393,7 +364,7 @@ which old compiler versions cannot compile (for gcc, version < 10.1).
 Also old Python versions may not work due to utf8 variable names.
 
 Some of the terminal outputs contain ansi escape sequences.
-If the terminal does not support them, the output will look different than intended.
+If the terminal does not support them of if the output is redirected to a file, the output will look different than intended.
 
 =====
 Usage
@@ -425,7 +396,7 @@ A guide to calculate those:
 
 File names:
 -----------
-aikaväli.py			time period: defines the last year to be used in analysis
+aikaväli.py			time period: defines the last year to be used in analysis for both C and Python codes
 aluemaski			region mask
 ikirdata                        permafrost data
 kaudet                          seasons
@@ -439,12 +410,12 @@ EOF
 
 # Lopuksi koodit ilman suuria tiedostoja
 cp -rl $k0 $k1
-rm -r $k1/flux1x1.nc $k1/create_kausien_päivät/ft_percent/ $k1/article_source/
+rm -r $k1/flux1x1.nc $k1/create_kausien_päivät/create_ftpercent/ftpercent/ $k1/article_source/
 cat >$k1/__tmp <<eof
 This directory is meant for those who just want to see the codes and not the large data files.
 From this directory, the largest files are left away and therefore, all codes here cannot be run.
 This directory is created from the complete directory by running
-~$ rm -r flux1x1.nc create_kausien_päivät/ft_percent/ article_source/
+~$ rm -r flux1x1.nc create_kausien_päivät/create_ftpercent/ftpercent/ article_source/
 and by adding this paragraph into this file.
 
 `cat $k1/README.rst`

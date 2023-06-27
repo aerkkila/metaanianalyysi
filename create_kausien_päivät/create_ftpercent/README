@@ -1,0 +1,9 @@
+Data must be first downloaded and preprocessed, see create_data.
+
+Thereafter start by compiling and running maski.c.
+That will create maski.nc which contains all grid cells where SMOS F/T data is defined in some day.
+Many grid cells are defined only part of time but all those will be used which are defined in some day.
+
+Then compile and run ftpercent.c:
+~$ gcc ftpercent.c -Ofast -lnctietue3 -lproj
+~$ ./a.out

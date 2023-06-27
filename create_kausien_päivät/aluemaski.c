@@ -8,7 +8,7 @@ typedef char tyyppi; const int nctyyppi = NC_BYTE;
 
 int main() {
     nct_set* set = nct_read_nc(indir "number_of_pixels.nc");
-    char* vuoret = nct_read_from_nc("vuoret.nc", "luokka");
+    char* vuoret = nct_read_from_nc("vuoret.nc", "data");
     nct_var* var = nct_firstvar(set);
     int xypit = var->len;
     int xpit = nct_get_var(set, "lon")->len;
