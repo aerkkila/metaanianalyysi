@@ -4,7 +4,7 @@ from matplotlib.pyplot import *
 from netCDF4 import Dataset
 import os, sys
 
-smosdir = '../smosdata'
+smosdir = 'create_kausien_päivät'
 kaudet = ['freezing', 'winter', 'summer']
 tapaht = ['start', 'end']
 
@@ -22,15 +22,15 @@ def main():
             päivät[ikausi,itapahtuma] = dt
     ds_päivät.close()
 
-    var = Dataset('%s/ft_percent/partly_frozen_percent_pixel_%i.nc' %(smosdir, vuosi-1))['data']
+    var = Dataset('%s/ftpercent/partly_frozen_percent_%i.nc' %(smosdir, vuosi-1))['data']
     partly = np.ma.getdata(var[:])
-    var = Dataset('%s/ft_percent/partly_frozen_percent_pixel_%i.nc' %(smosdir, vuosi))['data']
+    var = Dataset('%s/ftpercent/partly_frozen_percent_%i.nc' %(smosdir, vuosi))['data']
     partly = np.concatenate([partly, np.ma.getdata(var[:])])
     partly = np.reshape(partly, (partly.shape[0], np.product(partly.shape[1:])))
 
-    var = Dataset('%s/ft_percent/frozen_percent_pixel_%i.nc' %(smosdir, vuosi-1))['data']
+    var = Dataset('%s/ftpercent/frozen_percent_%i.nc' %(smosdir, vuosi-1))['data']
     frozen = np.ma.getdata(var[:])
-    var = Dataset('%s/ft_percent/frozen_percent_pixel_%i.nc' %(smosdir, vuosi))['data']
+    var = Dataset('%s/ftpercent/frozen_percent_%i.nc' %(smosdir, vuosi))['data']
     frozen = np.concatenate([frozen, np.ma.getdata(var[:])])
     frozen = np.reshape(frozen, (frozen.shape[0], np.product(frozen.shape[1:])))
 

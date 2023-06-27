@@ -132,6 +132,8 @@ char* korvaa(const char* str, int a, int b) {
 float jäätymisarvo(float* taul) {
     float talvi = taul[2*2+1];
     float syksy = taul[1*2+1] - talvi;
+    if (syksy < 0)
+	return 0;
     float kesä  = taul[0*2+1] - talvi;
     return syksy/kesä;
 }
