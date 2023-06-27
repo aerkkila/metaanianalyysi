@@ -1,0 +1,12 @@
+Start by downloading the data from ftp://litdb.fmi.fi/outgoing/SMOS-FTService/
+This can be done using the code lataa.sh (download).
+Using that code, it is safe to stop the download and re-running the code will then continue the download and not start over.
+That also avoids saving any incomplete file which would cause problems later.
+Downloaded size will be around 38 Gb consisting of approximately 4000 files.
+
+The data can be then created by compiling and running yhdistä_vuosittain.c (combine annually).
+That combines daily files into yearly files and if a file is missing, the values are copied from the previous day.
+
+Reference:
+https://nsdc.fmi.fi/services/SMOSService/
+(Rautiainen, K., Parkkinen, T., Lemmetyinen, J., Schwank, M., Wiesmann, A., Ikonen, J., Derksen, C., Davydov, S., Davydova, A., Boike, J., Langer, M., Drusch, M., and Pulliainen, J. 2016. SMOS prototype algorithm for detecting autumn soil freezing, Remote Sensing of Environment, 180, 346-360. DOI: 10.1016/j.rse.2016.01.012).

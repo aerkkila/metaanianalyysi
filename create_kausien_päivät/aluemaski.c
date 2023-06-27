@@ -20,12 +20,12 @@ int main() {
     while(lat[j_alku] < 50)
 	j_alku++;
     for(int i=j_alku*xpit; i<xypit; i++)
-	if (data[i] > 0 && !vuoret[i])
-	    maski[i] = 1;
+	maski[i] = data[i] > 0 && !vuoret[i];
     nct_set ulos = {0};
     nct_copy_var(&ulos, nct_get_var(set, "lat"), 1);
     nct_copy_var(&ulos, nct_get_var(set, "lon"), 1);
     nct_add_var_alldims(&ulos, maski, nctyyppi, "maski");
     nct_write_nc(&ulos, "aluemaski.nc");
     nct_free(&ulos, set);
+    free(vuoret);
 }

@@ -1,0 +1,6 @@
+kausien_päivät.c (season dates) is used to create kausien_päivät_int16.nc which contains start and end dates for each season.
+It is compiled with
+~$ gcc kausien_päivät.c -lnctietue3 -lnetcdf
+
+aluemaski.c (region mask) is used to create aluemaski.nc
+which is needed in kausien_päivät.c and in many other codes as well. That code reads vuoret.nc (mountains) which is created from ikirdata.nc (permafrost data) by choosing by hand those areas where permafrost extends to south like a peninsula. That was done in a graphical user interface using nctplot (github.com/aerkkila/nctplot).

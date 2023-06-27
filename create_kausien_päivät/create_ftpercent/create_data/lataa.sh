@@ -18,26 +18,31 @@ lataa_kuukausi() {
 	[ -f $tied ] && continue
 	printf "$d\r"
 	cd tmp # vältetään keskeneräiset tiedostot
-	ftp -V $url/$tied && mv $tied .. || printf "%i%02i%02i\n" $vuosi $kuukausi $d >>../puuttuvat.txt
+	ftp -V $url/$tied && mv $tied .. || printf "%i%02i%02i\n" $vuosi $kuukausi $d >>../../puuttuvat.txt
 	cd ..
     done
 }
 
 mkdir -p raaka
-rm -r raaka/tmp
+rm -r raaka/tmp puuttuvat.txt
 mkdir raaka/tmp
 cd raaka
-rm raaka/puuttuvat.txt
 
 vuosi=2010
 for kuukausi in `seq 7 12`; do
     lataa_kuukausi
 done
 
-for vuosi in `seq 2011 2021`; do
+for vuosi in `seq 2011 2020`; do
     for kuukausi in `seq 1 12`; do
 	lataa_kuukausi
     done
 done
 
+vuosi=2021
+for kuukausi in `seq 1 8`; do
+    lataa_kuukausi
+done
+
+cd ..
 rm -r raaka/tmp
