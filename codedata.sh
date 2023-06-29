@@ -381,17 +381,19 @@ Statistical significances
 Some statistical significances were only mentioned in the text and not shown in any table or figure.
 A guide to calculate those:
 
-"The difference between the sporadic permafrost and non-permafrost regions was significant in summer and in the freezing period (p < 0.001)."
+"The difference between the sporadic permafrost and non-permafrost regions was significant (p < 0.02)."
 ~$ ./ttest_categ.py ikir
 
-"Permafrost bogs had much smaller fluxes -- and was the only class that differed significantly from other classes in summer (p < 0.01)."
-"Tundra wetlands had the largest fluxes in both summer and winter. In winter they differed almost significantly from fens (p $\approx$ 0.05)."
+"Permafrost bogs had much smaller fluxes than other classes in summer and was the only class that differed significantly from other classes in summer (p < 0.01). Tundra wetlands --"
 ~$ ./ttest_categ.py temperate
 
-"Differences between corresponding (same wetland class and season) average fluxes in temperate and warm wetland areas were significant during summer and freezing period (p < 0.01). Marshes in summer were an exception where the difference was not significant."
+"Differences between corresponding (same wetland class and season) average fluxes in temperate and warm wetland areas were significant during the summer (p < 0.01).
+Marshes in summer were an exception where the difference was less significant (p = 0.03)."
 ~$ ./ttest_areas.py
 
-"in a t-test with equal variances and using the whole study area, bogs had significantly (p < 0.05) larger flux than fens in winter."
+"These differences were not statistically significant" 
+~$ ./ttest_categ.py
+"unless equal variances were assumed but in a t-test with equal variances and using the whole study area, bogs had significantly (p = 0.01) larger flux than fens in winter."
 ~$ ./ttest_categ.py sama
 
 File names:
