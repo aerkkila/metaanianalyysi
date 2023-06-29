@@ -22,10 +22,14 @@ def main():
             päivät[ikausi,itapahtuma] = dt
     ds_päivät.close()
 
-    var = Dataset('%s/ftpercent/partly_frozen_percent_%i.nc' %(smosdir, vuosi-1))['data']
-    partly = np.ma.getdata(var[:])
-    var = Dataset('%s/ftpercent/partly_frozen_percent_%i.nc' %(smosdir, vuosi))['data']
-    partly = np.concatenate([partly, np.ma.getdata(var[:])])
+    ds = Dataset('%s/ftpercent/partly_frozen_percent_%i.nc' %(smosdir, vuosi-1))
+    partly = np.ma.getdata(ds['data'][:])
+    lat = np.ma.getdata(ds['lat'][:])
+    lon = np.ma.getdata(ds['lon'][:])
+    ds.close()
+    ds = Dataset('%s/ftpercent/partly_frozen_percent_%i.nc' %(smosdir, vuosi))
+    partly = np.concatenate([partly, np.ma.getdata(ds['data'][:])])
+    ds.close()
     partly = np.reshape(partly, (partly.shape[0], np.product(partly.shape[1:])))
 
     var = Dataset('%s/ftpercent/frozen_percent_%i.nc' %(smosdir, vuosi-1))['data']
@@ -50,6 +54,7 @@ def main():
         if continueflag:
             continue
 
+        print("%i° N, %i° E" %(lat[p//len(lon)], lon[p%len(lon)]))
         alku = int(päivät[0,0][p]) - 30
         loppu = int(päivät[2,0][p]) + 30
         aikaväli = np.arange(alku, loppu)
@@ -58,10 +63,10 @@ def main():
         viivat[:] = [päivät[ind,0][p] for ind in range(len(kaudet))]
         yrange = gca().get_ylim()
         vlines(viivat, yrange[0], yrange[1], color='y', linewidth=3)
-        text(np.mean([alku, viivat[0]]), yrange[1]+0.02, 'summer', ha='center')
-        text(np.mean(viivat[[0,1]]), yrange[1]+0.02, 'freezing', ha='center')
-        text(np.mean(viivat[[1,2]]), yrange[1]+0.02, 'winter', ha='center')
-        text(np.mean([viivat[2], loppu]), yrange[1]+0.02, 'summer', ha='center')
+        text(np.mean([alku, viivat[0]]), yrange[1]+0.02, 'summer %i' %(vuosi-1), ha='center')
+        text(np.mean(viivat[[0,1]]), yrange[1]+0.02, 'freezing %i' %vuosi, ha='center')
+        text(np.mean(viivat[[1,2]]), yrange[1]+0.02, 'winter %i' %vuosi, ha='center')
+        text(np.mean([viivat[2], loppu]), yrange[1]+0.02, 'summer %i' %vuosi, ha='center')
         gca().set_ylim(yrange)
         gca().set_xlim([alku,loppu])
         xlabel('day of year')
