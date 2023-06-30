@@ -9,7 +9,7 @@ dof = lambda s1,n1,s2,n2: (s1/n1 + s2/n2)**2 / (s1**2/(n1**3-n1**2) + s2**2/(n2*
 
 tiedosto = "vuodata/nontemperate/wetlandvuo_biopost_%s_k0.csv"
 
-f = open(tiedosto %'summer', 'r')
+f = open(tiedosto %'thaw', 'r')
 f.readline()
 teksti = f.readline()[:-1]
 a = teksti.split(',')

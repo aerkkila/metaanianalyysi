@@ -127,11 +127,11 @@ int main(int argc, char** argv) {
     int xyres = maski->len;
     
     struct tiedot tiedot = {
-	.vuo    = nct_loadg_as(vuovset, "flux_bio_posterior", NC_DOUBLE)->data,
-	.alut   = nct_loadg_as(kauvset, "summer_start",       NC_SHORT )->data,
-	.loput  = nct_loadg_as(kauvset, "summer_end",         NC_SHORT )->data,
-	.WET    = nct_loadg_as(bawvset, "wetland",            NC_DOUBLE)->data,
-	.vuodet = nct_loadg_as(kauvset, "vuosi",              NC_INT   )->data,
+	.vuo    = nct_loadg_as(vuovset, "flux_bio_posterior",	NC_DOUBLE)->data,
+	.alut   = nct_loadg_as(kauvset, "thaw_start",		NC_SHORT )->data,
+	.loput  = nct_loadg_as(kauvset, "thaw_end",		NC_SHORT )->data,
+	.WET    = nct_loadg_as(bawvset, "wetland",		NC_DOUBLE)->data,
+	.vuodet = nct_loadg_as(kauvset, "vuosi",		NC_INT   )->data,
 	.res    = xyres,
 	.aika0  = nct_mktime0g(vuovset, "time", NULL).a.t,
     };

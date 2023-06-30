@@ -9,7 +9,7 @@
 
 #define arrpit(a) (sizeof(a)/sizeof(*(a)))
 
-const char* kaudet[] = {"summer", "freezing", "winter"};
+const char* kaudet[] = {"thaw", "freezing", "winter"};
 const char* suureet[] = {"rajat:", "pisteistä:", "r²:"};
 int kausia = arrpit(kaudet);
 int suureita = arrpit(suureet);

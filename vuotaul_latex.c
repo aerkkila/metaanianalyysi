@@ -21,7 +21,7 @@
 #endif
 
 const char* pripost[] = {"pri", "post"};
-const char* kaudet[] = {"summer", "freezing", "winter"};
+const char* kaudet[] = {"thaw", "freezing", "winter"};
 const char* ylänimet[] = {"wetland", "köppen", "ikir"};
 const char* wetlnimet[] = {"bog", "fen", "marsh", "permafrost_bog", "tundra_wetland", "wetland", "non-wetland"};
 const char* ikirnimet[] = {"non-permafrost", "sporadic", "discontinuous", "continuous"};

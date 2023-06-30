@@ -7,7 +7,7 @@ import luokat
 
 luokitus0 = np.array([*luokat.ikir, *luokat.kopp])
 luokitus1 = np.array(luokat.wetl)
-kaudet   = ['summer','freezing','winter']
+kaudet   = ['thaw','freezing','winter']
 pripost  = ['pri', 'post']
 
 def taulukko(tulos, luokka, textied):

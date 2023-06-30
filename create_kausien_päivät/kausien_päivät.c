@@ -397,8 +397,8 @@ aika_päättyi:;
     nct_put_interval(nct_dim2coord(nct_add_dim(&k, vuosia, "vuosi"), NULL, NC_INT), vuosi0, 1);
 #endif
     int dimids[] = {0,1,2};
-    nct_add_var(&k, pl.k[0], nctyyppi, "summer_start",   3, dimids);
-    nct_add_var(&k, pl.k[1], nctyyppi, "summer_end",     3, dimids);
+    nct_add_var(&k, pl.k[0], nctyyppi, "thaw_start",   3, dimids);
+    nct_add_var(&k, pl.k[1], nctyyppi, "thaw_end",     3, dimids);
     nct_add_var(&k, pl.j[0], nctyyppi, "freezing_start", 3, dimids);
     nct_add_var(&k, pl.j[1], nctyyppi, "freezing_end",   3, dimids);
     nct_add_var(&k, pl.t[0], nctyyppi, "winter_start",   3, dimids);

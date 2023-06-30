@@ -19,8 +19,8 @@ const char* ikirnimet[]      = {"non-permafrost", "sporadic", "discontinuous", "
 const char* köppnimet[]      = {"Db", "Dc", "Dd", "ET"};
 const char* wetlnimet[]      = {"wetland", "bog", "fen", "marsh", "permafrost_bog", "tundra_wetland"};
 const char* totlnimet[]      = {"total"};
-const char* kaudet[]         = {"whole_year", "summer", "freezing", "winter"};
-enum                           {whole_year_e, summer_e, freezing_e, winter_e};
+const char* kaudet[]         = {"whole_year", "thaw", "freezing", "winter"};
+enum                           {whole_year_e, thaw_e, freezing_e, winter_e};
 const char* luokitus_ulos[]  = {"total", "köppen", "ikir", "wetland"};
 enum luokitus_e                {totl_e,   köpp_e,   ikir_e, wetl_e};
 const char* vuolaji_sisään[] = {"flux_bio_prior", "flux_bio_posterior", "flux_antro_prior", "flux_antro_posterior"};
@@ -415,7 +415,7 @@ void tee_lajin_kaudet_vuosittain(struct tiedot* tiedot, nct_set* kauvset, char* 
 	for(int var=0; var<nvars; var++)
 	    sij[var] += sprintf(buf[var]+sij[var], "%s", kaudet[kausi]);
 
-	int vuosi1 = v10 - (kausi==summer_e);
+	int vuosi1 = v10 - (kausi==thaw_e);
 	for(tiedot->v0=v00; tiedot->v0<vuosi1; tiedot->v0++) {
 	    struct tulos tulos;
 	    tiedot->v1 = tiedot->v0+1;

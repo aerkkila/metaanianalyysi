@@ -5,7 +5,7 @@
 wc='warm cold'
 bfm='bog fen marsh'
 pt='permafrost_bog tundra_wetland'
-kaudet='summer freezing winter'
+kaudet='thaw freezing winter'
 kansio='../kuvia'
 
 B3() {

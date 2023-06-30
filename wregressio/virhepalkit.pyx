@@ -3,7 +3,7 @@ import numpy as np
 
 cdef FILE* f = fopen("sovitteet.txt", "r")
 cdef char sana[64]
-kaudet = [b'summer', b'freezing', b'winter']
+kaudet = [b'thaw', b'freezing', b'winter']
 lajit = [b'bog', b'fen', b'marsh', b'permafrost_bog', b'tundra_wetland']
 y = np.empty([len(kaudet),len(lajit)], np.float32)
 err = np.empty([2,len(kaudet),len(lajit)], np.float32)

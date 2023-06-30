@@ -285,7 +285,7 @@ EOF
 
 kansio=create_kausien_päivät
 git archive master $kansio |tar -x -C $k0
-cp $kansio/kausien_päivät_int16.nc $k0/kansio
+cp $kansio/kausien_päivät_int16.nc $k0/$kansio
 cp $kansio/vuoret.nc $k0/$kansio
 cp $kansio/aluemaski.nc $k0/$kansio
 kansio=$kansio/create_ftpercent
@@ -310,7 +310,7 @@ EOF
 cat > $k0/create_links.sh <<EOF
 #!/bin/sh
 a=create_kausien_päivät
-ln -s \$a/aluemaski.nc $a/kausien_päivät_int16.nc .
+ln -s \$a/aluemaski.nc \$a/kausien_päivät_int16.nc .
 ( cd \$a; ln -s create_ftpercent/ftpercent . )
 ( cd \$a/create_ftpercent;   ln -s create_data/data . )
 ( cd create_köppen;         ln -s ../köppen1x1maski.nc . )
@@ -384,11 +384,11 @@ A guide to calculate those:
 "The difference between the sporadic permafrost and non-permafrost regions was significant (p < 0.02)."
 ~$ ./ttest_categ.py ikir
 
-"Permafrost bogs had much smaller fluxes than other classes in summer and was the only class that differed significantly from other classes in summer (p < 0.01). Tundra wetlands --"
+"Permafrost bogs had much smaller fluxes than other classes in the thaw period and was the only class that differed significantly from other classes in summer (p < 0.01). Tundra wetlands --"
 ~$ ./ttest_categ.py temperate
 
-"Differences between corresponding (same wetland class and season) average fluxes in temperate and warm wetland areas were significant during the summer (p < 0.01).
-Marshes in summer were an exception where the difference was less significant (p = 0.03)."
+"Differences between corresponding (same wetland class and season) average fluxes in temperate and warm wetland areas were significant during the thaw period (p < 0.01).
+Marshes in the thaw period were an exception where the difference was less significant (p = 0.03)."
 ~$ ./ttest_areas.py
 
 "These differences were not statistically significant" 

@@ -22,8 +22,8 @@ const char* wetlnimet_1[]    = {"wetland", "permafrost_bog", "tundra_wetland"};
 const char* wetlandnimi_1    = "wetland_cold";
 const char *wetlandnimi, **wetlnimet;
 int wpit;
-const char* kaudet[]         = {"whole_year", "summer", "freezing", "winter"};
-enum                           {whole_year_e, summer_e, freezing_e, winter_e};
+const char* kaudet[]         = {"whole_year", "thaw", "freezing", "winter"};
+enum                           {whole_year_e, thaw_e, freezing_e, winter_e};
 const char* pripost_sisään[] = {"flux_bio_prior", "flux_bio_posterior"};
 const char* pripost_ulos[]   = {"pri", "post"};
 
@@ -157,8 +157,8 @@ int päiviä_nollapäivästä(time_t aika0, int vuosi, short päivä) {
 }
 
 const char* varnimet[] = {
-    [summer_e	*2]	= "summer_start",
-    [summer_e	*2+1]	= "summer_end",
+    [thaw_e	*2]	= "thaw_start",
+    [thaw_e	*2+1]	= "thaw_end",
     [winter_e	*2]	= "winter_start",
     [winter_e	*2+1]	= "winter_end",
     [freezing_e	*2]	= "freezing_start",

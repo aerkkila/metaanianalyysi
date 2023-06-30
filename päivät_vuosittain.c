@@ -22,7 +22,7 @@ const int resol = 19800;
 const char* ikirnimet[] = {"non-permafrost", "sporadic", "discontinuous", "continuous"};
 const char* köppnimet[] = {"Db", "Dc", "Dd", "ET"};
 const char* wetlnimet[] = {"wetland", "bog", "fen", "marsh", "tundra_wetland", "permafrost_bog"};
-const char* kaudet[]    = {"summer", "freezing", "winter"};
+const char* kaudet[]    = {"thaw", "freezing", "winter"};
 const char* päänimet [] = {"köppen", "ikir", "wetland"};
 enum                      {köpp_e,   ikir_e, wetl_e} luokenum;
 const char* muuttujat[] = {"start", "end", "length"};

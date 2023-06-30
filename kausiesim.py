@@ -5,7 +5,7 @@ from netCDF4 import Dataset
 import os, sys
 
 smosdir = 'create_kausien_päivät'
-kaudet = ['freezing', 'winter', 'summer']
+kaudet = ['freezing', 'winter', 'thaw']
 tapaht = ['start', 'end']
 
 def main():
@@ -63,10 +63,10 @@ def main():
         viivat[:] = [päivät[ind,0][p] for ind in range(len(kaudet))]
         yrange = gca().get_ylim()
         vlines(viivat, yrange[0], yrange[1], color='y', linewidth=3)
-        text(np.mean([alku, viivat[0]]), yrange[1]+0.02, 'summer %i' %(vuosi-1), ha='center')
+        text(np.mean([alku, viivat[0]]), yrange[1]+0.02, 'thaw %i' %(vuosi-1), ha='center')
         text(np.mean(viivat[[0,1]]), yrange[1]+0.02, 'freezing %i' %vuosi, ha='center')
         text(np.mean(viivat[[1,2]]), yrange[1]+0.02, 'winter %i' %vuosi, ha='center')
-        text(np.mean([viivat[2], loppu]), yrange[1]+0.02, 'summer %i' %vuosi, ha='center')
+        text(np.mean([viivat[2], loppu]), yrange[1]+0.02, 'thaw %i' %vuosi, ha='center')
         gca().set_ylim(yrange)
         gca().set_xlim([alku,loppu])
         xlabel('day of year')

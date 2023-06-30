@@ -1,5 +1,5 @@
 kausien_päivät.c (season dates) is used to create kausien_päivät_int16.nc which contains start and end dates for each season.
-It is compiled with
+Compile as:
 ~$ gcc kausien_päivät.c -lnctietue3 -lnetcdf
 
 aluemaski.c (region mask) is used to create aluemaski.nc

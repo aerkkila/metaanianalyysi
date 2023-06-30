@@ -18,7 +18,7 @@ tiedosto1 = "vuodata/ikirvuo_biopost_%s_k1.csv"
 tiedosto2 = "vuodata/köppenvuo_biopost_%s_k1.csv"
 
 def lue_indeksit(tiedosto):
-    f = open(tiedosto %'summer', 'r')
+    f = open(tiedosto %'thaw', 'r')
     f.readline()
     teksti = f.readline()[:-1]
     a = teksti.split(',')
