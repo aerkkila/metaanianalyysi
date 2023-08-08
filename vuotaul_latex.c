@@ -20,8 +20,9 @@
 #define kansio "vuodata/temperate/"
 #endif
 
-const char* pripost[] = {"pri", "post"};
-const char* kaudet[] = {"thaw", "freezing", "winter"};
+const char* pripost[] =	{"pri", "post"};
+const char* kaudet[] =	{"thaw", "freezing", "winter"};
+enum			{ind_sula, ind_jää,  ind_talvi};
 const char* ylänimet[] = {"wetland", "köppen", "ikir"};
 const char* wetlnimet[] = {"bog", "fen", "marsh", "permafrost_bog", "tundra_wetland", "wetland", "non-wetland"};
 const char* ikirnimet[] = {"non-permafrost", "sporadic", "discontinuous", "continuous"};
@@ -30,20 +31,10 @@ int
     pit_kaudet=ARRPIT(kaudet),
     pit_wetl=ARRPIT(wetlnimet),
     pit_köpp=ARRPIT(köppnimet),
-    pit_ikir=ARRPIT(ikirnimet),
-    ind_jää;
+    pit_ikir=ARRPIT(ikirnimet);
 
 #define _STR(s) #s
 #define STR2(s1,s2) (_STR(s1) _STR(s2))
-
-void pituudet() {
-    for(int i=0; i<pit_kaudet; i++)
-	if(!strcmp(kaudet[i], "freezing")) {
-	    ind_jää = 1;
-	    break;
-	}
-
-}
 
 char aprintapu[512];
 char* aprintf(const char* muoto, ...) {
@@ -139,24 +130,39 @@ float jäätymisarvo(float* taul) {
 }
 
 #define K(...) fprintf(f, __VA_ARGS__)
-#define A K(" & %.4f", taul[k*2])
-#define B K(" & %.0f & %.3f", taul[k*2]/summa*1000, taul[k*2+1])
+#define A(k) K(" & %.4f", taul[k*2])
+#define B(k) K(" & %.0f", taul[k*2]/summa*1000)
+#define C(k) K(" & %.3f", taul[k*2+1])
+#define rgb(r,g,b,f) " & \\colorbox[rgb]{%.2f, %.2f, %.2f}{" f "}", r, g, b
+#define C1(k,r,g,b) K(rgb(r, g, b, "%.3f"), taul[k*2+1])
+
 void kirjoita_rivi(FILE* f, float* taul) {
     float jä = jäätymisarvo(taul);
     float r = (jä-0.5)*2 * (jä>0.5);
     float b = (1-jä*2) * (jä<0.5);
     float summa = 0;
-    int k;
-    for(int k=0; k<pit_kaudet; k++) summa+=taul[k*2];
-    for(k=0; k<ind_jää; k++) { A; B; }
-    A;
-    K(" & %.0f & \\colorbox[rgb]{%.2f, %.2f, %.2f}{%.3f}",
-      taul[k*2]/summa*1000, 1-b, 1-r-b, 1-r, taul[k*2+1]);
-    for(int k=ind_jää+1; k<pit_kaudet; k++) { A; B; }
+    for(int k=0; k<pit_kaudet; k++)
+	summa += taul[k*2];
+
+    A(ind_sula);
+    B(ind_sula);
+    C(ind_sula);
+
+    A(ind_jää);
+    B(ind_jää);
+    C1(ind_jää, 1-b, 1-r-b, 1-r);
+
+    A(ind_talvi);
+    B(ind_talvi);
+    C(ind_talvi);
     K(" \\\\\n");
 }
+
 #undef A
 #undef B
+#undef C
+#undef rgb
+#undef C1
 
 void kirjoita_data(int ppnum, float* taul) {
 #if LAUHKEUS==1
@@ -181,6 +187,7 @@ void kirjoita_data(int ppnum, float* taul) {
 	kirjoita_rivi(f, taul);
 	taul += pit_kaudet*2;
     }
+    K("\\midrule\n");
     for(int i=0; i<pit_köpp; i++) {
 	K("%s", köppnimet[i]);
 	kirjoita_rivi(f, taul);
@@ -189,7 +196,7 @@ void kirjoita_data(int ppnum, float* taul) {
 #endif
 #if !KOSTEIKKO
 #if !LAUHKEUS
-    K("\\\\\n");
+    K("\\midrule\n");
 #endif
     for(int i=0; i<pit_wetl; i++) {
 	K("%s", korvaa(wetlnimet[i], '_', ' '));
@@ -203,7 +210,6 @@ void kirjoita_data(int ppnum, float* taul) {
 
 #if LAUHKEUS
 int main() {
-    pituudet();
     pit_wetl -= 1;
     float* taul = malloc(pit_wetl * pit_kaudet * 2 * sizeof(float));
     for(int ppnum=0; ppnum<2; ppnum++) {
@@ -216,7 +222,6 @@ int main() {
 }
 #else
 int main() {
-    pituudet();
     float* taul = malloc((pit_wetl+pit_köpp+pit_ikir)*pit_kaudet*2*sizeof(float));
     for(int ppnum=0; ppnum<2; ppnum++) {
 	float* taul1 = taul;
