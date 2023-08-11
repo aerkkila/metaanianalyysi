@@ -33,6 +33,7 @@ def main():
     p = os.popen(kutsu, 'r')
     koko = p.read()
     p.close()
+    print(koko)
     xkoko,ykoko = eval(koko)
     rcParams.update({'font.size':15, 'figure.figsize':(xkoko,ykoko)})
 
