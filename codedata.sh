@@ -142,7 +142,7 @@ EOF
 
 kansio=$k0/create_ikirdata
 mkdir -p $kansio
-git -C create_ikirdata archive master | tar -x -C $kansio
+git -C create_ikirdata_using_a_landmask archive master | tar -x -C $kansio
 
 kansio=$k0/create_köppen
 mkdir -p $kansio
