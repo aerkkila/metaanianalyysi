@@ -597,27 +597,26 @@ int main(int argc, char** argv) {
     tty = isatty(STDOUT_FILENO);
     argumentit(argc, argv);
 
+    nct_readflags = nct_rcoord|nct_rkeep|nct_ratt;
     nct_readm_nc(wetlset, ncdir "BAWLD1x1.nc");
     for(int i=0; i<wpit; i++) {
-	assert((var = nct_get_var(&wetlset, wetlnimet[i])));
+	assert((var = nct_loadg(&wetlset, wetlnimet[i])));
 	dt.wdata[i] = var->data;
     }
 
     dt.resol = var->len;
 
-    nct_set* vuovs = nct_read_ncf(ncdir "flux1x1.nc", nct_rlazy|nct_ratt);
+    nct_set* vuovs = nct_read_nc(ncdir "flux1x1.nc");
     var = nct_get_var(vuovs, "time");
     dt.t0_vuo = nct_mktime0(var, NULL).a.t;
-    dt.t0_vuo += nct_getl_integer(var, 0) * 86400;
+    dt.t0_vuo += nct_get_integer(var, 0) * 86400;
 
     dt.vuo = nct_loadg_as(vuovs, pripost_sisään[ppnum], NC_DOUBLE)->data;
     assert((intptr_t)dt.vuo >= 0x800);
 
     luo_pintaala(&dt, vuovs);
 
-    nct_set* päivät = nct_read_ncf(ncdir "kausien_päivät_int16.nc", nct_rlazy);
-    var = nct_get_var(päivät, "vuosi");
-    nct_load(var);
+    nct_set* päivät = nct_read_nc(ncdir "kausien_päivät_int16.nc");
 
     FILE* f = NULL;
     int pit = wpit;
